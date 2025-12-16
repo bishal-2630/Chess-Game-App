@@ -35,21 +35,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (user != null) {
           _showSuccessSnackBar('Registration successful!');
 
-          // Navigate to login screen
-          context.go('/login');
+          // Verify email if needed
+          if (!user.emailVerified) {
+            _showSuccessSnackBar('Please verify your email');
+          }
+
+          // Navigate to home screen directly
+          if (context.mounted) {
+            context.go('/chess');
+          }
         }
       } catch (e) {
         String errorMessage = 'Registration failed';
         if (e.toString().contains('email-already-in-use')) {
-          errorMessage = 'Email already in use';
+          errorMessage = 'Email already in use. Please login instead.';
         } else if (e.toString().contains('weak-password')) {
-          errorMessage = 'Password is too weak';
+          errorMessage = 'Password is too weak. Use at least 6 characters.';
+        } else if (e.toString().contains('invalid-email')) {
+          errorMessage = 'Invalid email format';
+        } else if (e.toString().contains('network-request-failed')) {
+          errorMessage = 'Network error. Check your internet connection';
         }
-        _showErrorSnackBar('$errorMessage: ${e.toString()}');
+        _showErrorSnackBar('$errorMessage');
       } finally {
-        setState(() {
-          _isLoading = false;
-        });
+        if (context.mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -63,42 +76,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final user = await _authService.signInWithGoogle();
 
       if (user != null) {
-        _showSuccessSnackBar('Google sign-up successful!');
+        _showSuccessSnackBar('Google registration successful!');
 
-        // Navigate to home screen
-        // TODO: Update with your home screen route
-        context.go('/home');
+        // Check if user is new
+        final isNewUser = user.metadata.creationTime != null &&
+            user.metadata.lastSignInTime != null &&
+            user.metadata.creationTime!
+                    .difference(user.metadata.lastSignInTime!)
+                    .abs() <
+                Duration(seconds: 1);
+
+        if (isNewUser) {
+          _showSuccessSnackBar('Welcome to Chess Game! Account created.');
+        }
+
+        if (context.mounted) {
+          context.go('/chess');
+        }
       } else {
-        // User cancelled the Google sign-in
-        _showErrorSnackBar('Sign up cancelled');
+        _showErrorSnackBar('Registration cancelled');
       }
     } catch (e) {
-      _showErrorSnackBar('Google sign-up failed: ${e.toString()}');
+      String errorMessage = 'Google registration failed';
+      if (e.toString().contains('sign_in_failed')) {
+        errorMessage =
+            'Google sign-in failed. Make sure Google Play Services are updated.';
+      } else if (e.toString().contains('network_error')) {
+        errorMessage = 'Network error. Check your internet connection';
+      }
+      _showErrorSnackBar('$errorMessage: ${e.toString()}');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (context.mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   String? _validateUsername(String? value) {
@@ -107,6 +144,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     if (value.length < 3) {
       return 'Username must be at least 3 characters';
+    }
+    if (value.contains(' ')) {
+      return 'Username cannot contain spaces';
     }
     return null;
   }
@@ -132,6 +172,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
     if (value != _passwordController.text) {
       return 'Passwords do not match';
     }
@@ -141,7 +184,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
+      appBar: AppBar(
+        title: const Text('Register'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _isLoading ? null : () => context.go('/login'),
+        ),
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -180,6 +229,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     prefixIcon: Icon(Icons.person),
                   ),
                   validator: _validateUsername,
+                  enabled: !_isLoading,
                 ),
                 const SizedBox(height: 15),
                 TextFormField(
@@ -191,6 +241,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: _validateEmail,
+                  enabled: !_isLoading,
                 ),
                 const SizedBox(height: 15),
                 TextFormField(
@@ -202,6 +253,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     prefixIcon: Icon(Icons.lock),
                   ),
                   validator: _validatePassword,
+                  enabled: !_isLoading,
                 ),
                 const SizedBox(height: 15),
                 TextFormField(
@@ -213,11 +265,55 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
                   validator: _validateConfirmPassword,
+                  enabled: !_isLoading,
                 ),
+                const SizedBox(height: 10),
+
+                // Password requirements
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Password must be at least 6 characters',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          Icon(
+                            _passwordController.text.length >= 6
+                                ? Icons.check_circle
+                                : Icons.circle_outlined,
+                            color: _passwordController.text.length >= 6
+                                ? Colors.green
+                                : Colors.grey,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            '6+ characters',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _passwordController.text.length >= 6
+                                  ? Colors.green
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
                 const SizedBox(height: 30),
 
                 if (_isLoading)
-                  const CircularProgressIndicator()
+                  const Center(child: CircularProgressIndicator())
                 else
                   ElevatedButton(
                     onPressed: _registerWithEmailPassword,
@@ -265,13 +361,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  icon: Container(
+                  icon: Image.asset(
+                    'assets/google_logo.png',
                     width: 24,
                     height: 24,
-                    child: Image.network(
-                      'https://www.google.com/favicon.ico',
-                      fit: BoxFit.cover,
-                    ),
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.g_mobiledata, size: 24);
+                    },
                   ),
                   label: const Text(
                     'Sign up with Google',
@@ -287,7 +383,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     const Text("Already have an account?"),
                     TextButton(
-                      onPressed: () => context.go('/login'),
+                      onPressed: _isLoading ? null : () => context.go('/login'),
                       child: const Text(
                         'Login',
                         style: TextStyle(fontWeight: FontWeight.bold),

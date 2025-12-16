@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:timer_count_down/timer_count_down.dart';
+import 'auth_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -18,78 +19,118 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _otpController = TextEditingController();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
 
   // State variables
   bool _isLoading = false;
   bool _emailSent = false;
   bool _otpVerified = false;
   bool _canResendOTP = false;
-  String? _verificationId;
   int _resendTimer = 60;
+  Timer? _timer;
+
+  // NEW: Add choice between Firebase and Django reset
+  bool _useFirebaseReset = false; // Toggle between Firebase and Django
 
   // Step tracking (0: Email, 1: OTP, 2: New Password)
   int _currentStep = 0;
 
   final _formKey = GlobalKey<FormState>();
+  final _emailFormKey = GlobalKey<FormState>();
 
-  // Send OTP to email
-  Future<void> _sendOTP() async {
-    if (_emailController.text.isEmpty) {
-      _showErrorSnackBar('Please enter your email');
-      return;
-    }
+  @override
+  void initState() {
+    super.initState();
+  }
 
-    setState(() {
-      _isLoading = true;
-    });
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _emailController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    _otpController.dispose();
+    super.dispose();
+  }
 
-    try {
-      // First, check if email exists by sending password reset email
-      await _auth.sendPasswordResetEmail(email: _emailController.text.trim());
-
-      // For OTP simulation (in real app, you'd integrate with SMS service)
-      // Since Firebase doesn't have email OTP natively, we'll simulate it
-      // In production, use a service like Twilio, MessageBird, or Firebase Cloud Functions
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('OTP sent to ${_emailController.text}'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-
-      // Simulate OTP (in real app, generate and store in backend)
-      _showOTPSnackBar();
-
+  // Send OTP to email using Django backend OR Firebase reset email
+  Future<void> _sendResetCode() async {
+    // Validate email first
+    if (_emailFormKey.currentState!.validate()) {
       setState(() {
-        _emailSent = true;
-        _canResendOTP = false;
-        _resendTimer = 60;
+        _isLoading = true;
       });
 
-      // Start resend timer
-      _startResendTimer();
-    } on FirebaseAuthException catch (e) {
-      String errorMessage = 'Failed to send OTP';
-      if (e.code == 'user-not-found') {
-        errorMessage = 'No account found with this email';
-      } else if (e.code == 'invalid-email') {
-        errorMessage = 'Invalid email address';
-      } else if (e.code == 'too-many-requests') {
-        errorMessage = 'Too many attempts. Try again later';
+      try {
+        if (_useFirebaseReset) {
+          // Use Firebase password reset
+          await _authService
+              .sendPasswordResetEmail(_emailController.text.trim());
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  const Text('✅ Password reset email sent! Check your inbox.'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+
+          // Firebase reset doesn't need OTP verification
+          // Navigate back to login after showing success
+          await Future.delayed(const Duration(seconds: 2));
+          if (context.mounted) {
+            context.go('/login');
+          }
+        } else {
+          // Use Django OTP
+          final result = await _authService.sendPasswordResetOTP(
+            _emailController.text.trim(),
+          );
+
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('✅ ${result['message']}'),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Check Django console on your computer for OTP',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+
+            setState(() {
+              _emailSent = true;
+              _canResendOTP = false;
+              _resendTimer = 60;
+              _currentStep = 1;
+            });
+
+            _startResendTimer();
+          } else {
+            _showErrorSnackBar(result['message'] ?? 'Failed to send OTP');
+          }
+        }
+      } catch (e) {
+        _showErrorSnackBar('Error: ${e.toString()}');
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
       }
-      _showErrorSnackBar(errorMessage);
-    } catch (e) {
-      _showErrorSnackBar('Error: ${e.toString()}');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
-  // Verify OTP
+  // Verify OTP using Django backend
   Future<void> _verifyOTP() async {
     if (_otpController.text.length != 6) {
       _showErrorSnackBar('Please enter 6-digit OTP');
@@ -101,12 +142,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      // Simulate OTP verification
-      // In production: Verify OTP with your backend
-      await Future.delayed(const Duration(seconds: 1));
+      final result = await _authService.verifyOTP(
+        _emailController.text.trim(),
+        _otpController.text,
+      );
 
-      // For demo: Accept any 6-digit code starting with '1'
-      if (_otpController.text.startsWith('1')) {
+      if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('OTP verified successfully'),
@@ -120,10 +161,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           _currentStep = 2; // Move to password reset step
         });
       } else {
-        _showErrorSnackBar('Invalid OTP. Try 123456 for demo');
+        _showErrorSnackBar(result['message'] ?? 'OTP verification failed');
       }
     } catch (e) {
-      _showErrorSnackBar('Verification failed: ${e.toString()}');
+      _showErrorSnackBar('OTP verification failed: ${e.toString()}');
     } finally {
       setState(() {
         _isLoading = false;
@@ -131,7 +172,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  // Reset password
+  // Reset password using Django backend
   Future<void> _resetPassword() async {
     if (_formKey.currentState!.validate()) {
       if (_newPasswordController.text != _confirmPasswordController.text) {
@@ -144,43 +185,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       try {
-        // In production: Call backend API to reset password
-        // For now, we'll use Firebase's updatePassword (requires deauthentication)
+        final result = await _authService.resetPasswordWithOTP(
+          _emailController.text.trim(),
+          _otpController.text,
+          _newPasswordController.text,
+          _confirmPasswordController.text,
+        );
 
-        // Note: For production, you should:
-        // 1. Store OTP in backend with expiration
-        // 2. Verify OTP via backend
-        // 3. Update password via backend
-
-        User? user = _auth.currentUser;
-
-        if (user != null && user.email == _emailController.text.trim()) {
-          await user.updatePassword(_newPasswordController.text);
-
+        if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password reset successfully!'),
+            SnackBar(
+              content:
+                  Text(result['message'] ?? 'Password reset successfully!'),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
-          );
-
-          // Navigate to login
-          context.go('/login');
-        } else {
-          // For demo: Just show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Password reset successfully! You can now login with new password.'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
             ),
           );
 
           // Navigate to login after delay
           await Future.delayed(const Duration(seconds: 2));
-          context.go('/login');
+          if (context.mounted) {
+            context.go('/login');
+          }
+        } else {
+          _showErrorSnackBar(result['message'] ?? 'Failed to reset password');
         }
       } catch (e) {
         _showErrorSnackBar('Failed to reset password: ${e.toString()}');
@@ -192,40 +220,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  void _showOTPSnackBar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Demo OTP: 123456'),
-            SizedBox(height: 4),
-            Text('Use this for testing', style: TextStyle(fontSize: 12)),
-          ],
-        ),
-        backgroundColor: Colors.blue,
-        duration: const Duration(seconds: 10),
-        action: SnackBarAction(
-          label: 'Copy',
-          onPressed: () {
-            // Copy to clipboard
-          },
-        ),
-      ),
-    );
-  }
-
   void _startResendTimer() {
-    Future.delayed(const Duration(seconds: 1), () {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendTimer > 0) {
         setState(() {
           _resendTimer--;
         });
-        _startResendTimer();
       } else {
         setState(() {
           _canResendOTP = true;
         });
+        timer.cancel();
       }
     });
   }
@@ -276,19 +282,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Progress Indicator
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildStep(1, 'Email', _currentStep >= 0),
-                  const SizedBox(height: 20, child: VerticalDivider()),
-                  _buildStep(2, 'OTP', _currentStep >= 1),
-                  const SizedBox(height: 20, child: VerticalDivider()),
-                  _buildStep(3, 'Reset', _currentStep >= 2),
-                ],
-              ),
-
-              const SizedBox(height: 40),
+              // Progress Indicator (only show for Django OTP flow)
+              if (!_useFirebaseReset) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildStep(1, 'Email', _currentStep >= 0),
+                    const SizedBox(height: 20, child: VerticalDivider()),
+                    _buildStep(2, 'OTP', _currentStep >= 1),
+                    const SizedBox(height: 20, child: VerticalDivider()),
+                    _buildStep(3, 'Reset', _currentStep >= 2),
+                  ],
+                ),
+                const SizedBox(height: 40),
+              ],
 
               // Title based on step
               Text(
@@ -307,7 +314,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
               Text(
                 _currentStep == 0
-                    ? 'Enter your email to receive OTP'
+                    ? 'Enter your email to receive reset instructions'
                     : _currentStep == 1
                         ? 'Enter the 6-digit code sent to your email'
                         : 'Enter your new password',
@@ -317,23 +324,58 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
 
-              const SizedBox(height: 40),
+              // NEW: Toggle between Firebase and Django
+              if (_currentStep == 0) ...[
+                const SizedBox(height: 20),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info, color: Colors.blue),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _useFirebaseReset
+                                ? 'Using Firebase reset (direct email link)'
+                                : 'Using Django OTP (check console for code)',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                        Switch(
+                          value: _useFirebaseReset,
+                          onChanged: (value) {
+                            setState(() {
+                              _useFirebaseReset = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 20),
 
               // Step 1: Email Input
               if (_currentStep == 0) ...[
-                TextFormField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email Address',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                Form(
+                  key: _emailFormKey,
+                  child: TextFormField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: 'Email Address',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      prefixIcon: const Icon(Icons.email),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
-                    prefixIcon: const Icon(Icons.email),
-                    filled: true,
-                    fillColor: Colors.grey[50],
+                    keyboardType: TextInputType.emailAddress,
+                    validator: _validateEmail,
                   ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: _validateEmail,
                 ),
                 const SizedBox(height: 30),
                 if (_isLoading)
@@ -343,22 +385,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _sendOTP,
+                      onPressed: _sendResetCode,
                       style: ElevatedButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: const Text(
-                        'Send OTP',
-                        style: TextStyle(fontSize: 16),
+                      child: Text(
+                        _useFirebaseReset ? 'Send Reset Email' : 'Send OTP',
+                        style: const TextStyle(fontSize: 16),
                       ),
                     ),
                   ),
               ],
 
-              // Step 2: OTP Verification
-              if (_currentStep == 1) ...[
+              // Step 2: OTP Verification (only for Django)
+              if (_currentStep == 1 && !_useFirebaseReset) ...[
                 Center(
                   child: PinCodeTextField(
                     appContext: context,
@@ -390,20 +432,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                     if (!_canResendOTP)
-                      Countdown(
-                        seconds: _resendTimer,
-                        build: (BuildContext context, double time) => Text(
-                          'Resend in ${time.toInt()}s',
-                          style: const TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      Text(
+                        'Resend in ${_resendTimer}s',
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
                         ),
-                        interval: const Duration(seconds: 1),
                       )
                     else
                       TextButton(
-                        onPressed: _sendOTP,
+                        onPressed: _sendResetCode,
                         child: const Text(
                           'Resend OTP',
                           style: TextStyle(
@@ -443,14 +481,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   onPressed: () {
                     setState(() {
                       _currentStep = 0;
+                      _otpController.clear();
                     });
                   },
                   child: const Text('Change Email Address'),
                 ),
               ],
 
-              // Step 3: New Password
-              if (_currentStep == 2) ...[
+              // Step 3: New Password (only for Django)
+              if (_currentStep == 2 && !_useFirebaseReset) ...[
                 Form(
                   key: _formKey,
                   child: Column(
@@ -606,14 +645,5 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
       ],
     );
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
-    _otpController.dispose();
-    super.dispose();
   }
 }
