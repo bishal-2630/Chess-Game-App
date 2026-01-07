@@ -6,6 +6,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
 import json
+import requests
 
 from .models import OTP
 from .serializers import (
@@ -49,7 +50,7 @@ class SendOTPView(APIView):
             print(f"Generated OTP: {otp_obj.otp_code} for user: {user.email}")
             
             # For development, print OTP to console
-            print(f"🔐 DEBUG OTP: {otp_obj.otp_code} (valid for 10 minutes)")
+            print(f"DEBUG OTP: {otp_obj.otp_code} (valid for 10 minutes)")
             
             # Try to send email
             try:
@@ -76,7 +77,7 @@ Chess Game Team
                     fail_silently=False,
                 )
                 
-                print(f"✅ Email sent to {email}")
+                print(f"Email sent to {email}")
                 
                 return Response({
                     "success": True,
@@ -86,7 +87,7 @@ Chess Game Team
                 }, status=status.HTTP_200_OK)
                 
             except Exception as email_error:
-                print(f"❌ Email sending failed: {str(email_error)}")
+                print(f"Email sending failed: {str(email_error)}")
                 # Still return success since OTP is generated (for testing)
                 return Response({
                     "success": True,
@@ -97,7 +98,7 @@ Chess Game Team
                 }, status=status.HTTP_200_OK)
                 
         except Exception as e:
-            print(f"❌ Error in SendOTPView: {str(e)}")
+            print(f"Error in SendOTPView: {str(e)}")
             return Response({
                 "success": False,
                 "message": f"Failed to process request: {str(e)}"
@@ -211,7 +212,7 @@ class ResetPasswordView(APIView):
             # Delete all OTPs for this user
             OTP.objects.filter(user=user, purpose='password_reset').delete()
             
-            print(f"✅ Password reset successful for {email}")
+            print(f"Password reset successful for {email}")
             
             return Response({
                 "success": True,
