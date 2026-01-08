@@ -107,7 +107,9 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://*.railway.app', cast=lambda v: [s.strip() for s in v.split(',')])
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', 
+                            default='https://*.railway.app,https://ktw0rs8y.up.railway.app', 
+                            cast=lambda v: [s.strip() for s in v.split(',')])
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
