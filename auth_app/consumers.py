@@ -5,6 +5,8 @@ class SignalingConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_id = self.scope['url_route']['kwargs']['room_id']
         self.room_group_name = f'call_{self.room_id}'
+        
+        print(f"📡 Connection attempt to room: {self.room_id}")
 
         # Join room group
         await self.channel_layer.group_add(
@@ -13,6 +15,7 @@ class SignalingConsumer(AsyncWebsocketConsumer):
         )
 
         await self.accept()
+        print(f"✅ Connection accepted for room: {self.room_id}")
 
     async def disconnect(self, close_code):
         # Leave room group
