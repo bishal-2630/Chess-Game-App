@@ -1,8 +1,3 @@
-"""
-swagger_views.py
-Authentication API views with Swagger documentation for Chess Game
-"""
-
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,13 +5,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate, get_user_model
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
 from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import pyotp
-import datetime
 
 User = get_user_model()
 
@@ -562,42 +554,6 @@ class ChangePasswordView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
-    @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['old_password', 'new_password'],
-            properties={
-                'old_password': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='Current password'
-                ),
-                'new_password': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='New password (min 6 chars)'
-                ),
-            }
-        ),
-        responses={
-            200: openapi.Response(
-                'Password changed successfully',
-                examples={
-                    'application/json': {
-                        'success': True,
-                        'message': 'Password changed successfully'
-                    }
-                }
-            ),
-            400: openapi.Response(
-                'Invalid password',
-                examples={
-                    'application/json': {
-                        'success': False,
-                        'message': 'Old password is incorrect'
-                    }
-                }
-            )
-        }
-    )
     def post(self, request):
         """Change password"""
         old_password = request.data.get('old_password')
@@ -611,7 +567,25 @@ class ChangePasswordView(APIView):
         
         user = request.user
         
-        # Verify old password
+        # Check if user has a usable password
+        if not user.has_usable_password():
+            # User has no password (guest user or password not set)
+            # Allow setting password without old password verification
+            if len(new_password) < 6:
+                return Response({
+                    'success': False,
+                    'message': 'New password must be at least 6 characters'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            user.set_password(new_password)
+            user.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Password set successfully (user had no previous password)'
+            }, status=status.HTTP_200_OK)
+        
+        # User has a password, verify old one
         if not user.check_password(old_password):
             return Response({
                 'success': False,
@@ -633,7 +607,6 @@ class ChangePasswordView(APIView):
             'success': True,
             'message': 'Password changed successfully'
         }, status=status.HTTP_200_OK)
-
 
 # ========== GUEST REGISTRATION (for your Flutter app) ==========
 class GuestRegisterView(APIView):
@@ -774,3 +747,262 @@ class HealthCheckView(APIView):
                 'redoc': '/redoc/'
             }
         }, status=status.HTTP_200_OK)
+    
+
+class DebugPasswordView(APIView):
+    """
+    Debug password verification
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        password_to_check = request.data.get('password', '')
+        user = request.user
+        
+        return Response({
+            'user_id': user.id,
+            'email': user.email,
+            'username': user.username,
+            'password_provided': password_to_check,
+            'password_matches': user.check_password(password_to_check),
+            'has_usable_password': user.has_usable_password(),
+            'password_hash_preview': user.password[:50] + '...' if user.password else 'None'
+        })
+    
+
+# ========== SEND OTP ==========
+class SendOTPView(APIView):
+    """
+    Send OTP for password reset
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email'],
+            properties={
+                'email': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='User email address'
+                ),
+            }
+        ),
+        responses={
+            200: openapi.Response('OTP sent successfully'),
+            400: openapi.Response('User not found')
+        }
+    )
+    def post(self, request):
+        email = request.data.get('email')
+        
+        if not email:
+            return Response({
+                'success': False,
+                'message': 'Email is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(email=email)
+            
+            # Generate OTP (using your OTP model)
+            from .models import OTP
+            otp_obj = OTP.generate_otp(user, purpose='password_reset')
+            
+            # For demo - print OTP to console
+            # In production, send email
+            print(f"OTP for {email}: {otp_obj.otp_code}")
+            
+            return Response({
+                'success': True,
+                'message': f'OTP sent to {email} (demo mode)',
+                'debug_otp': otp_obj.otp_code,  # Remove in production!
+                'expires_in': 600  # 10 minutes
+            }, status=status.HTTP_200_OK)
+            
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'No user found with this email'
+            }, status=status.HTTP_200_OK)
+
+
+# ========== VERIFY OTP ==========
+class VerifyOTPView(APIView):
+    """
+    Verify OTP for password reset
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email', 'otp'],
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'otp': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={200: 'OTP verified', 400: 'Invalid OTP'}
+    )
+    def post(self, request):
+        email = request.data.get('email')
+        otp_code = request.data.get('otp')
+        
+        try:
+            user = User.objects.get(email=email)
+            from .models import OTP
+            from django.utils import timezone
+            
+            otp_obj = OTP.objects.get(
+                user=user,
+                otp_code=otp_code,
+                purpose='password_reset',
+                is_used=False
+            )
+            
+            if timezone.now() > otp_obj.expires_at:
+                return Response({
+                    'success': False,
+                    'message': 'OTP expired'
+                })
+            
+            return Response({
+                'success': True,
+                'message': 'OTP verified successfully'
+            })
+            
+        except (User.DoesNotExist, OTP.DoesNotExist):
+            return Response({
+                'success': False,
+                'message': 'Invalid OTP or email'
+            })
+
+
+# ========== RESET PASSWORD ==========
+class ResetPasswordView(APIView):
+    """
+    Reset password using verified OTP
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email', 'otp', 'new_password', 'confirm_password'],
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'otp': openapi.Schema(type=openapi.TYPE_STRING),
+                'new_password': openapi.Schema(type=openapi.TYPE_STRING),
+                'confirm_password': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={200: 'Password reset', 400: 'Reset failed'}
+    )
+    def post(self, request):
+        email = request.data.get('email')
+        otp_code = request.data.get('otp')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+        
+        if new_password != confirm_password:
+            return Response({
+                'success': False,
+                'message': 'Passwords do not match'
+            })
+        
+        if len(new_password) < 6:
+            return Response({
+                'success': False,
+                'message': 'Password must be at least 6 characters'
+            })
+        
+        try:
+            user = User.objects.get(email=email)
+            from .models import OTP
+            from django.utils import timezone
+            
+            otp_obj = OTP.objects.get(
+                user=user,
+                otp_code=otp_code,
+                purpose='password_reset',
+                is_used=False
+            )
+            
+            if timezone.now() > otp_obj.expires_at:
+                return Response({
+                    'success': False,
+                    'message': 'OTP expired'
+                })
+            
+            # Update password
+            user.set_password(new_password)
+            user.save()
+            
+            # Mark OTP as used
+            otp_obj.mark_used()
+            
+            return Response({
+                'success': True,
+                'message': 'Password reset successfully'
+            })
+            
+        except (User.DoesNotExist, OTP.DoesNotExist):
+            return Response({
+                'success': False,
+                'message': 'Invalid OTP or email'
+            })
+
+
+# ========== FIREBASE AUTH ==========
+class FirebaseAuthView(APIView):
+    """
+    Firebase authentication (demo - returns guest user)
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['firebase_token'],
+            properties={
+                'firebase_token': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={200: 'Firebase auth successful'}
+    )
+    def post(self, request):
+        # For demo - create a guest-like user
+        # In production, verify Firebase token
+        
+        import time
+        guest_username = f"FirebaseUser_{int(time.time())}"
+        
+        user, created = User.objects.get_or_create(
+            username=guest_username,
+            defaults={
+                'email': f"{guest_username}@firebase.demo",
+                'password': None
+            }
+        )
+        
+        if created:
+            user.set_unusable_password()
+            user.save()
+        
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'success': True,
+            'message': 'Firebase authentication (demo)',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'is_firebase_user': True
+            },
+            'tokens': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh)
+            }
+        })
