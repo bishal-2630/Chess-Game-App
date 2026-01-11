@@ -2,8 +2,8 @@ from django.urls import path
 from .swagger_views import (
     RegisterView, LoginView, LogoutView, 
     SendOTPView, VerifyOTPView, ResetPasswordView,
-    GoogleAuthView, SendVerificationEmailView,
-    TokenVerifyView, TokenRefreshView, ChangePasswordView,
+    SendVerificationEmailView,
+    TokenVerifyView, ChangePasswordView,
     GuestRegisterView, HealthCheckView, FirebaseAuthView
 )
 
@@ -20,7 +20,6 @@ urlpatterns = [
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),
     
     # Social & Guest Auth
-    path('google/', GoogleAuthView.as_view(), name='google_auth'),
     path('firebase-login/', FirebaseAuthView.as_view(), name='firebase_login'),
     path('guest/', GuestRegisterView.as_view(), name='guest_register'),
     
@@ -30,7 +29,6 @@ urlpatterns = [
     
     # Token Operations
     path('token/verify/', TokenVerifyView.as_view(), name='verify_token'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
     # Health Check
     path('health/', HealthCheckView.as_view(), name='health_check'),
