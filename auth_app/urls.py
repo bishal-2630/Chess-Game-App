@@ -1,7 +1,7 @@
 from django.urls import path
 from .swagger_views import (
     RegisterView, LoginView, LogoutView, 
-    SendOTPView, VerifyOTPView, ResetPasswordView,
+    SendOTPView, VerifyOTPView, ResetPasswordView,VerifyEmailTokenView,
     SendVerificationEmailView,
     TokenVerifyView, ChangePasswordView,
     GuestRegisterView, HealthCheckView, FirebaseAuthView
