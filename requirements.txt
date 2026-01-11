@@ -9,3 +9,4 @@ requests
 psycopg2-binary
 dj-database-url
 whitenoise
+drf-yasg
