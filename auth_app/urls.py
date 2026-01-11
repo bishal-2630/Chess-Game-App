@@ -50,8 +50,8 @@ urlpatterns = [
 # Add demo endpoints if swagger_views exists
 if HAS_SWAGGER:
     from .swagger_views import (
-        RegisterView, LoginView, LogoutView, GoogleAuthView,
-        SendVerificationEmailView, TokenVerifyView, TokenRefreshView,
+        RegisterView, LoginView, LogoutView, 
+        SendVerificationEmailView, TokenVerifyView,
         ChangePasswordView, GuestRegisterView
     )
     
@@ -59,10 +59,8 @@ if HAS_SWAGGER:
         path('register/', RegisterView.as_view(), name='register'),
         path('login/', LoginView.as_view(), name='login'),
         path('logout/', LogoutView.as_view(), name='logout'),
-        path('google/', GoogleAuthView.as_view(), name='google_auth'),
         path('verify-email/send/', SendVerificationEmailView.as_view(), name='send_verification'),
         path('token/verify/', TokenVerifyView.as_view(), name='verify_token'),
-        path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
         path('change-password/', ChangePasswordView.as_view(), name='change_password'),
         path('guest/', GuestRegisterView.as_view(), name='guest_register'),
     ]
