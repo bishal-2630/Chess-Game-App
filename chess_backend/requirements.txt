@@ -1,0 +1,3 @@
+drf-yasg
+pyotp
+django-cors-headers
