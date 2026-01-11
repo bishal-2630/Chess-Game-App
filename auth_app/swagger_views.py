@@ -1,0 +1,947 @@
+"""
+swagger_views.py
+Authentication API views with Swagger documentation for Chess Game
+"""
+
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+import pyotp
+import datetime
+
+User = get_user_model()
+
+# ========== REGISTRATION ==========
+class RegisterView(APIView):
+    """
+    Register a new user with email, username and password
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email', 'password', 'username'],
+            properties={
+                'username': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='Unique username (min 3 chars, no spaces)'
+                ),
+                'email': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='Valid email address'
+                ),
+                'password': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='Password (min 6 characters)'
+                ),
+            }
+        ),
+        responses={
+            201: openapi.Response(
+                'User registered successfully', 
+                examples={
+                    'application/json': {
+                        'success': True,
+                        'user': {
+                            'id': 1,
+                            'username': 'testuser',
+                            'email': 'test@example.com'
+                        },
+                        'tokens': {
+                            'access': 'eyJhbGciOi...',
+                            'refresh': 'eyJhbGciOi...'
+                        }
+                    }
+                }
+            ),
+            400: openapi.Response(
+                'Bad Request',
+                examples={
+                    'application/json': {
+                        'success': False,
+                        'message': 'Email already exists'
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request):
+        """Register a new user"""
+        email = request.data.get('email')
+        password = request.data.get('password')
+        username = request.data.get('username')
+        
+        # Validation
+        if not email or not password or not username:
+            return Response({
+                'success': False,
+                'message': 'Email, password and username are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if User.objects.filter(email=email).exists():
+            return Response({
+                'success': False,
+                'message': 'Email already exists'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if User.objects.filter(username=username).exists():
+            return Response({
+                'success': False,
+                'message': 'Username already exists'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(username) < 3:
+            return Response({
+                'success': False,
+                'message': 'Username must be at least 3 characters'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if ' ' in username:
+            return Response({
+                'success': False,
+                'message': 'Username cannot contain spaces'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(password) < 6:
+            return Response({
+                'success': False,
+                'message': 'Password must be at least 6 characters'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password
+            )
+            
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'success': True,
+                'message': 'User registered successfully',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email
+                },
+                'tokens': {
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh)
+                }
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Registration failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========== LOGIN ==========
+class LoginView(APIView):
+    """
+    Login with email and password
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email', 'password'],
+            properties={
+                'email': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='Registered email address'
+                ),
+                'password': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='Account password'
+                ),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                'Login successful',
+                examples={
+                    'application/json': {
+                        'success': True,
+                        'user': {
+                            'id': 1,
+                            'username': 'testuser',
+                            'email': 'test@example.com'
+                        },
+                        'tokens': {
+                            'access': 'eyJhbGciOi...',
+                            'refresh': 'eyJhbGciOi...'
+                        }
+                    }
+                }
+            ),
+            401: openapi.Response(
+                'Invalid credentials',
+                examples={
+                    'application/json': {
+                        'success': False,
+                        'message': 'Invalid credentials'
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request):
+        """Login with email and password"""
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        if not email or not password:
+            return Response({
+                'success': False,
+                'message': 'Email and password are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Try to authenticate
+        user = authenticate(username=email, password=password)
+        
+        if user is None:
+            # Check if user exists but password is wrong
+            if User.objects.filter(email=email).exists():
+                return Response({
+                    'success': False,
+                    'message': 'Invalid password'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                return Response({
+                    'success': False,
+                    'message': 'No account found with this email'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'success': True,
+            'message': 'Login successful',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'email_verified': user.email_verified
+            },
+            'tokens': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh)
+            }
+        }, status=status.HTTP_200_OK)
+
+
+# ========== LOGOUT ==========
+class LogoutView(APIView):
+    """
+    Logout user and blacklist refresh token
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['refresh'],
+            properties={
+                'refresh': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='Refresh token to blacklist'
+                ),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                'Logged out successfully',
+                examples={
+                    'application/json': {
+                        'success': True,
+                        'message': 'Successfully logged out'
+                    }
+                }
+            ),
+            400: openapi.Response(
+                'Invalid token',
+                examples={
+                    'application/json': {
+                        'success': False,
+                        'message': 'Invalid refresh token'
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request):
+        """Logout user and blacklist refresh token"""
+        try:
+            refresh_token = request.data.get('refresh')
+            
+            if not refresh_token:
+                return Response({
+                    'success': False,
+                    'message': 'Refresh token is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Blacklist the refresh token
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            
+            return Response({
+                'success': True,
+                'message': 'Successfully logged out'
+            }, status=status.HTTP_200_OK)
+            
+        except TokenError as e:
+            return Response({
+                'success': False,
+                'message': f'Invalid token: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========== GOOGLE AUTH ==========
+class GoogleAuthView(APIView):
+    """
+    Authenticate with Google OAuth2 (Firebase integration)
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id_token'],
+            properties={
+                'id_token': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='Google OAuth2 ID token or Firebase token'
+                ),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                'Google auth successful',
+                examples={
+                    'application/json': {
+                        'success': True,
+                        'message': 'Google authentication successful',
+                        'user': {
+                            'id': 1,
+                            'username': 'googleuser',
+                            'email': 'user@gmail.com'
+                        },
+                        'tokens': {
+                            'access': 'eyJhbGciOi...',
+                            'refresh': 'eyJhbGciOi...'
+                        }
+                    }
+                }
+            ),
+            400: openapi.Response(
+                'Invalid token',
+                examples={
+                    'application/json': {
+                        'success': False,
+                        'message': 'Invalid Google token'
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request):
+        """Authenticate with Google OAuth2"""
+        id_token = request.data.get('id_token')
+        
+        if not id_token:
+            return Response({
+                'success': False,
+                'message': 'ID token is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # For Termux demo - simulate Google auth
+        # In production, implement Firebase token verification
+        
+        # Simulated user creation/retrieval for demo
+        try:
+            # Extract email from token (in production, verify with Firebase)
+            # For demo, we'll create a dummy user
+            demo_email = "demo_google_user@example.com"
+            
+            # Check if user exists
+            user, created = User.objects.get_or_create(
+                email=demo_email,
+                defaults={
+                    'username': f"googleuser_{int(timezone.now().timestamp())}",
+                    'password': None,  # Google users don't have password
+                    'email_verified': True
+                }
+            )
+            
+            if created:
+                user.set_unusable_password()
+                user.save()
+            
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'success': True,
+                'message': 'Google authentication successful (demo)',
+                'note': 'In production, implement Firebase token verification',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'email_verified': user.email_verified
+                },
+                'tokens': {
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh)
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Google authentication failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========== EMAIL VERIFICATION ==========
+class SendVerificationEmailView(APIView):
+    """
+    Send email verification link to user
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @swagger_auto_schema(
+        responses={
+            200: openapi.Response(
+                'Verification email sent',
+                examples={
+                    'application/json': {
+                        'success': True,
+                        'message': 'Verification email sent'
+                    }
+                }
+            ),
+            400: openapi.Response(
+                'Email already verified',
+                examples={
+                    'application/json': {
+                        'success': False,
+                        'message': 'Email already verified'
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request):
+        """Send email verification link"""
+        user = request.user
+        
+        # Check if already verified
+        if user.email_verified:
+            return Response({
+                'success': False,
+                'message': 'Email already verified'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # For Termux demo - simulate email sending
+        # In production, implement actual email sending
+        
+        # Generate verification token (simulated)
+        verification_token = pyotp.random_base32()[:20]
+        
+        # In production, you would:
+        # 1. Generate a secure token
+        # 2. Send email with verification link
+        # 3. Store token in database with expiry
+        
+        return Response({
+            'success': True,
+            'message': 'Verification email sent (demo mode)',
+            'debug_info': {
+                'user_id': user.id,
+                'email': user.email,
+                'demo_token': verification_token,
+                'note': 'In production, implement actual email sending'
+            }
+        }, status=status.HTTP_200_OK)
+
+
+# ========== VERIFY EMAIL TOKEN ==========
+class VerifyEmailTokenView(APIView):
+    """
+    Verify email using token from verification link
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'token',
+                openapi.IN_QUERY,
+                description="Email verification token",
+                type=openapi.TYPE_STRING,
+                required=True
+            ),
+            openapi.Parameter(
+                'user_id',
+                openapi.IN_QUERY,
+                description="User ID to verify",
+                type=openapi.TYPE_INTEGER,
+                required=True
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                'Email verified successfully',
+                examples={
+                    'application/json': {
+                        'success': True,
+                        'message': 'Email verified successfully'
+                    }
+                }
+            ),
+            400: openapi.Response(
+                'Invalid or expired token',
+                examples={
+                    'application/json': {
+                        'success': False,
+                        'message': 'Invalid or expired verification token'
+                    }
+                }
+            )
+        }
+    )
+    def get(self, request):
+        """Verify email using token (GET request for email links)"""
+        token = request.GET.get('token')
+        user_id = request.GET.get('user_id')
+        
+        if not token or not user_id:
+            return Response({
+                'success': False,
+                'message': 'Token and user_id are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(id=user_id)
+            
+            # For demo - accept any token
+            # In production, verify token against stored hash with expiry
+            
+            if user.email_verified:
+                return Response({
+                    'success': True,
+                    'message': 'Email already verified'
+                }, status=status.HTTP_200_OK)
+            
+            # Mark email as verified
+            user.email_verified = True
+            user.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Email verified successfully (demo)',
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'email_verified': user.email_verified
+                },
+                'note': 'In production, implement proper token verification'
+            }, status=status.HTTP_200_OK)
+            
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'User not found'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Verification failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========== TOKEN VERIFY ==========
+class TokenVerifyView(APIView):
+    """
+    Verify if a JWT token is valid
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['token'],
+            properties={
+                'token': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='JWT access token to verify'
+                ),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                'Token is valid',
+                examples={
+                    'application/json': {
+                        'valid': True,
+                        'message': 'Token is valid'
+                    }
+                }
+            ),
+            401: openapi.Response(
+                'Token is invalid',
+                examples={
+                    'application/json': {
+                        'valid': False,
+                        'message': 'Token is invalid or expired'
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request):
+        """Verify JWT token"""
+        token = request.data.get('token')
+        
+        if not token:
+            return Response({
+                'valid': False,
+                'message': 'Token is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Verify the token
+            access_token = RefreshToken(token).access_token
+            
+            # Check if token is expired
+            from rest_framework_simplejwt.tokens import AccessToken
+            AccessToken(token)
+            
+            return Response({
+                'valid': True,
+                'message': 'Token is valid',
+                'exp': access_token['exp'] if 'exp' in access_token else None
+            }, status=status.HTTP_200_OK)
+            
+        except TokenError as e:
+            return Response({
+                'valid': False,
+                'message': f'Token error: {str(e)}'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({
+                'valid': False,
+                'message': f'Invalid token: {str(e)}'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# ========== TOKEN REFRESH ==========
+class TokenRefreshView(APIView):
+    """
+    Refresh an expired access token using a valid refresh token
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['refresh'],
+            properties={
+                'refresh': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='Valid refresh token'
+                ),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                'Token refreshed',
+                examples={
+                    'application/json': {
+                        'access': 'eyJhbGciOi...',
+                        'refresh': 'eyJhbGciOi...'
+                    }
+                }
+            ),
+            401: openapi.Response(
+                'Invalid refresh token',
+                examples={
+                    'application/json': {
+                        'detail': 'Token is invalid or expired'
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request):
+        """Refresh access token"""
+        refresh_token = request.data.get('refresh')
+        
+        if not refresh_token:
+            return Response({
+                'detail': 'Refresh token is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Use SimpleJWT's built-in token refresh
+            from rest_framework_simplejwt.tokens import RefreshToken
+            
+            refresh = RefreshToken(refresh_token)
+            
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh)
+            }, status=status.HTTP_200_OK)
+            
+        except TokenError as e:
+            return Response({
+                'detail': f'Token error: {str(e)}'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({
+                'detail': f'Invalid token: {str(e)}'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# ========== CHANGE PASSWORD ==========
+class ChangePasswordView(APIView):
+    """
+    Change password for authenticated user
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['old_password', 'new_password'],
+            properties={
+                'old_password': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='Current password'
+                ),
+                'new_password': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='New password (min 6 chars)'
+                ),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                'Password changed successfully',
+                examples={
+                    'application/json': {
+                        'success': True,
+                        'message': 'Password changed successfully'
+                    }
+                }
+            ),
+            400: openapi.Response(
+                'Invalid password',
+                examples={
+                    'application/json': {
+                        'success': False,
+                        'message': 'Old password is incorrect'
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request):
+        """Change password"""
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+        
+        if not old_password or not new_password:
+            return Response({
+                'success': False,
+                'message': 'Old password and new password are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = request.user
+        
+        # Verify old password
+        if not user.check_password(old_password):
+            return Response({
+                'success': False,
+                'message': 'Old password is incorrect'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate new password
+        if len(new_password) < 6:
+            return Response({
+                'success': False,
+                'message': 'New password must be at least 6 characters'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Change password
+        user.set_password(new_password)
+        user.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Password changed successfully'
+        }, status=status.HTTP_200_OK)
+
+
+# ========== GUEST REGISTRATION (for your Flutter app) ==========
+class GuestRegisterView(APIView):
+    """
+    Create a guest user session
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['username'],
+            properties={
+                'username': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='Guest username'
+                ),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                'Guest session created',
+                examples={
+                    'application/json': {
+                        'success': True,
+                        'message': 'Guest session created',
+                        'guest_user': {
+                            'id': 999,
+                            'username': 'GuestPlayer123',
+                            'is_guest': True
+                        },
+                        'tokens': {
+                            'access': 'eyJhbGciOi...',
+                            'refresh': 'eyJhbGciOi...'
+                        }
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request):
+        """Create a guest user session"""
+        username = request.data.get('username')
+        
+        if not username:
+            return Response({
+                'success': False,
+                'message': 'Username is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Generate unique guest username
+        guest_username = f"Guest_{username}_{int(timezone.now().timestamp())}"
+        
+        try:
+            # Create guest user (no password, no email)
+            user = User.objects.create_user(
+                username=guest_username,
+                email=f"{guest_username}@guest.chessgame",
+                password=None  # No password for guest
+            )
+            
+            # Mark as guest user
+            user.set_unusable_password()
+            user.save()
+            
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'success': True,
+                'message': 'Guest session created',
+                'guest_user': {
+                    'id': user.id,
+                    'username': guest_username,
+                    'is_guest': True
+                },
+                'tokens': {
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh)
+                },
+                'note': 'Guest sessions are temporary and may be cleaned up periodically'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Guest registration failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========== HEALTH CHECK ==========
+class HealthCheckView(APIView):
+    """
+    Health check endpoint for API monitoring
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        responses={
+            200: openapi.Response(
+                'API is healthy',
+                examples={
+                    'application/json': {
+                        'status': 'healthy',
+                        'timestamp': '2024-01-01T12:00:00Z',
+                        'version': '1.0.0',
+                        'database': 'connected'
+                    }
+                }
+            )
+        }
+    )
+    def get(self, request):
+        """Health check endpoint"""
+        from django.db import connection
+        
+        # Check database connection
+        db_status = 'connected'
+        try:
+            connection.ensure_connection()
+        except:
+            db_status = 'disconnected'
+        
+        return Response({
+            'status': 'healthy',
+            'timestamp': timezone.now().isoformat(),
+            'service': 'Chess Game Authentication API',
+            'version': '1.0.0',
+            'database': db_status,
+            'endpoints': {
+                'register': '/api/auth/register/',
+                'login': '/api/auth/login/',
+                'logout': '/api/auth/logout/',
+                'send_otp': '/api/auth/send-otp/',
+                'verify_otp': '/api/auth/verify-otp/',
+                'reset_password': '/api/auth/reset-password/',
+                'swagger': '/swagger/',
+                'redoc': '/redoc/'
+            }
+        }, status=status.HTTP_200_OK)
