@@ -153,7 +153,7 @@ SIMPLE_JWT = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  # Allow all for demo
@@ -179,13 +179,13 @@ SWAGGER_SETTINGS = {
 # For Zrok/ngrok - UPDATE WITH YOUR EXACT URL
 CSRF_TRUSTED_ORIGINS = [
     "https://chessgameauth.share.zrok.io",
-    "http://chessgameauth.share.zrok.io",  # Add HTTP version too
+    "http://chessgameauth.share.zrok.io",  
     "https://*.zrok.io",
     "https://*.share.zrok.io",
     "https://*.ngrok.io",
     "https://*.loca.lt",
-    "http://localhost:8080",  # Update port to 8080
-    "http://127.0.0.1:8080",  # Update port to 8080
+    "http://localhost:8080",  
+    "http://127.0.0.1:8080",  
 ]
 
 # ADD THIS FOR SWAGGER TO WORK WITH ZROK
