@@ -47,8 +47,35 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+# ZROK HTTPS FIXES - ADD THESE LINES:
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+# CORS settings - ADD SPECIFIC ORIGINS FOR ZROK
+CORS_ALLOW_ALL_ORIGINS = True  # Keep this for testing
 CORS_ALLOW_CREDENTIALS = True
+
+# More specific CORS settings (optional but recommended)
+CORS_ALLOWED_ORIGINS = [
+    "https://chessgameauth.share.zrok.io",
+    "http://chessgameauth.share.zrok.io",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+]
+
+# For Swagger to work with zrok
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 ROOT_URLCONF = 'chess_backend.urls'
 
@@ -133,7 +160,7 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Swagger Settings
+# Swagger Settings - ADD SWAGGER UI FIX FOR ZROK
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'Bearer': {
@@ -145,14 +172,21 @@ SWAGGER_SETTINGS = {
     },
     'USE_SESSION_AUTH': False,
     'VALIDATOR_URL': None,
+    # Add this for zrok compatibility
+    'DEFAULT_API_URL': 'https://chessgameauth.share.zrok.io',
 }
 
-# For Zrok/ngrok
+# For Zrok/ngrok - UPDATE WITH YOUR EXACT URL
 CSRF_TRUSTED_ORIGINS = [
+    "https://chessgameauth.share.zrok.io",
+    "http://chessgameauth.share.zrok.io",  # Add HTTP version too
     "https://*.zrok.io",
     "https://*.share.zrok.io",
     "https://*.ngrok.io",
     "https://*.loca.lt",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
+    "http://localhost:8080",  # Update port to 8080
+    "http://127.0.0.1:8080",  # Update port to 8080
 ]
+
+# ADD THIS FOR SWAGGER TO WORK WITH ZROK
+SWAGGER_UI_OAUTH2_REDIRECT_URL = 'https://chessgameauth.share.zrok.io/swagger/oauth2-redirect.html'
