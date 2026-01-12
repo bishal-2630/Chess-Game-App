@@ -111,12 +111,13 @@ class RegisterView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            # Create user
-            user = User.objects.create_user(
+            user = User(
                 username=username,
                 email=email,
-                password=password
+                is_active=True
             )
+            user.set_password(password)  
+            user.save()
             
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
