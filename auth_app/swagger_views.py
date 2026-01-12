@@ -8,6 +8,8 @@ from django.contrib.auth import authenticate, get_user_model
 from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.core.mail import send_mail
+from django.conf import settings
 import pyotp
 
 User = get_user_model()

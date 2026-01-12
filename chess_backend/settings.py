@@ -131,7 +131,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Email settings (console for demo)
+# Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
@@ -139,7 +139,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'kbishal177@gmail.com'  
 EMAIL_HOST_PASSWORD = 'ypbn oyui lktw rrxv'
 
-DEFAULT_FROM_EMAIL = 'your-email@gmail.com'
+DEFAULT_FROM_EMAIL = 'kbishal177@gmail.com'
 
 # Firebase Configuration (optional)
 FIREBASE_API_KEY = ''
