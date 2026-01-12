@@ -18,7 +18,6 @@ except:
     ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
-    # REMOVED: 'daphne', 'channels' - causing issues on Termux
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -30,7 +29,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework.authtoken',
-    'drf_yasg',  # Swagger
+    'drf_yasg',  
     
     # Local
     'auth_app',
@@ -96,7 +95,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'chess_backend.wsgi.application'
-# REMOVED: ASGI_APPLICATION = 'chess_backend.asgi.application'
+
 
 DATABASES = {
     'default': {
@@ -133,7 +132,14 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Email settings (console for demo)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'kbishal177@gmail.com'  
+EMAIL_HOST_PASSWORD = 'ypbn oyui lktw rrxv'
+
+DEFAULT_FROM_EMAIL = 'your-email@gmail.com'
 
 # Firebase Configuration (optional)
 FIREBASE_API_KEY = ''
