@@ -3,7 +3,7 @@ from .swagger_views import (
     RegisterView, LoginView, LogoutView, 
     SendOTPView, VerifyOTPView, ResetPasswordView,VerifyEmailTokenView,
     SendVerificationEmailView,
-    TokenVerifyView, ChangePasswordView,
+    TokenVerifyView,
     GuestRegisterView, HealthCheckView, FirebaseAuthView
 )
 
@@ -17,7 +17,7 @@ urlpatterns = [
     path('send-otp/', SendOTPView.as_view(), name='send_otp'),
     path('verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset_password'),
-    path('change-password/', ChangePasswordView.as_view(), name='change_password'),
+    
     
     # Social & Guest Auth
     path('firebase-login/', FirebaseAuthView.as_view(), name='firebase_login'),

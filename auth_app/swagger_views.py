@@ -545,69 +545,6 @@ class TokenVerifyView(APIView):
             }, status=status.HTTP_401_UNAUTHORIZED)
 
 
-
-
-# ========== CHANGE PASSWORD ==========
-class ChangePasswordView(APIView):
-    """
-    Change password for authenticated user
-    """
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request):
-        """Change password"""
-        old_password = request.data.get('old_password')
-        new_password = request.data.get('new_password')
-        
-        if not old_password or not new_password:
-            return Response({
-                'success': False,
-                'message': 'Old password and new password are required'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        user = request.user
-        
-        # Check if user has a usable password
-        if not user.has_usable_password():
-            # User has no password (guest user or password not set)
-            # Allow setting password without old password verification
-            if len(new_password) < 6:
-                return Response({
-                    'success': False,
-                    'message': 'New password must be at least 6 characters'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            user.set_password(new_password)
-            user.save()
-            
-            return Response({
-                'success': True,
-                'message': 'Password set successfully (user had no previous password)'
-            }, status=status.HTTP_200_OK)
-        
-        # User has a password, verify old one
-        if not user.check_password(old_password):
-            return Response({
-                'success': False,
-                'message': 'Old password is incorrect'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Validate new password
-        if len(new_password) < 6:
-            return Response({
-                'success': False,
-                'message': 'New password must be at least 6 characters'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Change password
-        user.set_password(new_password)
-        user.save()
-        
-        return Response({
-            'success': True,
-            'message': 'Password changed successfully'
-        }, status=status.HTTP_200_OK)
-
 # ========== GUEST REGISTRATION (for your Flutter app) ==========
 class GuestRegisterView(APIView):
     """
