@@ -14,7 +14,7 @@ try:
     ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 except:
     SECRET_KEY = 'chess-game-bishal-2024-termux-key'
-    DEBUG = True
+    DEBUG = False
     ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
