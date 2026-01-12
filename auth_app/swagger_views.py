@@ -749,22 +749,47 @@ class SendOTPView(APIView):
             from .models import OTP
             otp_obj = OTP.generate_otp(user, purpose='password_reset')
             
-            # For demo - print OTP to console
-            # In production, send email
-            print(f"OTP for {email}: {otp_obj.otp_code}")
-            
-            return Response({
-                'success': True,
-                'message': f'OTP sent to {email} (demo mode)',
-                'debug_otp': otp_obj.otp_code,  # Remove in production!
-                'expires_in': 600  # 10 minutes
-            }, status=status.HTTP_200_OK)
+            # Try to send email
+            try:
+                subject = "Password Reset OTP - Chess Game"
+                message = f"Your OTP for password reset is: {otp_obj.otp_code}\n\nThis OTP will expire in 10 minutes."
+                
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+                
+                return Response({
+                    'success': True,
+                    'message': f'OTP sent to {email}',
+                    'expires_in': 600  # 10 minutes
+                }, status=status.HTTP_200_OK)
+                
+            except Exception as email_error:
+                # If email fails, fallback to console and include debug OTP
+                print(f"Email sending failed: {str(email_error)}")
+                print(f"OTP for {email}: {otp_obj.otp_code}")
+                
+                return Response({
+                    'success': True,
+                    'message': f'OTP generated but email failed: {str(email_error)}',
+                    'debug_otp': otp_obj.otp_code,  # For debugging only
+                    'expires_in': 600
+                }, status=status.HTTP_200_OK)
             
         except User.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'No user found with this email'
             }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ========== VERIFY OTP ==========
