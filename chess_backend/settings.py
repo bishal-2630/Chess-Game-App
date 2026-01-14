@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     
     # Local
     'auth_app',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -105,6 +106,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'chess_backend.wsgi.application'
+ASGI_APPLICATION = 'chess_backend.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
 
 DATABASES = {
