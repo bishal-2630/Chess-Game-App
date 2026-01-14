@@ -38,6 +38,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -81,7 +82,7 @@ ROOT_URLCONF = 'chess_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR.parent / 'chess_game' / 'build' / 'web'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -128,6 +129,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+STATICFILES_DIRS = [
+    BASE_DIR.parent / 'chess_game' / 'build' / 'web',
+]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

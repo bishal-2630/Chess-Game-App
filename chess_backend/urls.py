@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
+from django.views.generic import TemplateView
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -29,4 +30,7 @@ urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('swagger.json/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    
+    # Root URL - Serve Flutter App
+    path('', TemplateView.as_view(template_name='index.html')),
 ]
