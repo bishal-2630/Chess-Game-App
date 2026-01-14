@@ -14,16 +14,17 @@ try:
     ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
 # Debugging Paths
+except:
+    SECRET_KEY = 'chess-game-bishal-2024-termux-key'
+    DEBUG = False
+    ALLOWED_HOSTS = ['*']
+
+# Debugging Paths
 print(f"DEBUG: BASE_DIR = {BASE_DIR}")
 FLUTTER_WEB_DIR = BASE_DIR / 'chess_game' / 'build' / 'web'
 print(f"DEBUG: FLUTTER_WEB_DIR = {FLUTTER_WEB_DIR}")
 print(f"DEBUG: FLUTTER_WEB_DIR Exists? {FLUTTER_WEB_DIR.exists()}")
 print(f"DEBUG: Index HTML Exists? {(FLUTTER_WEB_DIR / 'index.html').exists()}")
-
-except:
-    SECRET_KEY = 'chess-game-bishal-2024-termux-key'
-    DEBUG = False
-    ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
