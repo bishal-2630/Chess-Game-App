@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Use config or fallback values
 try:
     SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
-    DEBUG = config('DEBUG', default=True, cast=bool)
+    DEBUG = config('DEBUG', default=False, cast=bool)
     ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 except:
     SECRET_KEY = 'chess-game-bishal-2024-termux-key'
