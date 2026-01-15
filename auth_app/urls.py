@@ -1,12 +1,12 @@
 from django.urls import path
 from .swagger_views import (
-    RegisterView, LoginView, LogoutView, 
+    RegisterView, LoginView, LogoutView,
     SendOTPView, VerifyOTPView, ResetPasswordView,VerifyEmailTokenView,
     SendVerificationEmailView,
     TokenVerifyView,
-    GuestRegisterView, HealthCheckView, FirebaseAuthView,
-    ConnectivityCheckView
+    GuestRegisterView, HealthCheckView, FirebaseAuthView
 )
+from .views import ConnectivityCheckView
 
 urlpatterns = [
     # Core Authentication
