@@ -7,12 +7,19 @@ class AuthAppConfig(AppConfig):
     name = 'auth_app'
 
     def ready(self):
-        # Only run migrations in the main process, not in reloaders or management commands
-        if os.environ.get('RUN_MAIN') == 'true' or 'daphne' in sys.argv or 'runserver' in sys.argv:
-            print("--- AuthApp: Triggering Auto-Migration ---")
-            try:
-                from django.core.management import call_command
-                call_command('migrate', interactive=False)
-                print("--- AuthApp: Auto-Migration Successful ---")
-            except Exception as e:
-                print(f"--- AuthApp: Auto-Migration Failed: {e} ---")
+        print(f"DEBUG: AuthApp ready() called. sys.argv = {sys.argv}")
+        # Auto-run migrations on startup, but avoid recursion if already migrating
+        if 'migrate' in sys.argv or 'makemigrations' in sys.argv or 'collectstatic' in sys.argv:
+            print("DEBUG: Skipping auto-migration because management command is running.")
+            return
+
+        print("--- AuthApp: Attempting Auto-Migration ---")
+        try:
+            from django.core.management import call_command
+            # Ensure tables are created
+            call_command('migrate', interactive=False)
+            print("--- AuthApp: Auto-Migration Successful ---")
+        except Exception as e:
+            print(f"--- AuthApp: Auto-Migration Failed: {e} ---")
+            import traceback
+            print(traceback.format_exc())
