@@ -1055,13 +1055,13 @@ class FirebaseAuthView(APIView):
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
+            import traceback
             error_traceback = traceback.format_exc()
             print(f"ERROR in FirebaseAuthView: {str(e)}")
             print(error_traceback)
             return Response(
                 {
-                    "detail": f"Authentication failed: {str(e)}",
-                    "traceback": error_traceback
+                    "detail": f"Authentication failed: {str(e)}"
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

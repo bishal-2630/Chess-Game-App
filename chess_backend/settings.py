@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'drf_yasg',  
     
     # Local
-    'auth_app',
+    'auth_app.apps.AuthAppConfig',
     'channels',
 ]
 
