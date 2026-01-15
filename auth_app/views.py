@@ -45,6 +45,14 @@ class ConnectivityCheckView(APIView):
         except Exception as e:
             results['smtp_465'] = f"Unreachable: {str(e)}"
             
+        # Test SMTP Port 2525
+        try:
+            s = socket.create_connection(("smtp.gmail.com", 2525), timeout=5)
+            results['smtp_2525'] = "Reachable"
+            s.close()
+        except Exception as e:
+            results['smtp_2525'] = f"Unreachable: {str(e)}"
+            
         return Response(results)
 
 User = get_user_model()
