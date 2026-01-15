@@ -11,6 +11,9 @@ from drf_yasg import openapi
 from django.core.mail import send_mail
 from django.conf import settings
 import pyotp
+import requests
+import traceback
+from .serializers import FirebaseAuthSerializer
 
 User = get_user_model()
 
@@ -922,52 +925,143 @@ class ResetPasswordView(APIView):
 # ========== FIREBASE AUTH ==========
 class FirebaseAuthView(APIView):
     """
-    Firebase authentication (demo - returns guest user)
+    Firebase authentication and session synchronization
     """
     permission_classes = [AllowAny]
     
     @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['firebase_token'],
-            properties={
-                'firebase_token': openapi.Schema(type=openapi.TYPE_STRING),
-            }
-        ),
-        responses={200: 'Firebase auth successful'}
+        request_body=FirebaseAuthSerializer,
+        responses={
+            200: openapi.Response(
+                'Authentication successful',
+                examples={
+                    'application/json': {
+                        'access': 'eyJhbGciOi...',
+                        'refresh': 'eyJhbGciOi...',
+                        'user': {
+                            'id': 1,
+                            'username': 'bishal',
+                            'email': 'kbishal177@gmail.com'
+                        }
+                    }
+                }
+            ),
+            401: openapi.Response('Invalid Firebase token')
+        }
     )
     def post(self, request):
-        # For demo - create a guest-like user
-        # In production, verify Firebase token
+        serializer = FirebaseAuthSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        import time
-        guest_username = f"FirebaseUser_{int(time.time())}"
+        firebase_token = serializer.validated_data['firebase_token']
         
-        user, created = User.objects.get_or_create(
-            username=guest_username,
-            defaults={
-                'email': f"{guest_username}@firebase.demo",
-                'password': None
-            }
-        )
-        
-        if created:
-            user.set_unusable_password()
-            user.save()
-        
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            'success': True,
-            'message': 'Firebase authentication (demo)',
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'is_firebase_user': True
-            },
-            'tokens': {
-                'access': str(refresh.access_token),
-                'refresh': str(refresh)
-            }
-        })
+        try:
+            print(f"DEBUG: Verifying Firebase token...")
+            # Verify Firebase token using Firebase REST API
+            api_key = settings.FIREBASE_API_KEY
+            verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={api_key}"
+            
+            response = requests.post(verify_url, json={"idToken": firebase_token})
+            response_data = response.json()
+            
+            if response.status_code != 200:
+                print(f"DEBUG: Firebase token verification failed: {response_data}")
+                return Response(
+                    {"detail": "Invalid Firebase token."},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            user_info = response_data['users'][0]
+            firebase_uid = user_info['localId']
+            email = user_info.get('email')
+            display_name = user_info.get('displayName', '')
+            
+            print(f"DEBUG: User Info from Firebase: UID={firebase_uid}, Email={email}")
+            
+            if not email:
+                return Response(
+                    {"detail": "Email not found in Firebase token."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get or create user
+            try:
+                user = User.objects.get(firebase_uid=firebase_uid)
+                print(f"DEBUG: Found user by UID: {user.username}")
+            except User.DoesNotExist:
+                try:
+                    user = User.objects.get(email=email)
+                    user.firebase_uid = firebase_uid
+                    user.save()
+                    print(f"DEBUG: found user by email and updated UID: {user.username}")
+                except User.DoesNotExist:
+                    print(f"DEBUG: Creating new user for: {email}")
+                    # Create username from email
+                    username = email.split('@')[0]
+                    base_username = username
+                    counter = 1
+                    
+                    # Ensure unique username
+                    while User.objects.filter(username=username).exists():
+                        username = f"{base_username}{counter}"
+                        counter += 1
+                    
+                    # Parse display name
+                    first_name = ''
+                    last_name = ''
+                    if display_name:
+                        name_parts = display_name.split()
+                        if len(name_parts) > 0:
+                            first_name = name_parts[0]
+                        if len(name_parts) > 1:
+                            last_name = ' '.join(name_parts[1:])
+                    
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=None,  # Firebase users don't have Django passwords
+                        first_name=first_name,
+                        last_name=last_name,
+                        firebase_uid=firebase_uid
+                    )
+            
+            # Login the user to create a session and sessionid cookie
+            print(f"DEBUG: Attempting session login for user: {user.username}")
+            from django.contrib.auth import login
+            if user is not None:
+                # Specify the backend manually since we didn't use authenticate()
+                user.backend = 'django.contrib.auth.backends.ModelBackend'
+                login(request, user)
+                print(f"DEBUG: Session login successful for user: {user.username}")
+            
+            # Generate JWT token for Django API access
+            from rest_framework_simplejwt.tokens import RefreshToken
+            
+            print(f"DEBUG: Generating JWT token for user: {user.username}")
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "firebase_uid": user.firebase_uid
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            error_traceback = traceback.format_exc()
+            print(f"ERROR in FirebaseAuthView: {str(e)}")
+            print(error_traceback)
+            return Response(
+                {
+                    "detail": f"Authentication failed: {str(e)}",
+                    "traceback": error_traceback
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -172,8 +172,8 @@ EMAIL_HOST_PASSWORD = 'ypbn oyui lktw rrxv'
 DEFAULT_FROM_EMAIL = 'kbishal177@gmail.com'
 
 # Firebase Configuration (optional)
-FIREBASE_API_KEY = ''
-FIREBASE_WEB_API_KEY = ''
+FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')
+FIREBASE_WEB_API_KEY = config('FIREBASE_WEB_API_KEY', default='')
 
 # JWT Configuration
 from datetime import timedelta
