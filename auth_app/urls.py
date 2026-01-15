@@ -4,7 +4,8 @@ from .swagger_views import (
     SendOTPView, VerifyOTPView, ResetPasswordView,VerifyEmailTokenView,
     SendVerificationEmailView,
     TokenVerifyView,
-    GuestRegisterView, HealthCheckView, FirebaseAuthView
+    GuestRegisterView, HealthCheckView, FirebaseAuthView,
+    ConnectivityCheckView
 )
 
 urlpatterns = [
@@ -12,6 +13,9 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    
+    # Debug/Networking
+    path('debug/network/', ConnectivityCheckView.as_view(), name='network_check'),
     
     # Password Management
     path('send-otp/', SendOTPView.as_view(), name='send_otp'),

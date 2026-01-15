@@ -16,6 +16,37 @@ from .serializers import (
     FirebaseAuthSerializer
 )
 
+class ConnectivityCheckView(APIView):
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request):
+        results = {}
+        # Test Google HTTP
+        try:
+            r = requests.get("https://google.com", timeout=5)
+            results['google_http'] = f"Success ({r.status_code})"
+        except Exception as e:
+            results['google_http'] = f"Failed: {str(e)}"
+            
+        # Test SMTP Port 587
+        import socket
+        try:
+            s = socket.create_connection(("smtp.gmail.com", 587), timeout=5)
+            results['smtp_587'] = "Reachable"
+            s.close()
+        except Exception as e:
+            results['smtp_587'] = f"Unreachable: {str(e)}"
+
+        # Test SMTP Port 465
+        try:
+            s = socket.create_connection(("smtp.gmail.com", 465), timeout=5)
+            results['smtp_465'] = "Reachable"
+            s.close()
+        except Exception as e:
+            results['smtp_465'] = f"Unreachable: {str(e)}"
+            
+        return Response(results)
+
 User = get_user_model()
 
 class SendOTPView(APIView):
