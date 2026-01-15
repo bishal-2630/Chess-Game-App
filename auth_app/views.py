@@ -52,13 +52,16 @@ class SendOTPView(APIView):
             # For development, print OTP to console
             print(f"DEBUG OTP: {otp_obj.otp_code} (valid for 10 minutes)")
             
-            # Try to send email
-            try:
-                subject = "Password Reset OTP - Chess Game"
-                message = f"""
+            # Try to send email in background
+            import threading
+            
+            def send_otp_email(user, email, otp_code):
+                try:
+                    subject = "Password Reset OTP - Chess Game"
+                    message = f"""
 Dear {user.username},
 
-Your password reset OTP is: {otp_obj.otp_code}
+Your password reset OTP is: {otp_code}
 
 This OTP will expire in 10 minutes.
 
@@ -67,35 +70,30 @@ If you didn't request this, please ignore this email.
 Best regards,
 Chess Game Team
 """
-                
-                # Send email
-                send_mail(
-                    subject=subject,
-                    message=message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[email],
-                    fail_silently=False,
-                )
-                
-                print(f"Email sent to {email}")
-                
-                return Response({
-                    "success": True,
-                    "message": "OTP sent successfully to your email.",
-                    "email": email,
-                    "expires_in": 600
-                }, status=status.HTTP_200_OK)
-                
-            except Exception as email_error:
-                print(f"Email sending failed: {str(email_error)}")
-                # Still return success since OTP is generated (for testing)
-                return Response({
-                    "success": True,
-                    "message": f"OTP generated: {otp_obj.otp_code} (Email failed: {str(email_error)})",
-                    "email": email,
-                    "expires_in": 600,
-                    "debug_otp": otp_obj.otp_code  # For testing only
-                }, status=status.HTTP_200_OK)
+                    send_mail(
+                        subject=subject,
+                        message=message,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],
+                        fail_silently=False,
+                    )
+                    print(f"✅ Background Email sent successfully to {email}")
+                except Exception as e:
+                    print(f"❌ Background Email sending failed for {email}: {str(e)}")
+
+            # Start background thread
+            email_thread = threading.Thread(
+                target=send_otp_email,
+                args=(user, email, otp_obj.otp_code)
+            )
+            email_thread.start()
+            
+            return Response({
+                "success": True,
+                "message": "OTP generated. Please check your email (and spam folder) in a few moments.",
+                "email": email,
+                "expires_in": 600
+            }, status=status.HTTP_200_OK)
                 
         except Exception as e:
             print(f"Error in SendOTPView: {str(e)}")
@@ -248,7 +246,7 @@ class FirebaseAuthView(APIView):
             api_key = settings.FIREBASE_API_KEY
             verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={api_key}"
             
-            response = requests.post(verify_url, json={"idToken": firebase_token})
+            response = requests.post(verify_url, json={"idToken": firebase_token}, timeout=10)
             response_data = response.json()
             
             if response.status_code != 200:

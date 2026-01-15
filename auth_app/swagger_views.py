@@ -752,36 +752,37 @@ class SendOTPView(APIView):
             from .models import OTP
             otp_obj = OTP.generate_otp(user, purpose='password_reset')
             
-            # Try to send email
-            try:
-                subject = "Password Reset OTP - Chess Game"
-                message = f"Your OTP for password reset is: {otp_obj.otp_code}\n\nThis OTP will expire in 10 minutes."
-                
-                send_mail(
-                    subject=subject,
-                    message=message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[email],
-                    fail_silently=False,
-                )
-                
-                return Response({
-                    'success': True,
-                    'message': f'OTP sent to {email}',
-                    'expires_in': 600  # 10 minutes
-                }, status=status.HTTP_200_OK)
-                
-            except Exception as email_error:
-                # If email fails, fallback to console and include debug OTP
-                print(f"Email sending failed: {str(email_error)}")
-                print(f"OTP for {email}: {otp_obj.otp_code}")
-                
-                return Response({
-                    'success': True,
-                    'message': f'OTP generated but email failed: {str(email_error)}',
-                    'debug_otp': otp_obj.otp_code,  # For debugging only
-                    'expires_in': 600
-                }, status=status.HTTP_200_OK)
+            # Try to send email in background
+            import threading
+            
+            def send_otp_email(email_addr, otp_code):
+                try:
+                    subject = "Password Reset OTP - Chess Game"
+                    message = f"Your OTP for password reset is: {otp_code}\n\nThis OTP will expire in 10 minutes."
+                    
+                    send_mail(
+                        subject=subject,
+                        message=message,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email_addr],
+                        fail_silently=False,
+                    )
+                    print(f"✅ Background Email sent successfully to {email_addr}")
+                except Exception as e:
+                    print(f"❌ Background Email sending failed for {email_addr}: {str(e)}")
+
+            # Start background thread
+            email_thread = threading.Thread(
+                target=send_otp_email,
+                args=(email, otp_obj.otp_code)
+            )
+            email_thread.start()
+            
+            return Response({
+                'success': True,
+                'message': f'OTP generated. Please check your email (and spam folder) in a few moments.',
+                'expires_in': 600
+            }, status=status.HTTP_200_OK)
             
         except User.DoesNotExist:
             return Response({

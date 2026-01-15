@@ -13,6 +13,9 @@ try:
     SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
     DEBUG = config('DEBUG', default=False, cast=bool)
     ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
+    RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-production.up.railway.app')
+    if RAILWAY_HOSTNAME:
+        ALLOWED_HOSTS.append(RAILWAY_HOSTNAME)
 
 # Debugging Paths
 except:
@@ -69,6 +72,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://chessgameauth.share.zrok.io",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "https://chess-game-app-production.up.railway.app",
 ]
 
 # For Swagger to work with zrok
@@ -219,7 +223,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.ngrok.io",
     "https://*.loca.lt",
     "http://localhost:8080",  
-    "http://127.0.0.1:8080",  
+    "http://127.0.0.1:8080",
+    "https://chess-game-app-production.up.railway.app",
 ]
 
 # ADD THIS FOR SWAGGER TO WORK WITH ZROK
