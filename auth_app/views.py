@@ -53,6 +53,19 @@ class ConnectivityCheckView(APIView):
         except Exception as e:
             results['smtp_2525'] = f"Unreachable: {str(e)}"
             
+        # Test Firebase API
+        api_key = settings.FIREBASE_API_KEY
+        if not api_key:
+            results['firebase_config'] = "MISSING (FIREBASE_API_KEY is empty)"
+        else:
+            results['firebase_config'] = f"Present (starts with {api_key[:4]}...)"
+            try:
+                # Just a simple check to see if the domain is reachable
+                r = requests.get("https://identitytoolkit.googleapis.com/generateMobileSdkConfig", timeout=5)
+                results['firebase_api_domain'] = f"Reachable ({r.status_code})"
+            except Exception as e:
+                results['firebase_api_domain'] = f"Unreachable: {str(e)}"
+            
         return Response(results)
 
 User = get_user_model()
