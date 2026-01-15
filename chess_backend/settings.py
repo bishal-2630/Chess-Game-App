@@ -19,13 +19,8 @@ except:
     DEBUG = False
     ALLOWED_HOSTS = ['*']
 
-# Debugging Paths
-print(f"DEBUG: BASE_DIR = {BASE_DIR}")
+# Flutter Web Directory
 FLUTTER_WEB_DIR = BASE_DIR / 'chess_game' / 'build' / 'web'
-print(f"DEBUG: FLUTTER_WEB_DIR = {FLUTTER_WEB_DIR}")
-print(f"DEBUG: FLUTTER_WEB_DIR Exists? {FLUTTER_WEB_DIR.exists()}")
-print(f"DEBUG: Index HTML Exists? {(FLUTTER_WEB_DIR / 'index.html').exists()}")
-print(f"DEBUG: DB_PATH = {BASE_DIR / 'db.sqlite3'}")
 
 INSTALLED_APPS = [
     'django.contrib.admin',

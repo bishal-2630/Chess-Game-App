@@ -7,10 +7,8 @@ class AuthAppConfig(AppConfig):
     name = 'auth_app'
 
     def ready(self):
-        print(f"DEBUG: AuthApp ready() called. sys.argv = {sys.argv}")
         # Auto-run migrations on startup, but avoid recursion if already migrating
         if 'migrate' in sys.argv or 'makemigrations' in sys.argv or 'collectstatic' in sys.argv:
-            print("DEBUG: Skipping auto-migration because management command is running.")
             return
 
         print("--- AuthApp: Attempting Auto-Migration ---")
