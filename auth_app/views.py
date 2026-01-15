@@ -305,6 +305,13 @@ class FirebaseAuthView(APIView):
                         firebase_uid=firebase_uid
                     )
             
+            # Login the user to create a session and sessionid cookie
+            from django.contrib.auth import login
+            if user is not None:
+                # Specify the backend manually since we didn't use authenticate()
+                user.backend = 'django.contrib.auth.backends.ModelBackend'
+                login(request, user)
+            
             # Generate JWT token for Django API access
             from rest_framework_simplejwt.tokens import RefreshToken
             
