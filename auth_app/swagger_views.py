@@ -752,6 +752,9 @@ class SendOTPView(APIView):
             from .models import OTP
             otp_obj = OTP.generate_otp(user, purpose='password_reset')
             
+            # CLEAR LOG FOR USER
+            print(f"\n🚀 [OTP FOR {email}]: {otp_obj.otp_code} 🚀\n")
+            
             # Try to send email in background
             import threading
             
