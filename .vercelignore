@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+local_settings.py
+
+# Flutter
+chess_game/.dart_tool/
+chess_game/.flutter-plugins
+chess_game/.flutter-plugins-dependencies
+chess_game/.packages
+chess_game/.pub-cache/
+chess_game/.pub/
+chess_game/build/
+chess_game/.idea/
+chess_game/*.iml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Android/iOS build files
+chess_game/android/.gradle/
+chess_game/android/app/build/
+chess_game/ios/Pods/
+chess_game/ios/.symlinks/
+chess_game/ios/Flutter/Flutter.framework/
+chess_game/ios/Flutter/Flutter.podspec
+
+# Test files
+test/
+tests/
+*.test.py
+
+# Documentation
+*.md
+README.md

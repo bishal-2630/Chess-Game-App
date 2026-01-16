@@ -16,12 +16,23 @@ try:
     RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-production.up.railway.app')
     if RAILWAY_HOSTNAME:
         ALLOWED_HOSTS.append(RAILWAY_HOSTNAME)
+    
+    # Vercel hostname support
+    VERCEL_URL = os.environ.get('VERCEL_URL')
+    if VERCEL_URL:
+        ALLOWED_HOSTS.append(VERCEL_URL)
+        ALLOWED_HOSTS.append(f'*.{VERCEL_URL.split(".", 1)[-1]}' if '.' in VERCEL_URL else VERCEL_URL)
 
 # Debugging Paths
 except:
     SECRET_KEY = 'chess-game-bishal-2024-termux-key'
     DEBUG = False
     ALLOWED_HOSTS = ['*']
+
+# Add Vercel URLs to ALLOWED_HOSTS if not already added
+VERCEL_URL = os.environ.get('VERCEL_URL')
+if VERCEL_URL and VERCEL_URL not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(VERCEL_URL)
 
 # Flutter Web Directory
 FLUTTER_WEB_DIR = BASE_DIR / 'chess_game' / 'build' / 'web'
@@ -62,7 +73,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 
-# CORS settings - ADD SPECIFIC ORIGINS FOR ZROK
+# CORS settings - ADD SPECIFIC ORIGINS FOR ZROK and Vercel
 CORS_ALLOW_ALL_ORIGINS = True  # Keep this for testing
 CORS_ALLOW_CREDENTIALS = True
 
@@ -73,7 +84,15 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "https://chess-game-app-production.up.railway.app",
+    "https://*.vercel.app",
 ]
+
+# Add Vercel URL to CORS_ALLOWED_ORIGINS
+VERCEL_URL = os.environ.get('VERCEL_URL')
+if VERCEL_URL:
+    vercel_origin = f"https://{VERCEL_URL}" if not VERCEL_URL.startswith('http') else VERCEL_URL
+    if vercel_origin not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(vercel_origin)
 
 # For Swagger to work with zrok
 CORS_ALLOW_HEADERS = [
@@ -165,9 +184,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'kbishal177@gmail.com')
 
-# Firebase Configuration (optional)
+# Firebase Configuration 
 FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')
 FIREBASE_WEB_API_KEY = config('FIREBASE_WEB_API_KEY', default='')
+
 
 # JWT Configuration
 from datetime import timedelta
@@ -186,11 +206,11 @@ REST_FRAMEWORK = {
         
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # Allow all for demo
+        'rest_framework.permissions.AllowAny',  
     ],
 }
 
-# Swagger Settings - ADD SWAGGER UI FIX FOR ZROK
+# Swagger Settings 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'Bearer': {
@@ -202,11 +222,10 @@ SWAGGER_SETTINGS = {
     },
     'USE_SESSION_AUTH': False,
     'VALIDATOR_URL': None,
-    # Add this for zrok compatibility
     'DEFAULT_API_URL': 'https://chessgameauth.share.zrok.io',
 }
 
-# For Zrok/ngrok - UPDATE WITH YOUR EXACT URL
+# For Zrok/ngrok and Vercel
 CSRF_TRUSTED_ORIGINS = [
     "https://chessgameauth.share.zrok.io",
     "http://chessgameauth.share.zrok.io",  
@@ -217,8 +236,16 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8080",  
     "http://127.0.0.1:8080",
     #"https://chess-game-app-production.up.railway.app",
-    "https://chessgame-wheat.vercel.app/",
+    "https://chessgame-wheat.vercel.app",
+    "https://*.vercel.app",
 ]
 
-# ADD THIS FOR SWAGGER TO WORK WITH ZROK
+# Add Vercel URL to CSRF_TRUSTED_ORIGINS
+VERCEL_URL = os.environ.get('VERCEL_URL')
+if VERCEL_URL:
+    vercel_origin = f"https://{VERCEL_URL}" if not VERCEL_URL.startswith('http') else VERCEL_URL
+    if vercel_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(vercel_origin)
+
+# SWAGGER TO WORK WITH ZROK
 SWAGGER_UI_OAUTH2_REDIRECT_URL = 'https://chessgameauth.share.zrok.io/swagger/oauth2-redirect.html'
