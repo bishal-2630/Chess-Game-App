@@ -9,23 +9,21 @@ import os
 def serve_flutter_app(request):
     """Serve the Flutter app index.html file"""
     try:
-        # Debug: Print base directory and check paths
-        base_dir = Path(settings.BASE_DIR)
-        index_path = base_dir / 'public' / 'index.html'
+        # In Vercel, files are deployed to /var/task/ directly
+        # Try multiple possible locations
+        possible_paths = [
+            Path('/var/task/index.html'),  # Vercel deployment directory
+            Path(settings.BASE_DIR) / 'public' / 'index.html',  # Local development
+            Path(settings.BASE_DIR) / 'index.html',  # Alternative
+        ]
         
-        # Debug info (will appear in logs)
-        print(f"Base directory: {base_dir}")
-        print(f"Index path: {index_path}")
-        print(f"Index path exists: {index_path.exists()}")
+        index_path = None
+        for path in possible_paths:
+            if path.exists():
+                index_path = path
+                break
         
-        # List contents of public directory for debugging
-        public_dir = base_dir / 'public'
-        if public_dir.exists():
-            print(f"Public directory contents: {list(public_dir.iterdir())}")
-        else:
-            print(f"Public directory does not exist at: {public_dir}")
-        
-        if index_path.exists():
+        if index_path:
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
@@ -33,7 +31,7 @@ def serve_flutter_app(request):
             response = HttpResponse(content, content_type='text/html')
             return response
         else:
-            error_msg = f"Flutter app not found. Looking for: {index_path}"
+            error_msg = f"Flutter app not found. Tried paths: {possible_paths}"
             print(error_msg)
             return HttpResponse(error_msg, status=404)
             
