@@ -1,62 +1,51 @@
 """
 Django views for serving the Flutter app
 """
-from django.http import HttpResponse, HttpResponseNotFound
-from django.conf import settings
+from django.http import HttpResponse
 from pathlib import Path
-import mimetypes
-import os
 
 def serve_flutter_app(request):
-    """Serve the main Flutter app or its assets"""
+    """Serve the Flutter app"""
     try:
-        # Get the requested path
+        # Simple approach: serve index.html for root, try to serve files for other paths
         path = request.path.lstrip('/')
         
-        # If no path, serve index.html
-        if not path:
-            possible_paths = [
-                Path('/var/task/index.html'),
-                Path(settings.BASE_DIR) / 'index.html',
-                Path('index.html'),
-            ]
-            
-            for p in possible_paths:
-                if p.exists():
-                    file_path = p
-                    break
-        else:
-            # Serve assets and other files
-            possible_paths = [
-                Path('/var/task') / path,
-                Path(settings.BASE_DIR) / path,
-                Path(path),
-            ]
-            
-            file_path = None
-            for p in possible_paths:
-                if p.exists() and p.is_file():
-                    file_path = p
-                    break
-        
-        if file_path:
-            # Determine content type
-            content_type, _ = mimetypes.guess_type(str(file_path))
-            if content_type is None:
-                content_type = 'application/octet-stream'
-            
-            # Read file content
-            if file_path.suffix == '.html':
-                with open(file_path, 'r', encoding='utf-8') as f:
+        if not path or path == '':
+            # Serve index.html for root
+            index_path = Path('index.html')
+            if index_path.exists():
+                with open(index_path, 'r', encoding='utf-8') as f:
                     content = f.read()
+                return HttpResponse(content, content_type='text/html')
             else:
-                with open(file_path, 'rb') as f:
-                    content = f.read()
-            
-            response = HttpResponse(content, content_type=content_type)
-            return response
+                return HttpResponse("index.html not found", status=404)
         else:
-            return HttpResponseNotFound(f"File not found: {path}")
-            
+            # Try to serve the requested file
+            file_path = Path(path)
+            if file_path.exists() and file_path.is_file():
+                # Read as binary for non-HTML files
+                if file_path.suffix.lower() in ['.html', '.htm', '.css', '.js']:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                else:
+                    with open(file_path, 'rb') as f:
+                        content = f.read()
+                
+                # Basic content type detection
+                if file_path.suffix.lower() in ['.js']:
+                    content_type = 'application/javascript'
+                elif file_path.suffix.lower() in ['.css']:
+                    content_type = 'text/css'
+                elif file_path.suffix.lower() in ['.png', '.jpg', '.jpeg', '.gif', '.ico']:
+                    content_type = 'image/*'
+                elif file_path.suffix.lower() in ['.html', '.htm']:
+                    content_type = 'text/html'
+                else:
+                    content_type = 'application/octet-stream'
+                
+                return HttpResponse(content, content_type=content_type)
+            else:
+                return HttpResponse(f"File not found: {path}", status=404)
+                
     except Exception as e:
         return HttpResponse(f"Error: {str(e)}", status=500)
