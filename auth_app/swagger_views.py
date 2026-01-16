@@ -760,48 +760,36 @@ class SendOTPView(APIView):
             
             def send_otp_email(email_addr, otp_code):
                 try:
-                    # Using Elastic Email API for reliable delivery on Railway
                     subject = "Password Reset OTP - Chess Game"
-                    html_content = f"""
-                    <p>Your OTP for password reset is: <strong>{otp_code}</strong></p>
-                    <p>This OTP will expire in 10 minutes.</p>
-                    <p>If you didn't request this, please ignore this email.</p>
-                    <p>Best regards,<br>Chess Game Team</p>
+                    message = f"""
+                    Your OTP for password reset is: {otp_code}
+                    
+                    This OTP will expire in 10 minutes.
+                    
+                    If you didn't request this, please ignore this email.
+                    
+                    Best regards,
+                    Chess Game Team
                     """
                     
-                    api_key = getattr(settings, 'ELASTIC_EMAIL_API_KEY', '')
-                    if not api_key:
-                        print("❌ Elastic Email API Key is missing in settings")
-                        return
-
-                    response = requests.post(
-                        "https://api.elasticemail.com/v4/emails",
-                        headers={
-                            "X-ElasticEmail-ApiKey": api_key,
-                            "Content-Type": "application/json",
-                        },
-                        json={
-                            "Recipients": [{"Email": email_addr}],
-                            "Content": {
-                                "Body": [
-                                    {
-                                        "ContentType": "HTML",
-                                        "Content": html_content
-                                    }
-                                ],
-                                "From": settings.DEFAULT_FROM_EMAIL,
-                                "Subject": subject
-                            }
-                        },
-                        timeout=10
+                    # Use Django's built-in send_mail with Gmail SMTP
+                    send_mail(
+                        subject=subject,
+                        message=message,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email_addr],
+                        fail_silently=False,
+                        html_message=f"""
+                        <p>Your OTP for password reset is: <strong>{otp_code}</strong></p>
+                        <p>This OTP will expire in 10 minutes.</p>
+                        <p>If you didn't request this, please ignore this email.</p>
+                        <p>Best regards,<br>Chess Game Team</p>
+                        """
                     )
                     
-                    if response.status_code in [200, 201]:
-                        print(f"✅ Background Email sent via Elastic Email to {email_addr}")
-                    else:
-                        print(f"❌ Elastic Email API failed: {response.status_code} - {response.text}")
+                    print(f"✅ Email sent via Gmail SMTP to {email_addr}")
                 except Exception as e:
-                    print(f"❌ Background Email sending failed for {email_addr}: {str(e)}")
+                    print(f"❌ Gmail sending failed for {email_addr}: {str(e)}")
 
             # Start background thread
             email_thread = threading.Thread(
