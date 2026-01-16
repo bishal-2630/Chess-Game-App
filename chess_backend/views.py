@@ -13,8 +13,8 @@ def serve_flutter_app(request):
         # Try multiple possible locations
         possible_paths = [
             Path('/var/task/index.html'),  # Vercel deployment directory
-            Path(settings.BASE_DIR) / 'public' / 'index.html',  # Local development
-            Path(settings.BASE_DIR) / 'index.html',  # Alternative
+            Path(settings.BASE_DIR) / 'index.html',  # Local development
+            Path('index.html'),  # Current directory
         ]
         
         index_path = None
@@ -27,7 +27,10 @@ def serve_flutter_app(request):
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # Set the correct content type
+            # Set the correct base href for Vercel deployment
+            content = content.replace('<base href="/">', '<base href="/">')
+            
+            # Set correct content type
             response = HttpResponse(content, content_type='text/html')
             return response
         else:
