@@ -12,8 +12,8 @@ sys.path.insert(0, str(project_root))
 # Set Django settings module
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chess_backend.settings')
 
-# Import Django WSGI application
-from django.core.wsgi import get_wsgi_application
+# Import the WSGI application from chess_backend
+from chess_backend.wsgi import application
 
-# Get the WSGI application - this is what Vercel will use
-application = get_wsgi_application()
+# Vercel Python runtime looks for 'app' variable
+app = application
