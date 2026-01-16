@@ -168,11 +168,12 @@ GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default='')
 GOOGLE_REFRESH_TOKEN = config('GOOGLE_REFRESH_TOKEN', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='kbishal177@gmail.com')
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'kbishal177@gmail.com'  # Your Gmail
-EMAIL_HOST_PASSWORD = 'ypbn oyui lktw rrxv'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
 # Firebase Configuration (optional)
 FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')
