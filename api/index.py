@@ -3,10 +3,13 @@ Vercel serverless function handler for Flutter application
 """
 from django.http import HttpResponse
 
-def handler(request):
-    """Minimal Vercel handler"""
+def handler(environ):
+    """Standard Vercel handler with environ parameter"""
     try:
-        return HttpResponse("Handler working! Path: " + str(request.path), content_type='text/html')
+        # Get path from query string or path info
+        path_info = environ.get('PATH_INFO', '').lstrip('/')
+        
+        return HttpResponse("Handler working! Path: " + path_info, content_type='text/html')
     except Exception as e:
         return HttpResponse(f"Error: {str(e)}", status=500)
 
