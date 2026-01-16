@@ -31,6 +31,9 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('swagger.json/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     
+    # Flutter assets (JS, CSS, images, etc.)
+    re_path(r'^(?P<path>flutter\.js|flutter_bootstrap\.js|main\.dart\.js|assets/.*|canvaskit/.*|icons/.*|favicon\.png|manifest\.json|version\.json)$', views.serve_flutter_assets, name='serve_flutter_assets'),
+    
     # Root URL - Serve Flutter app
     path('', views.serve_flutter_app, name='serve_flutter_app'),
 ]
