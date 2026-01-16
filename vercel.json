@@ -4,17 +4,9 @@
     {
       "src": "api/index.py",
       "use": "@vercel/python"
-    },
-    {
-      "src": "api/health.py",
-      "use": "@vercel/python"
     }
   ],
   "routes": [
-    {
-      "src": "/health",
-      "dest": "api/health.py"
-    },
     {
       "src": "/api/(.*)",
       "dest": "api/index.py"
@@ -34,10 +26,6 @@
     {
       "src": "/static/(.*)",
       "dest": "api/index.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
     }
   ],
   "env": {
