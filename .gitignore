@@ -25,6 +25,12 @@ media/
 .DS_Store
 Thumbs.db
 
-# Personal files
-kbishal177@gmail.com
+# Environment variables - CRITICAL - KEEP THESE!
 .env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*
+!.env.example
+

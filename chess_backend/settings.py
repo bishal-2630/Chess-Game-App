@@ -163,16 +163,9 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Email settings
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'kbishal177@gmail.com'  
-# EMAIL_HOST_PASSWORD = 'ypbn oyui lktw rrxv'
-
-# Elastic Email API Configuration (for Railway compatibility)
-ELASTIC_EMAIL_API_KEY = config('ELASTIC_EMAIL_API_KEY', default='')
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default='')
+GOOGLE_REFRESH_TOKEN = config('GOOGLE_REFRESH_TOKEN', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='kbishal177@gmail.com')
 
 # Firebase Configuration (optional)
