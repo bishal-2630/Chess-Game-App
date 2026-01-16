@@ -109,27 +109,40 @@ class SendOTPView(APIView):
             
             def send_otp_email(user, email, otp_code):
                 try:
+                    # Using Resend API for reliable delivery on Railway
                     subject = "Password Reset OTP - Chess Game"
-                    message = f"""
-Dear {user.username},
+                    html_content = f"""
+                    <p>Dear {user.username},</p>
+                    <p>Your password reset OTP is: <strong>{otp_code}</strong></p>
+                    <p>This OTP will expire in 10 minutes.</p>
+                    <p>If you didn't request this, please ignore this email.</p>
+                    <p>Best regards,<br>Chess Game Team</p>
+                    """
+                    
+                    api_key = getattr(settings, 'RESEND_API_KEY', '')
+                    if not api_key:
+                        print("❌ Resend API Key is missing in settings")
+                        return
 
-Your password reset OTP is: {otp_code}
-
-This OTP will expire in 10 minutes.
-
-If you didn't request this, please ignore this email.
-
-Best regards,
-Chess Game Team
-"""
-                    send_mail(
-                        subject=subject,
-                        message=message,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[email],
-                        fail_silently=False,
+                    response = requests.post(
+                        "https://api.resend.com/emails",
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "from": settings.DEFAULT_FROM_EMAIL,
+                            "to": [email],
+                            "subject": subject,
+                            "html": html_content,
+                        },
+                        timeout=10
                     )
-                    print(f"✅ Background Email sent successfully to {email}")
+                    
+                    if response.status_code in [200, 201]:
+                        print(f"✅ Background Email sent via Resend to {email}")
+                    else:
+                        print(f"❌ Resend API failed: {response.status_code} - {response.text}")
                 except Exception as e:
                     print(f"❌ Background Email sending failed for {email}: {str(e)}")
 

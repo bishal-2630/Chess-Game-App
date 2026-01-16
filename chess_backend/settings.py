@@ -164,14 +164,17 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Email settings
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'kbishal177@gmail.com'  
-EMAIL_HOST_PASSWORD = 'ypbn oyui lktw rrxv'
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'kbishal177@gmail.com'  
+# EMAIL_HOST_PASSWORD = 'ypbn oyui lktw rrxv'
 
-DEFAULT_FROM_EMAIL = 'kbishal177@gmail.com'
+# Resend API Configuration (for Railway compatibility)
+RESEND_API_KEY = config('RESEND_API_KEY', default='')
+RESEND_FROM_EMAIL = 'onboarding@resend.dev'  # Default for testing, or your verified domain
+DEFAULT_FROM_EMAIL = RESEND_FROM_EMAIL
 
 # Firebase Configuration (optional)
 FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')
