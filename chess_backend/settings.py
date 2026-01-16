@@ -171,10 +171,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # EMAIL_HOST_USER = 'kbishal177@gmail.com'  
 # EMAIL_HOST_PASSWORD = 'ypbn oyui lktw rrxv'
 
-# Resend API Configuration (for Railway compatibility)
-RESEND_API_KEY = config('RESEND_API_KEY', default='')
-RESEND_FROM_EMAIL = 'onboarding@resend.dev'  # Default for testing, or your verified domain
-DEFAULT_FROM_EMAIL = RESEND_FROM_EMAIL
+# Elastic Email API Configuration (for Railway compatibility)
+ELASTIC_EMAIL_API_KEY = config('ELASTIC_EMAIL_API_KEY', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='kbishal177@gmail.com')
 
 # Firebase Configuration (optional)
 FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')

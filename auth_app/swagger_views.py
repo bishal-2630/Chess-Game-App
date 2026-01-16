@@ -760,7 +760,7 @@ class SendOTPView(APIView):
             
             def send_otp_email(email_addr, otp_code):
                 try:
-                    # Using Resend API for reliable delivery on Railway
+                    # Using Elastic Email API for reliable delivery on Railway
                     subject = "Password Reset OTP - Chess Game"
                     html_content = f"""
                     <p>Your OTP for password reset is: <strong>{otp_code}</strong></p>
@@ -769,30 +769,37 @@ class SendOTPView(APIView):
                     <p>Best regards,<br>Chess Game Team</p>
                     """
                     
-                    api_key = getattr(settings, 'RESEND_API_KEY', '')
+                    api_key = getattr(settings, 'ELASTIC_EMAIL_API_KEY', '')
                     if not api_key:
-                        print("❌ Resend API Key is missing in settings")
+                        print("❌ Elastic Email API Key is missing in settings")
                         return
 
                     response = requests.post(
-                        "https://api.resend.com/emails",
+                        "https://api.elasticemail.com/v4/emails",
                         headers={
-                            "Authorization": f"Bearer {api_key}",
+                            "X-ElasticEmail-ApiKey": api_key,
                             "Content-Type": "application/json",
                         },
                         json={
-                            "from": settings.DEFAULT_FROM_EMAIL,
-                            "to": [email_addr],
-                            "subject": subject,
-                            "html": html_content,
+                            "Recipients": [{"Email": email_addr}],
+                            "Content": {
+                                "Body": [
+                                    {
+                                        "ContentType": "HTML",
+                                        "Content": html_content
+                                    }
+                                ],
+                                "From": settings.DEFAULT_FROM_EMAIL,
+                                "Subject": subject
+                            }
                         },
                         timeout=10
                     )
                     
                     if response.status_code in [200, 201]:
-                        print(f"✅ Background Email sent via Resend to {email_addr}")
+                        print(f"✅ Background Email sent via Elastic Email to {email_addr}")
                     else:
-                        print(f"❌ Resend API failed: {response.status_code} - {response.text}")
+                        print(f"❌ Elastic Email API failed: {response.status_code} - {response.text}")
                 except Exception as e:
                     print(f"❌ Background Email sending failed for {email_addr}: {str(e)}")
 
