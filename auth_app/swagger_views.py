@@ -760,36 +760,45 @@ class SendOTPView(APIView):
             
             def send_otp_email(email_addr, otp_code):
                 try:
-                    subject = "Password Reset OTP - Chess Game"
-                    message = f"""
-                    Your OTP for password reset is: {otp_code}
+                    import os
+                    import requests
                     
-                    This OTP will expire in 10 minutes.
+                    # Get Resend API key from environment
+                    api_key = os.environ.get('RESEND_API_KEY', '')
                     
-                    If you didn't request this, please ignore this email.
+                    if not api_key:
+                        print("❌ RESEND_API_KEY is missing in environment variables")
+                        return
                     
-                    Best regards,
-                    Chess Game Team
-                    """
-                    
-                    # Use Django's built-in send_mail with Gmail SMTP
-                    send_mail(
-                        subject=subject,
-                        message=message,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[email_addr],
-                        fail_silently=False,
-                        html_message=f"""
-                        <p>Your OTP for password reset is: <strong>{otp_code}</strong></p>
-                        <p>This OTP will expire in 10 minutes.</p>
-                        <p>If you didn't request this, please ignore this email.</p>
-                        <p>Best regards,<br>Chess Game Team</p>
-                        """
+                    response = requests.post(
+                        "https://api.resend.com/emails",
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "from": "Chess Game <onboarding@resend.dev>",
+                            "to": [email_addr],
+                            "subject": "Password Reset OTP - Chess Game",
+                            "html": f"""
+                            <p>Your OTP for password reset is: <strong>{otp_code}</strong></p>
+                            <p>This OTP will expire in 10 minutes.</p>
+                            <p>If you didn't request this, please ignore this email.</p>
+                            <p>Best regards,<br>Chess Game Team</p>
+                            """
+                        },
+                        timeout=10
                     )
                     
-                    print(f"✅ Email sent via Gmail SMTP to {email_addr}")
+                    if response.status_code == 200:
+                        print(f"✅ Email sent via Resend to {email_addr}")
+                        return True
+                    else:
+                        print(f"❌ Resend API failed: {response.status_code} - {response.text}")
+                        return False
                 except Exception as e:
-                    print(f"❌ Gmail sending failed for {email_addr}: {str(e)}")
+                    print(f"❌ Email sending failed: {str(e)}")
+                    return False
 
             # Start background thread
             email_thread = threading.Thread(
