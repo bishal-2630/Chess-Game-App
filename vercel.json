@@ -8,10 +8,6 @@
     {
       "src": "api/health.py",
       "use": "@vercel/python"
-    },
-    {
-      "src": "chess_game/build/web/**/*",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -40,8 +36,40 @@
       "dest": "api/index.py"
     },
     {
+      "src": "/assets/(.*)",
+      "dest": "/chess_game/build/web/assets/$1"
+    },
+    {
+      "src": "/canvaskit/(.*)",
+      "dest": "/chess_game/build/web/canvaskit/$1"
+    },
+    {
+      "src": "/flutter.js",
+      "dest": "/chess_game/build/web/flutter.js"
+    },
+    {
+      "src": "/flutter_bootstrap.js",
+      "dest": "/chess_game/build/web/flutter_bootstrap.js"
+    },
+    {
+      "src": "/main.dart.js",
+      "dest": "/chess_game/build/web/main.dart.js"
+    },
+    {
+      "src": "/favicon.png",
+      "dest": "/chess_game/build/web/favicon.png"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/chess_game/build/web/manifest.json"
+    },
+    {
+      "src": "/",
+      "dest": "/chess_game/build/web/index.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "chess_game/build/web/$1"
+      "dest": "/chess_game/build/web/index.html"
     }
   ],
   "env": {
