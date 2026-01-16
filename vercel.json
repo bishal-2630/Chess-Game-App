@@ -4,12 +4,44 @@
     {
       "src": "api/index.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "api/health.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "chess_game/build/web/**/*",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/health",
+      "dest": "api/health.py"
+    },
+    {
+      "src": "/api/(.*)",
       "dest": "api/index.py"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/swagger/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/redoc/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "chess_game/build/web/$1"
     }
   ],
   "env": {

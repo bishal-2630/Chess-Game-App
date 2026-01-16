@@ -116,7 +116,8 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.debug',
+                # Root URL - API only (Flutter served by Vercel static files)
+                # path('', TemplateView.as_view(template_name='index.html')),
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -135,9 +136,12 @@ CHANNEL_LAYERS = {
 }
 
 
+# Database configuration
+# Uses DATABASE_URL environment variable if set (PostgreSQL on Vercel)
+# Falls back to SQLite for local development if DATABASE_URL is not set
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",  # Fallback for local dev only
         conn_max_age=600,
         conn_health_checks=True,
     )
@@ -176,9 +180,11 @@ WHITENOISE_USE_FINDERS = True
 # Use simple storage to avoid manifest errors
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
+# Only add Flutter web directory if it exists (for local development)
+FLUTTER_WEB_PATH = BASE_DIR / 'chess_game' / 'build' / 'web'
 STATICFILES_DIRS = [
-    BASE_DIR / 'chess_game' / 'build' / 'web',
-]
+    FLUTTER_WEB_PATH,
+] if FLUTTER_WEB_PATH.exists() else []
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
