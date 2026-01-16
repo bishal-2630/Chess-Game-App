@@ -31,6 +31,6 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('swagger.json/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     
-    # Root URL - API only (Flutter served by Vercel static files)
-    # path('', TemplateView.as_view(template_name='index.html')),
+    # Root URL - Serve Flutter app
+    path('', TemplateView.as_view(template_name='index.html')),
 ]

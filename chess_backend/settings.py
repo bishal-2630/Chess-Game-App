@@ -112,12 +112,11 @@ ROOT_URLCONF = 'chess_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'chess_game' / 'build' / 'web'],
+        'DIRS': [BASE_DIR / 'public'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                # Root URL - API only (Flutter served by Vercel static files)
-                # path('', TemplateView.as_view(template_name='index.html')),
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -180,8 +179,8 @@ WHITENOISE_USE_FINDERS = True
 # Use simple storage to avoid manifest errors
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-# Only add Flutter web directory if it exists (for local development)
-FLUTTER_WEB_PATH = BASE_DIR / 'chess_game' / 'build' / 'web'
+# Static files configuration for Vercel
+FLUTTER_WEB_PATH = BASE_DIR / 'public'
 STATICFILES_DIRS = [
     FLUTTER_WEB_PATH,
 ] if FLUTTER_WEB_PATH.exists() else []
