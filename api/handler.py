@@ -1,23 +1,22 @@
-def handler(environ):
-    """Standard Vercel handler with environ parameter"""
-    try:
-        path = environ.get('PATH_INFO', '').lstrip('/')
-        
-        # Test different paths
-        if path == '/test-auth':
-            return HttpResponse("Auth endpoint working! Path: " + path, content_type='text/html')
-        elif path == '/test-db':
-            try:
-                from django.db import connection
-                from django.contrib.auth import get_user_model
-                User = get_user_model()
-                count = User.objects.count()
-                return HttpResponse(f"DB working! Found {count} users. Path: " + path, content_type='text/html')
-            except Exception as e:
-                return HttpResponse(f"DB error: {str(e)}", status=500)
-        else:
-            return HttpResponse("Handler working! Path: " + path, content_type='text/html')
-    except Exception as e:
-        return HttpResponse(f"Error: {str(e)}", status=500)
+import os
+import sys
+from pathlib import Path
 
-app = handler
+# Add the project directory to the Python path
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR))
+
+# Set Django settings module
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chess_backend.settings')
+
+# Import Django WSGI application
+import django
+django.setup()
+
+from django.core.wsgi import get_wsgi_application
+
+# Create the WSGI application
+application = get_wsgi_application()
+
+# Vercel expects 'app' as the handler
+app = application

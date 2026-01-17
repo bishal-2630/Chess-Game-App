@@ -11,3 +11,4 @@ dj-database-url
 whitenoise
 drf-yasg
 pyotp
+gunicorn
