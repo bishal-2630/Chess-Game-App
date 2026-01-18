@@ -47842,7 +47842,8 @@ break
 case 10:f=l
 i=B.L.bp(0,A.fe(A.fd(f.e)).bp(0,f.w))
 h="Login failed"
-if(J.O(i,"detail")!=null)h=J.O(i,"detail")
+if(J.O(i,"message")!=null)h=J.O(i,"message")
+else if(J.O(i,"detail")!=null)h=J.O(i,"detail")
 else if(J.O(i,"email")!=null)h=J.O(J.O(i,"email"),0)
 else if(J.O(i,"password")!=null)h=J.O(J.O(i,"password"),0)
 else if(J.O(i,"non_field_errors")!=null)h=J.O(J.O(i,"non_field_errors"),0)
