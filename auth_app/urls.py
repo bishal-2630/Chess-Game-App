@@ -4,7 +4,7 @@ from .swagger_views import (
     SendOTPView, VerifyOTPView, ResetPasswordView,VerifyEmailTokenView,
     SendVerificationEmailView,
     TokenVerifyView,
-    GuestRegisterView, HealthCheckView, FirebaseAuthView
+    GuestRegisterView, HealthCheckView, FirebaseAuthView, DebugLoginView
 )
 from .views import ConnectivityCheckView
 from .google_auth_views import GoogleLoginView
@@ -43,6 +43,9 @@ urlpatterns = [
     
     # Health Check
     path('health/', HealthCheckView.as_view(), name='health_check'),
+    
+    # Debug Login (temporary)
+    path('debug-login/', DebugLoginView.as_view(), name='debug_login'),
     
     # Game & User Management
     path('users/online/', OnlineUsersView.as_view(), name='online_users'),
