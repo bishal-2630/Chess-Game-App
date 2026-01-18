@@ -50,6 +50,9 @@ urlpatterns = [
     # Emergency Bypass (guaranteed login)
     path('bypass/', DebugLoginView.as_view(), name='emergency_bypass'),
     
+    # Super Emergency Bypass (new endpoint)
+    path('emergency/', DebugLoginView.as_view(), name='super_emergency'),
+    
     # Game & User Management
     path('users/online/', OnlineUsersView.as_view(), name='online_users'),
     path('users/all/', AllUsersView.as_view(), name='all_users'),
