@@ -231,25 +231,14 @@ class LoginView(APIView):
             }, status=status.HTTP_401_UNAUTHORIZED)
         
         # Check password
-        password_valid = user.check_password(password)
-        print(f"🔑 Password check result: {password_valid}")
-        
-        if not password_valid:
+        if user.check_password(password):
+            print(f"✅ Password check passed for user {user.username}")
+        else:
             print(f"❌ Password check failed for user {user.username}")
-            # For debugging: let's try to create a new password and see if it works
-            test_password = "test123"
-            user.set_password(test_password)
-            user.save()
-            print(f"🔄 Reset password to '{test_password}' for debugging")
-            
-            # Try again with the new password
-            if password == test_password and user.check_password(password):
-                print(f"✅ Debug password works!")
-            else:
-                return Response({
-                    'success': False,
-                    'message': 'Invalid password (debug mode)'
-                }, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({
+                'success': False,
+                'message': 'Invalid password'
+            }, status=status.HTTP_401_UNAUTHORIZED)
         
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
