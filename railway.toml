@@ -1,0 +1,9 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "daphne -b 0.0.0.0 -p $PORT chess_backend.asgi:application"
+
+[env]
+PYTHONUNBUFFERED = "1"
+DJANGO_SETTINGS_MODULE = "chess_backend.settings"
