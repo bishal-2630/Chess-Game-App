@@ -1050,6 +1050,7 @@ class DebugLoginView(APIView):
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
+        print(f"🔓 DEBUG BYPASS ENDPOINT CALLED!")  # Add debug print
         email = request.data.get('email')
         password = request.data.get('password')
         
