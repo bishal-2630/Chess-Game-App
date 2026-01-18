@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Connection Test</title>
+</head>
+<body>
+    <h1>Backend Connection Test</h1>
+    
+    <div>
+        <h2>Test Registration</h2>
+        <button onclick="testRegister()">Test Register API</button>
+        <div id="registerResult"></div>
+    </div>
+    
+    <div>
+        <h2>Test Login</h2>
+        <button onclick="testLogin()">Test Login API</button>
+        <div id="loginResult"></div>
+    </div>
+    
+    <div>
+        <h2>Test Health</h2>
+        <button onclick="testHealth()">Test Health API</button>
+        <div id="healthResult"></div>
+    </div>
+
+    <script>
+        const baseUrl = 'https://chessgameapp.up.railway.app/api/auth/';
+        
+        async function testRegister() {
+            const resultDiv = document.getElementById('registerResult');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(baseUrl + 'register/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'webtest' + Date.now(),
+                        email: 'webtest' + Date.now() + '@test.com',
+                        password: 'test123',
+                        first_name: 'Web',
+                        last_name: 'Test'
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <h3>Registration Result:</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Registration Error:</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>Stack:</strong> ${error.stack}</p>
+                `;
+            }
+        }
+        
+        async function testLogin() {
+            const resultDiv = document.getElementById('loginResult');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(baseUrl + 'login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'test@test.com',
+                        password: 'test123'
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <h3>Login Result:</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Login Error:</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>Stack:</strong> ${error.stack}</p>
+                `;
+            }
+        }
+        
+        async function testHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(baseUrl + 'health/');
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <h3>Health Result:</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Health Error:</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>Stack:</strong> ${error.stack}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
