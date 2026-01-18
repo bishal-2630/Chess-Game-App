@@ -1,10 +1,6 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.contrib.auth import get_user_model
-from .models import GameInvitation
-
-User = get_user_model()
 
 class SignalingConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -66,6 +62,8 @@ class SignalingConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def update_user_status(self, is_online, room_id):
         if self.user.is_authenticated:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
             user = User.objects.get(id=self.user.id)
             user.is_online = is_online
             user.current_room = room_id if is_online else None
