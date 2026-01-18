@@ -183,7 +183,9 @@ WHITENOISE_USE_FINDERS = True
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Static files configuration for Vercel
-FLUTTER_WEB_PATH = BASE_DIR / 'public'
+# FLUTTER_WEB_PATH = BASE_DIR / 'public' # OLD BROKEN PATH
+FLUTTER_WEB_PATH = BASE_DIR / 'chess_game' / 'build' / 'web'
+
 STATICFILES_DIRS = [
     FLUTTER_WEB_PATH,
 ] if FLUTTER_WEB_PATH.exists() else []
