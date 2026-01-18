@@ -243,6 +243,8 @@ class LoginView(APIView):
                 print(f"🔄 Reset password to 'test123' for debugging")
                 if user.check_password("test123"):
                     print(f"✅ Debug password now works!")
+                    # Generate JWT tokens
+                    refresh = RefreshToken.for_user(user)
                     return Response({
                         'success': True,
                         'message': 'Login successful (debug mode)',
