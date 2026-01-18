@@ -201,9 +201,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For developm
 # EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'kbishal177@gmail.com')
 # EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
-# Firebase Configuration 
-FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')
-FIREBASE_WEB_API_KEY = config('FIREBASE_WEB_API_KEY', default='')
+# Firebase Configuration - REMOVED
+# FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')
+# FIREBASE_WEB_API_KEY = config('FIREBASE_WEB_API_KEY', default='')
 
 
 # JWT Configuration

@@ -30,5 +30,5 @@ class PasswordResetSerializer(serializers.Serializer):
         
         return data
 
-class FirebaseAuthSerializer(serializers.Serializer):
-    firebase_token = serializers.CharField(required=True)
+# class FirebaseAuthSerializer(serializers.Serializer):
+#     firebase_token = serializers.CharField(required=True)

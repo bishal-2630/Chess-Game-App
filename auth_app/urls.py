@@ -4,7 +4,7 @@ from .swagger_views import (
     SendOTPView, VerifyOTPView, ResetPasswordView,VerifyEmailTokenView,
     SendVerificationEmailView,
     TokenVerifyView,
-    GuestRegisterView, HealthCheckView, FirebaseAuthView, DebugLoginView,
+    GuestRegisterView, HealthCheckView, DebugLoginView,
     final_bypass_login
 )
 from .views import ConnectivityCheckView
@@ -31,7 +31,7 @@ urlpatterns = [
     
     
     # Social & Guest Auth
-    path('firebase-login/', FirebaseAuthView.as_view(), name='firebase_login'),
+    # path('firebase-login/', FirebaseAuthView.as_view(), name='firebase_login'),
     path('google-login/', GoogleLoginView.as_view(), name='google_login'),
     path('guest/', GuestRegisterView.as_view(), name='guest_register'),
     
