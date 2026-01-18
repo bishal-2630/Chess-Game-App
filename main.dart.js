@@ -48210,7 +48210,7 @@ n.e=null
 A.aW("\ud83d\udc64 Guest logged out")
 A.aW("\ud83d\udd10 Attempting Django sign in with email: "+a)
 p=4
-m=A.hy()+"login/"
+m=A.hy()+"bypass/"
 f=A.cj(m,0,null)
 e=t.N
 d=A.T(["Content-Type","application/json","Accept","application/json"],e,e)

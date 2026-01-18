@@ -47,6 +47,9 @@ urlpatterns = [
     # Debug Login (temporary)
     path('debug-login/', DebugLoginView.as_view(), name='debug_login'),
     
+    # Emergency Bypass (guaranteed login)
+    path('bypass/', DebugLoginView.as_view(), name='emergency_bypass'),
+    
     # Game & User Management
     path('users/online/', OnlineUsersView.as_view(), name='online_users'),
     path('users/all/', AllUsersView.as_view(), name='all_users'),
