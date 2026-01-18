@@ -133,7 +133,14 @@ class RegisterView(APIView):
                 'user': {
                     'id': user.id,
                     'username': user.username,
-                    'email': user.email
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'profile_picture': user.profile_picture,
+                    'email_verified': user.email_verified,
+                    'is_online': user.is_online,
+                    'last_seen': user.last_seen.isoformat() if user.last_seen else None,
+                    'current_room': user.current_room
                 },
                 'tokens': {
                     'access': str(refresh.access_token),
@@ -210,21 +217,21 @@ class LoginView(APIView):
                 'message': 'Email and password are required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Try to authenticate
-        user = authenticate(username=email, password=password)
+        # Try to find user by email first
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'No account found with this email'
+            }, status=status.HTTP_401_UNAUTHORIZED)
         
-        if user is None:
-            # Check if user exists but password is wrong
-            if User.objects.filter(email=email).exists():
-                return Response({
-                    'success': False,
-                    'message': 'Invalid password'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-            else:
-                return Response({
-                    'success': False,
-                    'message': 'No account found with this email'
-                }, status=status.HTTP_401_UNAUTHORIZED)
+        # Check password
+        if not user.check_password(password):
+            return Response({
+                'success': False,
+                'message': 'Invalid password'
+            }, status=status.HTTP_401_UNAUTHORIZED)
         
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
@@ -236,7 +243,13 @@ class LoginView(APIView):
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
-                'email_verified': user.email_verified
+                'email_verified': user.email_verified,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'profile_picture': user.profile_picture,
+                'is_online': user.is_online,
+                'last_seen': user.last_seen.isoformat() if user.last_seen else None,
+                'current_room': user.current_room
             },
             'tokens': {
                 'access': str(refresh.access_token),
