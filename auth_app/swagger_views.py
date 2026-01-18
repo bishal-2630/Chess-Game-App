@@ -211,6 +211,8 @@ class LoginView(APIView):
         email = request.data.get('email')
         password = request.data.get('password')
         
+        print(f"🔍 Login attempt: email={email}")
+        
         if not email or not password:
             return Response({
                 'success': False,
@@ -220,14 +222,19 @@ class LoginView(APIView):
         # Try to find user by email first
         try:
             user = User.objects.get(email=email)
+            print(f"👤 Found user: {user.username}, id={user.id}")
         except User.DoesNotExist:
+            print(f"❌ No user found with email: {email}")
             return Response({
                 'success': False,
                 'message': 'No account found with this email'
             }, status=status.HTTP_401_UNAUTHORIZED)
         
         # Check password
-        if not user.check_password(password):
+        if user.check_password(password):
+            print(f"✅ Password check passed for user {user.username}")
+        else:
+            print(f"❌ Password check failed for user {user.username}")
             return Response({
                 'success': False,
                 'message': 'Invalid password'
