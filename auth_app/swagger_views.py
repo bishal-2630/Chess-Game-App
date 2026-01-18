@@ -770,11 +770,12 @@ class HealthCheckView(APIView):
         
         return Response({
             'status': 'healthy',
+            'deploy_version': 'v2-fixed-deploy-TIMESTAMP-CHECK', # Tracer bullet
             'timestamp': timezone.now().isoformat(),
             'service': 'Chess Game Authentication API',
             'version': '1.0.0',
             'database': db_status,
-            'debug_bypass_deployed': True,  # Add this to verify deployment
+            'debug_bypass_deployed': True,
             'endpoints': {
                 'register': '/api/auth/register/',
                 'login': '/api/auth/login/',
