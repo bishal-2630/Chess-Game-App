@@ -771,6 +771,7 @@ class HealthCheckView(APIView):
             'service': 'Chess Game Authentication API',
             'version': '1.0.0',
             'database': db_status,
+            'debug_bypass_deployed': True,  # Add this to verify deployment
             'endpoints': {
                 'register': '/api/auth/register/',
                 'login': '/api/auth/login/',
