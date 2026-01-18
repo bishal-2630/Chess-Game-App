@@ -10,6 +10,9 @@ class User(AbstractUser):
     profile_picture = models.URLField(max_length=500, null=True, blank=True)
     email_verified = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
+    is_online = models.BooleanField(default=False)
+    last_seen = models.DateTimeField(auto_now=True)
+    current_room = models.CharField(max_length=100, null=True, blank=True)
     
     def __str__(self):
         return self.email
@@ -54,3 +57,24 @@ class PasswordResetToken(models.Model):
     
     def is_valid(self):
         return datetime.now() < self.expires_at and not self.is_used
+
+class GameInvitation(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('declined', 'Declined'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_invitations')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_invitations')
+    room_id = models.CharField(max_length=100)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['sender', 'receiver', 'room_id']
+    
+    def __str__(self):
+        return f"{self.sender.username} → {self.receiver.username} ({self.status})"

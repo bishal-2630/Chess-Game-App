@@ -8,6 +8,11 @@ from .swagger_views import (
 )
 from .views import ConnectivityCheckView
 from .google_auth_views import GoogleLoginView
+from .game_views import (
+    OnlineUsersView, AllUsersView, UpdateOnlineStatusView,
+    SendInvitationView, MyInvitationsView, RespondToInvitationView,
+    cancel_invitation
+)
 
 urlpatterns = [
     # Core Authentication
@@ -38,4 +43,13 @@ urlpatterns = [
     
     # Health Check
     path('health/', HealthCheckView.as_view(), name='health_check'),
+    
+    # Game & User Management
+    path('users/online/', OnlineUsersView.as_view(), name='online_users'),
+    path('users/all/', AllUsersView.as_view(), name='all_users'),
+    path('users/status/', UpdateOnlineStatusView.as_view(), name='update_status'),
+    path('invitations/send/', SendInvitationView.as_view(), name='send_invitation'),
+    path('invitations/my/', MyInvitationsView.as_view(), name='my_invitations'),
+    path('invitations/<int:invitation_id>/respond/', RespondToInvitationView.as_view(), name='respond_invitation'),
+    path('invitations/<int:invitation_id>/cancel/', cancel_invitation, name='cancel_invitation'),
 ]
