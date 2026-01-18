@@ -29293,8 +29293,8 @@ return s},
 aLi(a,b,c){var s=null
 return c.a(A.aY1(a,b,s,s,s,s))},
 aLh(a,b,c){return c.a(A.b4B(a,[b]))},
-hw(){return"http://127.0.0.1:8000/api/auth/"},
-aFi(){return"ws://127.0.0.1:8000/ws/call/"},
+hw(){return"https://chessgameapp.up.railway.app/api/auth/"},
+aFi(){return"wss://chessgameapp.up.railway.app/ws/call/"},
 aa8(){var s=0,r=A.r(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$aa8=A.t(function(a,b){if(a===1){o.push(b)
 s=p}for(;;)switch(s){case 0:p=4
