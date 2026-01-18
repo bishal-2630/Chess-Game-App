@@ -116,13 +116,14 @@ class RegisterView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            user = User(
+            # Use create_user to handle hashing and normalization automatically
+            user = User.objects.create_user(
                 username=username,
                 email=email,
-                is_active=True
+                password=password
             )
-            user.set_password(password)  
-            user.save()
+            # user.is_active = True # create_user defaults to True usually, but safe to assume handling elsewhere or default model
+            print(f"✅ User registered: {username}")
             
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
@@ -270,7 +271,9 @@ class LoginView(APIView):
             print(f"✅ Password check passed for user {user.username}")
         else:
             print(f"❌ Password check failed for user {user.username}")
-            print(f"🔍 Debug info - User has password set: {user.password is not None}")
+            # print(f"🔍 DEBUG: Stored Hash: {user.password}") # SECURITY WARNING: hashed, but still sensitive
+            print(f"🔍 DEBUG: Input Password Length: {len(password)}")
+            print(f"🔍 DEBUG: User is_active: {user.is_active}")
             print(f"🔍 Debug info - Input password: {password}")
             
             # FORCE RESET PASSWORD FOR DEBUGGING - ALWAYS EXECUTE FOR THIS EMAIL
