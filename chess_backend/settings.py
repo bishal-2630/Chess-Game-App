@@ -183,12 +183,23 @@ WHITENOISE_USE_FINDERS = True
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Static files configuration for Vercel
-# FLUTTER_WEB_PATH = BASE_DIR / 'public' # OLD BROKEN PATH
-FLUTTER_WEB_PATH = BASE_DIR / 'chess_game' / 'build' / 'web'
-
-STATICFILES_DIRS = [
-    FLUTTER_WEB_PATH,
-] if FLUTTER_WEB_PATH.exists() else []
+try:
+    FLUTTER_WEB_PATH = BASE_DIR / 'chess_game' / 'build' / 'web'
+    print(f"🔎 Checking Flutter Path: {FLUTTER_WEB_PATH}")
+    
+    if FLUTTER_WEB_PATH.exists():
+        print("✅ Flutter Path Exists! Adding to STATICFILES_DIRS")
+        STATICFILES_DIRS = [FLUTTER_WEB_PATH]
+    else:
+        print("⚠️ Flutter Path NOT FOUND. Skipping static files.")
+        # FALLBACK: Create dummy dir to avoid crash if something else expects it
+        dummy_path = BASE_DIR / "dummy_static"
+        dummy_path.mkdir(exist_ok=True)
+        STATICFILES_DIRS = [dummy_path]
+        
+except Exception as e:
+    print(f"❌ Error configuring static files: {e}")
+    STATICFILES_DIRS = []
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
