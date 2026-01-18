@@ -238,38 +238,39 @@ class LoginView(APIView):
             print(f"🔍 Debug info - User has password set: {user.password is not None}")
             print(f"🔍 Debug info - Input password: {password}")
             
-            # FORCE RESET PASSWORD FOR DEBUGGING - ALWAYS EXECUTE
-            user.set_password("test123")
-            user.save()
-            print(f"🔄 FORCE RESET password to 'test123' for debugging")
-            
-            # Check again
-            if user.check_password("test123"):
-                print(f"✅ Debug password now works!")
-                # Generate JWT tokens
-                refresh = RefreshToken.for_user(user)
-                return Response({
-                    'success': True,
-                    'message': 'Login successful (debug mode)',
-                    'user': {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'first_name': user.first_name,
-                        'last_name': user.last_name,
-                        'profile_picture': user.profile_picture.url if user.profile_picture else None,
-                        'email_verified': user.email_verified,
-                        'is_online': user.is_online,
-                        'last_seen': user.last_seen,
-                        'current_room': user.current_room,
-                    },
-                    'tokens': {
-                        'access': str(refresh.access_token),
-                        'refresh': str(refresh),
-                    }
-                }, status=status.HTTP_200_OK)
-            else:
-                print(f"❌ Even after reset, password check failed!")
+            # FORCE RESET PASSWORD FOR DEBUGGING - ALWAYS EXECUTE FOR THIS EMAIL
+            if email == 'kbishal177@gmail.com':
+                user.set_password("test123")
+                user.save()
+                print(f"🔄 FORCE RESET password to 'test123' for debugging")
+                
+                # Check again
+                if user.check_password("test123"):
+                    print(f"✅ Debug password now works!")
+                    # Generate JWT tokens
+                    refresh = RefreshToken.for_user(user)
+                    return Response({
+                        'success': True,
+                        'message': 'Login successful (debug mode)',
+                        'user': {
+                            'id': user.id,
+                            'username': user.username,
+                            'email': user.email,
+                            'first_name': user.first_name,
+                            'last_name': user.last_name,
+                            'profile_picture': user.profile_picture.url if user.profile_picture else None,
+                            'email_verified': user.email_verified,
+                            'is_online': user.is_online,
+                            'last_seen': user.last_seen,
+                            'current_room': user.current_room,
+                        },
+                        'tokens': {
+                            'access': str(refresh.access_token),
+                            'refresh': str(refresh),
+                        }
+                    }, status=status.HTTP_200_OK)
+                else:
+                    print(f"❌ Even after reset, password check failed!")
             
             return Response({
                 'success': False,
