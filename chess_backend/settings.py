@@ -68,16 +68,27 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# ZROK HTTPS FIXES - ADD THESE LINES:
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'APP': {
+            'client_id': config('GOOGLE_CLIENT_ID', default=''),
+            'secret': config('GOOGLE_CLIENT_SECRET', default=''),
+        }
+    }
+}
+
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 
-# CORS settings - ADD SPECIFIC ORIGINS FOR ZROK and Vercel
-CORS_ALLOW_ALL_ORIGINS = True  # Keep this for testing
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True  
 CORS_ALLOW_CREDENTIALS = True
 
-# More specific CORS settings (optional but recommended)
+
 CORS_ALLOWED_ORIGINS = [
     "https://chessgameauth.share.zrok.io",
     "http://chessgameauth.share.zrok.io",
@@ -135,12 +146,10 @@ CHANNEL_LAYERS = {
 }
 
 
-# Database configuration
-# Uses DATABASE_URL environment variable if set (PostgreSQL on Vercel)
-# Falls back to SQLite for local development if DATABASE_URL is not set
+
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",  # Fallback for local dev only
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",  
         conn_max_age=600,
         conn_health_checks=True,
     )
@@ -245,7 +254,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.vercel.app",
 ]
 
-# Add Vercel URL to CSRF_TRUSTED_ORIGINS
+
 VERCEL_URL = os.environ.get('VERCEL_URL')
 if VERCEL_URL:
     vercel_origin = f"https://{VERCEL_URL}" if not VERCEL_URL.startswith('http') else VERCEL_URL

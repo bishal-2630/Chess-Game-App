@@ -7,6 +7,7 @@ from .swagger_views import (
     GuestRegisterView, HealthCheckView, FirebaseAuthView
 )
 from .views import ConnectivityCheckView
+from .google_auth_views import GoogleLoginView
 
 urlpatterns = [
     # Core Authentication
@@ -25,6 +26,7 @@ urlpatterns = [
     
     # Social & Guest Auth
     path('firebase-login/', FirebaseAuthView.as_view(), name='firebase_login'),
+    path('google-login/', GoogleLoginView.as_view(), name='google_login'),
     path('guest/', GuestRegisterView.as_view(), name='guest_register'),
     
     # Email Verification

@@ -6,6 +6,8 @@ import uuid
 
 class User(AbstractUser):
     firebase_uid = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    google_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    profile_picture = models.URLField(max_length=500, null=True, blank=True)
     email_verified = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     
