@@ -1045,6 +1045,10 @@ class ResetPasswordView(APIView):
             })
 
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+
+@method_decorator(csrf_exempt, name='dispatch')
 class DebugLoginView(APIView):
     """Debug endpoint to bypass authentication"""
     permission_classes = [permissions.AllowAny]
