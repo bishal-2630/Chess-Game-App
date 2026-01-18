@@ -71,6 +71,8 @@ class SignalingConsumer(AsyncWebsocketConsumer):
 
 class UserNotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        # Allow anonymous connections for now
+        self.user_id = None
         if self.scope["user"].is_authenticated:
             self.user_id = self.scope["user"].id
             self.user_group_name = f'user_{self.user_id}'
@@ -81,10 +83,12 @@ class UserNotificationConsumer(AsyncWebsocketConsumer):
                 self.channel_name
             )
             
-            await self.accept()
-            print(f"✅ User notification connected: {self.user_id}")
+            print(f"🔔 User {self.user_id} connecting to notifications")
         else:
-            await self.close()
+            print(f"🔔 Anonymous user connecting to notifications")
+        
+        await self.accept()
+        print(f"✅ Notification connection accepted")
 
     async def disconnect(self, close_code):
         if hasattr(self, 'user_group_name'):
