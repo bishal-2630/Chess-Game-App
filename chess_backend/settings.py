@@ -11,7 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Use config or fallback values
 try:
     SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
-    DEBUG = config('DEBUG', default=False, cast=bool)
+    # DEBUG = config('DEBUG', default=False, cast=bool)
+    DEBUG = True # FORCE DEBUG FOR DIAGNOSTICS
     ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
     RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-production.up.railway.app')
     if RAILWAY_HOSTNAME:
@@ -62,7 +63,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',  # Disabled for API
+    'django.middleware.csrf.CsrfViewMiddleware',  # Uncommented to ensure control and bypass works
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
