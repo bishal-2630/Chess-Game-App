@@ -48210,7 +48210,7 @@ n.e=null
 A.aW("\ud83d\udc64 Guest logged out")
 A.aW("\ud83d\udd10 Attempting Django sign in with email: "+a)
 p=4
-m=A.hy()+"api/auth/login/"
+m=A.hy()+"login/"
 f=A.cj(m,0,null)
 e=t.N
 d=A.T(["Content-Type","application/json","Accept","application/json"],e,e)
@@ -48275,7 +48275,7 @@ axO(a,a0,a1){var s=0,r=A.q(t.P),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e,d,c,b
 var $async$x0=A.r(function(a2,a3){if(a2===1){o.push(a3)
 s=p}for(;;)switch(s){case 0:A.aW("\ud83d\udcdd Starting Django registration for: "+a)
 p=4
-m=A.hy()+"api/auth/register/"
+m=A.hy()+"register/"
 f=A.cj(m,0,null)
 e=t.N
 d=A.T(["Content-Type","application/json","Accept","application/json"],e,e)
@@ -48352,7 +48352,7 @@ s=1
 break}s=8
 return A.t(m.gAL(),$async$mL)
 case 8:l=a2
-k=A.hy()+"api/auth/google-login/"
+k=A.hy()+"google-login/"
 d=A.cj(k,0,null)
 c=t.N
 b=A.T(["Content-Type","application/json","Accept","application/json"],c,c)
@@ -48553,7 +48553,7 @@ o.e=null
 A.aW("\ud83d\udc64 Guest logged out")
 s=7
 break
-case 8:n=A.hy()+"api/auth/logout/"
+case 8:n=A.hy()+"logout/"
 q=10
 l=t.N
 s=13
