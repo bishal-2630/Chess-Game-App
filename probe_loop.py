@@ -11,7 +11,7 @@ def check():
         try:
             # Check Health
             try:
-                r = requests.get(f"{BASE_URL}/api/auth/health-check-new/", timeout=5)
+                r = requests.get(f"{BASE_URL}/api/auth/health-new/", timeout=5)
                 if r.status_code == 200:
                     data = r.json()
                     # Check for our specific version string

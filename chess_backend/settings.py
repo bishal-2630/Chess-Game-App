@@ -49,41 +49,45 @@ INSTALLED_APPS = [
     'channels',
 ]
 
-import auth_app
+import sys
+import os
+import importlib
+
+print("\n" + "="*50)
+print("🔍 EXTREME STARTUP DEBUG")
+print(f"PID: {os.getpid()}")
+print(f"CWD: {os.getcwd()}")
+print(f"PYTHONPATH: {sys.path}")
+
 try:
+    import auth_app
+    print(f"auth_app location: {auth_app.__file__}")
     auth_app_dir = os.path.dirname(auth_app.__file__)
-    print(f"DEBUG: auth_app DIRECTORY: {auth_app_dir}")
-    print(f"DEBUG: auth_app FILES: {os.listdir(auth_app_dir)}")
+    print(f"auth_app contents: {os.listdir(auth_app_dir)}")
+    
+    # Check if urls.py exists (should be gone)
     urls_path = os.path.join(auth_app_dir, 'urls.py')
-    if os.path.exists(urls_path):
-        size = os.path.getsize(urls_path)
-        print(f"DEBUG: auth_app/urls.py SIZE: {size}")
-    else:
-        print("DEBUG: auth_app/urls.py NOT FOUND")
-        
+    print(f"Old urls.py exists: {os.path.exists(urls_path)}")
+    
+    # Check if urls_v3.py exists
     urls_v3_path = os.path.join(auth_app_dir, 'urls_v3.py')
-    if os.path.exists(urls_v3_path):
-        print(f"DEBUG: auth_app/urls_v3.py FOUND! Size: {os.path.getsize(urls_v3_path)}")
-    else:
-        print("DEBUG: auth_app/urls_v3.py NOT FOUND")
-
-    main_urls_path = os.path.join(BASE_DIR, 'chess_backend', 'urls.py')
-    with open(main_urls_path, 'r') as f:
-        print(f"DEBUG: chess_backend/urls.py CONTENT:\n{f.read()}")
-        
-    print(f"DEBUG: AUTH_APP IN SYS.MODULES: {'auth_app' in sys.modules}")
-    if 'auth_app' in sys.modules:
-        print(f"DEBUG: AUTH_APP MODULE FILE: {sys.modules['auth_app'].__file__}")
-        
-    print("DEBUG: ATTEMPTING FORCE IMPORT OF auth_app.urls_v3...")
-    try:
-        import auth_app.urls_v3
-        print("DEBUG: FORCE IMPORT SUCCESSFUL")
-    except Exception as e:
-        print(f"DEBUG: FORCE IMPORT FAILED: {e}")
-
+    print(f"New urls_v3.py exists: {os.path.exists(urls_v3_path)}")
+    
+    # FORCE IMPORT
+    print("Attempting manual import of auth_app.urls_v3...")
+    uv3 = importlib.import_module('auth_app.urls_v3')
+    print(f"SUCCESS: urls_v3 loaded from {uv3.__file__}")
 except Exception as e:
-    print(f"DEBUG: FAILED TO LIST DIR: {e}")
+    print(f"DEBUG ERROR: {e}")
+
+try:
+    root_urlconf = locals().get('ROOT_URLCONF', 'NOT SET YET')
+    print(f"ROOT_URLCONF: {root_urlconf}")
+except:
+    print("ROOT_URLCONF could not be read from locals")
+
+print("="*50 + "\n")
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
