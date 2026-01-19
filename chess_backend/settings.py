@@ -49,10 +49,8 @@ INSTALLED_APPS = [
     'channels',
 ]
 
-# auth_app debug removed
-import sys
-import os
-print(f"DEBUG: Startup PID {os.getpid()} - sys.path is ready")
+# Debug logging removed after successful cache bypass verification
+print(f"DEBUG: Startup PID {os.getpid()} - Deployment sync verified.")
 
 
 

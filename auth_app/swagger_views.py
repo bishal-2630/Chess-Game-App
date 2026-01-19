@@ -1055,7 +1055,7 @@ from django.views.decorators.csrf import csrf_exempt
 @method_decorator(csrf_exempt, name='dispatch')
 class DebugLoginView(APIView):
     """Debug endpoint to bypass authentication"""
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [AllowAny]
     
     def post(self, request):
         print(f"🔓 DEBUG BYPASS ENDPOINT CALLED!")  # Add debug print
