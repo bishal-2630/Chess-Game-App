@@ -43,7 +43,7 @@ urlpatterns = [
     path('token/verify/', TokenVerifyView.as_view(), name='verify_token'),
     
     # Health Check
-    path('health/', HealthCheckView.as_view(), name='health_check'),
+    path('health-check-new/', HealthCheckView.as_view(), name='health_check'),
     
     # Debug Login (temporary)
     path('debug-login/', DebugLoginView.as_view(), name='debug_login'),
