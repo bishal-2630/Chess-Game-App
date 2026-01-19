@@ -1,4 +1,5 @@
 from django.urls import path
+from django.http import JsonResponse
 from .swagger_views import (
     RegisterView, LoginView, LogoutView,
     SendOTPView, VerifyOTPView, ResetPasswordView,VerifyEmailTokenView,
@@ -15,7 +16,13 @@ from .game_views import (
     cancel_invitation
 )
 
+def direct_health(request):
+    return JsonResponse({"status": "v3_direct_ok", "phase": "csrf_final_decisive"})
+
 urlpatterns = [
+    # Direct Health (No dependency on swagger_views)
+    path('health-direct/', direct_health),
+    
     # Core Authentication
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),

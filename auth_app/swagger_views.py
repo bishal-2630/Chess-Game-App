@@ -1106,10 +1106,10 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from django.views.decorators.csrf import csrf_exempt
 import json
 
-@csrf_exempt
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@csrf_exempt
 def final_bypass_login(request):
     """
     A simple, function-based view for guaranteed login.
