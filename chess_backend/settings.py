@@ -99,7 +99,7 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-ROOT_URLCONF = 'chess_backend.urls'
+ROOT_URLCONF = 'chess_backend.urls_v4'
 
 TEMPLATES = [
     {
