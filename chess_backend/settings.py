@@ -70,6 +70,18 @@ try:
     main_urls_path = os.path.join(BASE_DIR, 'chess_backend', 'urls.py')
     with open(main_urls_path, 'r') as f:
         print(f"DEBUG: chess_backend/urls.py CONTENT:\n{f.read()}")
+        
+    print(f"DEBUG: AUTH_APP IN SYS.MODULES: {'auth_app' in sys.modules}")
+    if 'auth_app' in sys.modules:
+        print(f"DEBUG: AUTH_APP MODULE FILE: {sys.modules['auth_app'].__file__}")
+        
+    print("DEBUG: ATTEMPTING FORCE IMPORT OF auth_app.urls_v3...")
+    try:
+        import auth_app.urls_v3
+        print("DEBUG: FORCE IMPORT SUCCESSFUL")
+    except Exception as e:
+        print(f"DEBUG: FORCE IMPORT FAILED: {e}")
+
 except Exception as e:
     print(f"DEBUG: FAILED TO LIST DIR: {e}")
 
