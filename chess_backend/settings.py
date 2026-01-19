@@ -49,44 +49,11 @@ INSTALLED_APPS = [
     'channels',
 ]
 
+# auth_app debug removed
 import sys
 import os
-import importlib
+print(f"DEBUG: Startup PID {os.getpid()} - sys.path is ready")
 
-print("\n" + "="*50)
-print("🔍 EXTREME STARTUP DEBUG")
-print(f"PID: {os.getpid()}")
-print(f"CWD: {os.getcwd()}")
-print(f"PYTHONPATH: {sys.path}")
-
-try:
-    import auth_app
-    print(f"auth_app location: {auth_app.__file__}")
-    auth_app_dir = os.path.dirname(auth_app.__file__)
-    print(f"auth_app contents: {os.listdir(auth_app_dir)}")
-    
-    # Check if urls.py exists (should be gone)
-    urls_path = os.path.join(auth_app_dir, 'urls.py')
-    print(f"Old urls.py exists: {os.path.exists(urls_path)}")
-    
-    # Check if urls_v3.py exists
-    urls_v3_path = os.path.join(auth_app_dir, 'urls_v3.py')
-    print(f"New urls_v3.py exists: {os.path.exists(urls_v3_path)}")
-    
-    # FORCE IMPORT
-    print("Attempting manual import of auth_app.urls_v3...")
-    uv3 = importlib.import_module('auth_app.urls_v3')
-    print(f"SUCCESS: urls_v3 loaded from {uv3.__file__}")
-except Exception as e:
-    print(f"DEBUG ERROR: {e}")
-
-try:
-    root_urlconf = locals().get('ROOT_URLCONF', 'NOT SET YET')
-    print(f"ROOT_URLCONF: {root_urlconf}")
-except:
-    print("ROOT_URLCONF could not be read from locals")
-
-print("="*50 + "\n")
 
 
 MIDDLEWARE = [
