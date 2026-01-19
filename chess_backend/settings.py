@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
 import time
 DEBUG = True
-ROOT_URLCONF = 'chess_backend.urls_v4'
+ROOT_URLCONF = 'chess_backend.urls_v7_final'
 print(f"🚀 SERVER STARTING - TS: {time.time()} - DEBUG: {DEBUG} - URLCONF: {ROOT_URLCONF}")
 ALLOWED_HOSTS = ['*']
 RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-production.up.railway.app')
@@ -225,5 +225,5 @@ SWAGGER_UI_OAUTH2_REDIRECT_URL = 'https://chessgameauth.share.zrok.io/swagger/oa
 # GHOSTBUSTER CONFIG
 CSRF_FAILURE_VIEW = 'auth_app.views.csrf_failure'
 APPEND_SLASH = False
-DEPLOYMENT_ID = "FINAL_GHOSTBUSTER_V1"
+DEPLOYMENT_ID = "V7_EXORCIST_FINAL"
 print(f"👻 GHOSTBUSTER ACTIVE - ID: {DEPLOYMENT_ID}")
