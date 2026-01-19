@@ -33,7 +33,8 @@ urlpatterns = [
     path('api/auth/', include('auth_app.urls_v3')),
     
     # Ghost Check
-    path('ghost-check/', views.direct_rollback_check),
+    from auth_app.views import direct_rollback_check
+    path('ghost-check/', direct_rollback_check),
     
     # Swagger URLs
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
