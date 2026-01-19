@@ -298,3 +298,23 @@ class ResetPasswordView(APIView):
                 "success": False,
                 "message": f"Password reset failed: {str(e)}"
             }, status=status.HTTP_200_OK)
+
+from django.http import JsonResponse
+def csrf_failure(request, reason=""):
+    """
+    Custom CSRF failure view to prove it's our code.
+    """
+    return JsonResponse({
+        "success": False,
+        "message": "CSRF_VERIFICATION_FAILED_IDENTIFIED",
+        "reason": reason,
+        "deployment_id": "FINAL_GHOSTBUSTER_V1",
+        "ts": timezone.now().isoformat()
+    }, status=403)
+
+def direct_rollback_check(request):
+    return JsonResponse({
+        "status": "LIVE_VERSION_CONFIRMED",
+        "version": "FINAL_GHOSTBUSTER_V1",
+        "ts": timezone.now().isoformat()
+    })
