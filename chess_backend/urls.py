@@ -22,6 +22,9 @@ schema_view = get_schema_view(
 from django.http import JsonResponse
 import time
 
+# API
+from auth_app.views import direct_rollback_check
+
 urlpatterns = [
     # Root Health Check
     path('health-root-v6/', lambda r: JsonResponse({"root_rollout": "SUCCESS", "ts": time.time()})),
@@ -33,7 +36,6 @@ urlpatterns = [
     path('api/auth/', include('auth_app.urls_v3')),
     
     # Ghost Check
-    from auth_app.views import direct_rollback_check
     path('ghost-check/', direct_rollback_check),
     
     # Swagger URLs
