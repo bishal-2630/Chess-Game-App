@@ -25,6 +25,13 @@ class DisableCSRFOnSpecificAPIsMiddleware(MiddlewareMixin):
 
     def process_response(self, request, response):
         # Attach DEPLOYMENT_ID to every response for definitive identification
-        dep_id = getattr(settings, 'DEPLOYMENT_ID', 'GHOST_OR_STALE')
-        response['X-Deployment-ID'] = dep_id
+        try:
+            dep_id = getattr(settings, 'DEPLOYMENT_ID', 'GHOST_OR_STALE')
+            # Use multiple header formats to ensure at least one gets through
+            response['X-Deployment-ID'] = dep_id
+            response['X-App-Version'] = dep_id  # Alternative header name
+            response['X-Custom-Deploy'] = dep_id  # Another alternative
+            print(f"✅ HEADERS ADDED - ID: {dep_id}")
+        except Exception as e:
+            print(f"❌ HEADER ERROR: {str(e)}")
         return response
