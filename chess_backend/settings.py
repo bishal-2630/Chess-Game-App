@@ -50,7 +50,16 @@ INSTALLED_APPS = [
 ]
 
 import auth_app
+import sys
 print(f"DEBUG: auth_app LOADED FROM: {auth_app.__file__}")
+print(f"DEBUG: SYS.PATH: {sys.path}")
+try:
+    urls_path = os.path.join(os.path.dirname(auth_app.__file__), 'urls.py')
+    with open(urls_path, 'r') as f:
+        content = f.read()
+        print(f"DEBUG: auth_app/urls.py CONTENT START (500 chars):\n{content[:500]}")
+except Exception as e:
+    print(f"DEBUG: FAILED TO READ urls.py: {e}")
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

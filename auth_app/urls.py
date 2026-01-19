@@ -1,4 +1,3 @@
-THIS_SHOULD_BREAK_THE_BUILD = 
 from django.urls import path
 from .swagger_views import (
     RegisterView, LoginView, LogoutView,
