@@ -66,6 +66,10 @@ try:
         print(f"DEBUG: auth_app/urls_v3.py FOUND! Size: {os.path.getsize(urls_v3_path)}")
     else:
         print("DEBUG: auth_app/urls_v3.py NOT FOUND")
+
+    main_urls_path = os.path.join(BASE_DIR, 'chess_backend', 'urls.py')
+    with open(main_urls_path, 'r') as f:
+        print(f"DEBUG: chess_backend/urls.py CONTENT:\n{f.read()}")
 except Exception as e:
     print(f"DEBUG: FAILED TO LIST DIR: {e}")
 
