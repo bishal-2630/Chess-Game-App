@@ -51,6 +51,7 @@ INSTALLED_APPS = [
 
 import auth_app
 import sys
+# FORCE REBUILD TIMESTAMP: 2026-01-19 10:58
 print(f"DEBUG: auth_app LOADED FROM: {auth_app.__file__}")
 print(f"DEBUG: SYS.PATH: {sys.path}")
 try:
