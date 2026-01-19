@@ -3,7 +3,7 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "daphne -v 1 -b 0.0.0.0 -p $PORT chess_backend.asgi:application"
-healthcheckPath = "/api/auth/health-v5/"
+healthcheckPath = "/health-root-v6/"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
 
