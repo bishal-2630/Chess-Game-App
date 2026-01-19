@@ -1107,7 +1107,6 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 
 @csrf_exempt
-@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def final_bypass_login(request):
