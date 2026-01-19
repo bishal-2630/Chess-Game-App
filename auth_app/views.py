@@ -308,13 +308,13 @@ def csrf_failure(request, reason=""):
         "success": False,
         "message": "CSRF_VERIFICATION_FAILED_IDENTIFIED",
         "reason": reason,
-        "deployment_id": "FINAL_GHOSTBUSTER_V1",
+        "deployment_id": getattr(settings, 'DEPLOYMENT_ID', 'UNKNOWN'),
         "ts": timezone.now().isoformat()
     }, status=403)
 
 def direct_rollback_check(request):
     return JsonResponse({
         "status": "LIVE_VERSION_CONFIRMED",
-        "version": "FINAL_GHOSTBUSTER_V1",
+        "version": getattr(settings, 'DEPLOYMENT_ID', 'UNKNOWN'),
         "ts": timezone.now().isoformat()
     })
