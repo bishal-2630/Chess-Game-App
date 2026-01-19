@@ -1,15 +1,24 @@
-class DisableCSRFOnSpecificAPIsMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
 
-    def __call__(self, request):
-        # Check if the request path is one of the bypass endpoints
+from django.utils.deprecation import MiddlewareMixin
+
+class DisableCSRFOnSpecificAPIsMiddleware(MiddlewareMixin):
+    def process_request(self, request):
+        # Check if the request path contains any bypass endpoints
         path = request.path
-        if 'final-bypass' in path or 'emergency' in path or 'bypass' in path:
-            # Re-verify and force disable
-            request._dont_enforce_csrf_checks = True
-            request.csrf_processing_done = True
-            print(f"🚫 CSRF FORCE DISABLED for path: {path}")
-
-        response = self.get_response(request)
-        return response
+        bypass_paths = [
+            'final-bypass',
+            'emergency',
+            'bypass',
+            'google-login',  
+            'firebase-login',
+            'api/auth/google-login'  
+        ]
+        
+        for bypass_path in bypass_paths:
+            if bypass_path in path:
+                # Force disable CSRF checks
+                request._dont_enforce_csrf_checks = True
+                print(f"🚫 CSRF DISABLED for path: {path}")
+                break
+        
+        return None

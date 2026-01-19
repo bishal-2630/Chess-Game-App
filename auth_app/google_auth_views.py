@@ -84,8 +84,8 @@ class GoogleLoginView(APIView):
                 )
             
             # Login the user to create a session
-            user.backend = 'django.contrib.auth.backends.ModelBackend'
-            login(request, user)
+            #user.backend = 'django.contrib.auth.backends.ModelBackend'
+            #login(request, user)
             
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
