@@ -1102,12 +1102,13 @@ class DebugLoginView(APIView):
 
 # FirebaseAuthView REMOVED
 
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from django.views.decorators.csrf import csrf_exempt
 import json
 
 @csrf_exempt
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def final_bypass_login(request):
     """
