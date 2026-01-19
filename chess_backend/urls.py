@@ -19,7 +19,13 @@ schema_view = get_schema_view(
     permission_classes=(AllowAny,),
 )
 
+from django.http import JsonResponse
+import time
+
 urlpatterns = [
+    # Root Health Check
+    path('health-root-v6/', lambda r: JsonResponse({"root_rollout": "SUCCESS", "ts": time.time()})),
+    
     # Admin
     path('admin/', admin.site.urls),
     
