@@ -12,7 +12,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
 import time
 DEBUG = True
-print(f"🚀 SERVER STARTING - TIMESTAMP: {time.time()} - DEBUG: {DEBUG}")
+ROOT_URLCONF = 'chess_backend.urls_v4'
+print(f"🚀 SERVER STARTING - TS: {time.time()} - DEBUG: {DEBUG} - URLCONF: {ROOT_URLCONF}")
 ALLOWED_HOSTS = ['*']
 RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-production.up.railway.app')
 
