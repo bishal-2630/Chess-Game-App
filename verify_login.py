@@ -1,7 +1,7 @@
 import requests
 import json
 
-url = "https://chess-game-app-production.up.railway.app/api/auth/final-bypass/"
+url = "https://chess-game-app-production.up.railway.app/api/auth/final-bypass-v2/"
 payload = {
     "email": "kbishal177@gmail.com",
     "password": "test123"
