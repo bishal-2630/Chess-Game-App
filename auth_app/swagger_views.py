@@ -758,7 +758,6 @@ class HealthCheckView(APIView):
         }
     )
     def get(self, request):
-        print("DEBUG: HealthCheckView HIT")
         from django.db import connection
         
         # Check database connection

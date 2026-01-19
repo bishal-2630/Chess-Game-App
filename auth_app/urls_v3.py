@@ -1,4 +1,3 @@
-print("🔥 DEBUG: LOADING URLS_V3.PY - CACHE BYPASSED")
 from django.urls import path
 from .swagger_views import (
     RegisterView, LoginView, LogoutView,
