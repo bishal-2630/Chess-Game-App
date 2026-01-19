@@ -10,11 +10,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Use config or fallback values
 SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
-DEBUG = False
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
+import time
+DEBUG = True
+print(f"🚀 SERVER STARTING - TIMESTAMP: {time.time()} - DEBUG: {DEBUG}")
+ALLOWED_HOSTS = ['*']
 RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-production.up.railway.app')
-if RAILWAY_HOSTNAME:
-    ALLOWED_HOSTS.append(RAILWAY_HOSTNAME)
 
 # Vercel hostname support
 VERCEL_URL = os.environ.get('VERCEL_URL')
@@ -66,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+print(f"🛠️ ACTIVE MIDDLEWARE: {MIDDLEWARE}")
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
