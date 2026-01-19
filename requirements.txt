@@ -1,4 +1,4 @@
-# CACHE_BUSTER_V2_STRICT_SYNC
+# CACHE_BUSTER_V3_ULTRA_SYNC_CONFIRMED
 django>=4.2,<5.0
 channels>=4.0,<4.1
 daphne>=4.0,<4.1
