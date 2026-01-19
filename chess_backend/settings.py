@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Use config or fallback values
 SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
-DEBUG = True # FORCE DEBUG GLOBALLY
+DEBUG = True 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-production.up.railway.app')
 if RAILWAY_HOSTNAME:
@@ -48,6 +48,9 @@ INSTALLED_APPS = [
     'auth_app.apps.AuthAppConfig',
     'channels',
 ]
+
+import auth_app
+print(f"DEBUG: auth_app LOADED FROM: {auth_app.__file__}")
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
