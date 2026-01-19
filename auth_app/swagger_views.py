@@ -770,7 +770,7 @@ class HealthCheckView(APIView):
         
         return Response({
             'status': 'healthy',
-            'deploy_version': 'v2-fixed-deploy-TIMESTAMP-CHECK', # Tracer bullet
+            'deploy_version': 'v3-forced-update-2026-01-19-try2', # Tracer bullet force update
             'timestamp': timezone.now().isoformat(),
             'service': 'Chess Game Authentication API',
             'version': '1.0.0',
