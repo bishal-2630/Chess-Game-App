@@ -20,9 +20,12 @@ from .game_views import (
 def direct_health(request):
     return JsonResponse({"status": "v3_direct_ok", "phase": "csrf_final_decisive"})
 
+def rollout_proof(request):
+    return JsonResponse({"rollout": "FORCE_SYNC_SUCCESS", "ts": time.time()})
+
 urlpatterns = [
     # Prototyping rollout proof
-    path('health-v5/', lambda r: JsonResponse({"rollout": "FORCE_SYNC_SUCCESS", "ts": time.time()})),
+    path('health-v5/', rollout_proof),
     
     # Direct Health (No dependency on swagger_views)
     path('health-direct/', direct_health),
