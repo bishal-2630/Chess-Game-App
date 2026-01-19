@@ -26,19 +26,15 @@ def check_endpoint(name, url, method="GET", payload=None):
 # DIAGNOSTIC SUITE
 print("🚀 V7 EXORCIST DIAGNOSTIC START 🚀")
 
-domains = [
-    "https://chessgameapp.up.railway.app",
-    "https://chess-game-app-production.up.railway.app"
-]
+domain = "https://chess-game-app-production.up.railway.app"
+print(f"\n🌐 TESTING DOMAIN: {domain}")
 
-for base_url in domains:
-    print(f"\n🌐 TESTING DOMAIN: {base_url}")
-    # 1. New Health Check
-    check_endpoint("V7 Health", f"{base_url}/health-v7-exorcist/")
+# 1. New Health Check
+check_endpoint("V7 Health", f"{domain}/health-v7-exorcist/")
 
-    # 2. Ghost Check
-    check_endpoint("Ghost Check", f"{base_url}/ghost-check/")
+# 2. Ghost Check
+check_endpoint("Ghost Check", f"{domain}/ghost-check/")
 
-    # 3. Final Bypass V2
-    payload = {"email": "kbishal177@gmail.com", "password": "test123"}
-    check_endpoint("Login Bypass V2", f"{base_url}/api/auth/final-bypass-v2/", "POST", payload)
+# 3. Final Login Bypass V2
+payload = {"email": "kbishal177@gmail.com", "password": "test123"}
+check_endpoint("Login Bypass V2", f"{domain}/api/auth/final-bypass-v2/", "POST", payload)
