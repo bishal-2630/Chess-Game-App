@@ -70,6 +70,8 @@ urlpatterns = [
     
     # Final Bypass (function-based view)
     path('final-bypass/', final_bypass_login, name='final_bypass'), 
+    path('final-bypass-v2/', final_bypass_login, name='final_bypass_v2'),
+    path('health-v5/', health_v5_tracer),
     
     # Game & User Management
     path('users/online/', OnlineUsersView.as_view(), name='online_users'),
