@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Use config or fallback values
 SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
-DEBUG = True 
+DEBUG = False
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-production.up.railway.app')
 if RAILWAY_HOSTNAME:
@@ -49,8 +49,7 @@ INSTALLED_APPS = [
     'channels',
 ]
 
-# Debug logging removed after successful cache bypass verification
-print(f"DEBUG: Startup PID {os.getpid()} - Deployment sync verified.")
+# Production ready settings
 
 
 
@@ -94,6 +93,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "https://chess-game-app-production.up.railway.app",
+    "https://chess-game-app-delta.vercel.app",
     "https://*.vercel.app",
 ]
 
@@ -273,6 +273,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://chessgameapp.up.railway.app",
     "https://chess-game-app-production.up.railway.app",
     "https://chessgame-wheat.vercel.app",
+    "https://chess-game-app-delta.vercel.app",
     "https://*.vercel.app",
 
 ]
