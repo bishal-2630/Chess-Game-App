@@ -20,12 +20,6 @@ RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-producti
 VERCEL_URL = os.environ.get('VERCEL_URL')
 if VERCEL_URL:
     ALLOWED_HOSTS.append(VERCEL_URL)
-    ALLOWED_HOSTS.append(f'*.{VERCEL_URL.split(".", 1)[-1]}' if '.' in VERCEL_URL else VERCEL_URL)
-
-# Add Vercel URLs to ALLOWED_HOSTS if not already added
-VERCEL_URL = os.environ.get('VERCEL_URL')
-if VERCEL_URL and VERCEL_URL not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(VERCEL_URL)
 
 # Flutter Web Directory
 FLUTTER_WEB_DIR = BASE_DIR / 'chess_game' / 'build' / 'web'
@@ -49,10 +43,6 @@ INSTALLED_APPS = [
     'channels',
 ]
 
-# Production ready settings
-
-
-
 MIDDLEWARE = [
     'auth_app.middleware.DisableCSRFOnSpecificAPIsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -60,8 +50,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # REMOVED CSRF MIDDLEWARE
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    # CSRF MIDDLEWARE REMOVED
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -79,7 +68,6 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
@@ -87,7 +75,6 @@ USE_X_FORWARDED_PORT = True
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  
 CORS_ALLOW_CREDENTIALS = True
-
 
 CORS_ALLOWED_ORIGINS = [
     "https://chessgameauth.share.zrok.io",
@@ -98,13 +85,6 @@ CORS_ALLOWED_ORIGINS = [
     "https://chess-game-app-delta.vercel.app",
     "https://*.vercel.app",
 ]
-
-# Add Vercel URL to CORS_ALLOWED_ORIGINS
-VERCEL_URL = os.environ.get('VERCEL_URL')
-if VERCEL_URL:
-    vercel_origin = f"https://{VERCEL_URL}" if not VERCEL_URL.startswith('http') else VERCEL_URL
-    if vercel_origin not in CORS_ALLOWED_ORIGINS:
-        CORS_ALLOWED_ORIGINS.append(vercel_origin)
 
 # For Swagger to work with zrok
 CORS_ALLOW_HEADERS = [
@@ -146,8 +126,6 @@ CHANNEL_LAYERS = {
     }
 }
 
-
-
 DATABASES = {
     'default': dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",  
@@ -157,22 +135,13 @@ DATABASES = {
 }
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 AUTH_USER_MODEL = 'auth_app.User'
-
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -180,51 +149,27 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# Ensure directory exists to silence warning
 if not STATIC_ROOT.exists():
     STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
-# Use Finders to serve files even if collectstatic fails
 WHITENOISE_USE_FINDERS = True
-# Use simple storage to avoid manifest errors
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-# Static files configuration for Vercel
 try:
     FLUTTER_WEB_PATH = BASE_DIR / 'chess_game' / 'build' / 'web'
-    print(f"🔎 Checking Flutter Path: {FLUTTER_WEB_PATH}")
-    
     if FLUTTER_WEB_PATH.exists():
-        print("✅ Flutter Path Exists! Adding to STATICFILES_DIRS")
         STATICFILES_DIRS = [FLUTTER_WEB_PATH]
     else:
-        print("⚠️ Flutter Path NOT FOUND. Skipping static files.")
-        # FALLBACK: Create dummy dir to avoid crash if something else expects it
         dummy_path = BASE_DIR / "dummy_static"
         dummy_path.mkdir(exist_ok=True)
         STATICFILES_DIRS = [dummy_path]
-        
 except Exception as e:
-    print(f"❌ Error configuring static files: {e}")
     STATICFILES_DIRS = []
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'kbishal177@gmail.com')
-
-# Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # For production
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'kbishal177@gmail.com')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
-
-
-
-# JWT Configuration
 from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
@@ -238,14 +183,12 @@ SIMPLE_JWT = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  
     ],
 }
 
-# Swagger Settings 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'Bearer': {
@@ -260,7 +203,6 @@ SWAGGER_SETTINGS = {
     'DEFAULT_API_URL': 'https://chessgameauth.share.zrok.io',
 }
 
-# For Zrok/ngrok and Vercel
 CSRF_TRUSTED_ORIGINS = [
     "https://chessgameauth.share.zrok.io",
     "http://chessgameauth.share.zrok.io",  
@@ -275,15 +217,12 @@ CSRF_TRUSTED_ORIGINS = [
     "https://chessgame-wheat.vercel.app",
     "https://chess-game-app-delta.vercel.app",
     "https://*.vercel.app",
-
 ]
 
-
-VERCEL_URL = os.environ.get('VERCEL_URL')
-if VERCEL_URL:
-    vercel_origin = f"https://{VERCEL_URL}" if not VERCEL_URL.startswith('http') else VERCEL_URL
-    if vercel_origin not in CSRF_TRUSTED_ORIGINS:
-        CSRF_TRUSTED_ORIGINS.append(vercel_origin)
-
-# SWAGGER TO WORK WITH ZROK
 SWAGGER_UI_OAUTH2_REDIRECT_URL = 'https://chessgameauth.share.zrok.io/swagger/oauth2-redirect.html'
+
+# GHOSTBUSTER CONFIG
+CSRF_FAILURE_VIEW = 'auth_app.views.csrf_failure'
+APPEND_SLASH = False
+DEPLOYMENT_ID = "FINAL_GHOSTBUSTER_V1"
+print(f"👻 GHOSTBUSTER ACTIVE - ID: {DEPLOYMENT_ID}")
