@@ -49,8 +49,24 @@ INSTALLED_APPS = [
     'channels',
 ]
 
-# auth_app debug removed
-
+try:
+    auth_app_dir = os.path.dirname(auth_app.__file__)
+    print(f"DEBUG: auth_app DIRECTORY: {auth_app_dir}")
+    print(f"DEBUG: auth_app FILES: {os.listdir(auth_app_dir)}")
+    urls_path = os.path.join(auth_app_dir, 'urls.py')
+    if os.path.exists(urls_path):
+        size = os.path.getsize(urls_path)
+        print(f"DEBUG: auth_app/urls.py SIZE: {size}")
+    else:
+        print("DEBUG: auth_app/urls.py NOT FOUND")
+        
+    urls_v3_path = os.path.join(auth_app_dir, 'urls_v3.py')
+    if os.path.exists(urls_v3_path):
+        print(f"DEBUG: auth_app/urls_v3.py FOUND! Size: {os.path.getsize(urls_v3_path)}")
+    else:
+        print("DEBUG: auth_app/urls_v3.py NOT FOUND")
+except Exception as e:
+    print(f"DEBUG: FAILED TO LIST DIR: {e}")
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
