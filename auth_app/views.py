@@ -108,7 +108,7 @@ class SendOTPView(APIView):
             
             def send_otp_email(user, email, otp_code):
                 try:
-                    # Using Elastic Email API for reliable delivery on Railway
+                    # Use standard Django send_mail (uses SMTP settings from settings.py)
                     subject = "Password Reset OTP - Chess Game"
                     html_content = f"""
                     <p>Dear {user.username},</p>
@@ -118,37 +118,18 @@ class SendOTPView(APIView):
                     <p>Best regards,<br>Chess Game Team</p>
                     """
                     
-                    api_key = getattr(settings, 'ELASTIC_EMAIL_API_KEY', '')
-                    if not api_key:
-                        print("❌ Elastic Email API Key is missing in settings")
-                        return
-
-                    response = requests.post(
-                        "https://api.elasticemail.com/v4/emails",
-                        headers={
-                            "X-ElasticEmail-ApiKey": api_key,
-                            "Content-Type": "application/json",
-                        },
-                        json={
-                            "Recipients": [{"Email": email}],
-                            "Content": {
-                                "Body": [
-                                    {
-                                        "ContentType": "HTML",
-                                        "Content": html_content
-                                    }
-                                ],
-                                "From": settings.DEFAULT_FROM_EMAIL,
-                                "Subject": subject
-                            }
-                        },
-                        timeout=10
+                    plain_message = f"Dear {user.username},\nYour password reset OTP is: {otp_code}\nExpires in 10 minutes."
+                    
+                    send_mail(
+                        subject,
+                        plain_message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [email],
+                        fail_silently=False,
+                        html_message=html_content
                     )
                     
-                    if response.status_code in [200, 201]:
-                        print(f"✅ Background Email sent via Elastic Email to {email}")
-                    else:
-                        print(f"❌ Elastic Email API failed: {response.status_code} - {response.text}")
+                    print(f"✅ Background Email sent via SMTP to {email}")
                 except Exception as e:
                     print(f"❌ Background Email sending failed for {email}: {str(e)}")
 
