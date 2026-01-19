@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'channels',
 ]
 
+import auth_app
 try:
     auth_app_dir = os.path.dirname(auth_app.__file__)
     print(f"DEBUG: auth_app DIRECTORY: {auth_app_dir}")
