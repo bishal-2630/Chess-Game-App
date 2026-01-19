@@ -45,18 +45,29 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'auth_app.middleware.DisableCSRFOnSpecificAPIsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # CSRF MIDDLEWARE REMOVED
+    # CSRF PROTECTION DISABLED - This is a REST API using JWT authentication
+    # CSRF protection is not needed for APIs that use token-based auth (not cookies)
+    # Security is provided by: JWT tokens + CORS + HTTPS
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 print(f"🛠️ ACTIVE MIDDLEWARE: {MIDDLEWARE}")
+
+# REST API Security Configuration (No CSRF needed)
+CSRF_COOKIE_SECURE = False
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_HTTPONLY = False
+
+# Completely disable CSRF for API
+CSRF_COOKIE_SECURE = False
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_HTTPONLY = False
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
