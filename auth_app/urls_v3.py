@@ -55,7 +55,7 @@ urlpatterns = [
     path('emergency/', DebugLoginView.as_view(), name='super_emergency'),
     
     # Final Bypass (function-based view)
-    # path('final-bypass/', final_bypass_login, name='final_bypass'), # REMOVED to force 404 on stale clients
+    path('final-bypass/', final_bypass_login, name='final_bypass'), 
     
     # Game & User Management
     path('users/online/', OnlineUsersView.as_view(), name='online_users'),

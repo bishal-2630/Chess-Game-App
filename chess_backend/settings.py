@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 
 
 MIDDLEWARE = [
+    'auth_app.middleware.DisableCSRFOnSpecificAPIsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
