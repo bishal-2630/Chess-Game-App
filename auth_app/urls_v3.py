@@ -9,7 +9,7 @@ from .swagger_views import (
     GuestRegisterView, HealthCheckView, DebugLoginView,
     final_bypass_login
 )
-from .views import ConnectivityCheckView
+from .views import ConnectivityCheckView, TestEmailView
 from .google_auth_views import GoogleLoginView
 from .game_views import (
     OnlineUsersView, AllUsersView, UpdateOnlineStatusView,
@@ -37,6 +37,7 @@ urlpatterns = [
     
     # Debug/Networking
     path('debug/network/', ConnectivityCheckView.as_view(), name='network_check'),
+    path('debug/email-test/', TestEmailView.as_view(), name='email_test'),
     
     # Password Management
     path('send-otp/', SendOTPView.as_view(), name='send_otp'),

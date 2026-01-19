@@ -67,6 +67,53 @@ class ConnectivityCheckView(APIView):
             
         return Response(results)
 
+class TestEmailView(APIView):
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        email = request.data.get('email', 'kbishal177@gmail.com')
+        try:
+            from django.core.mail import send_mail
+            from django.conf import settings
+            
+            # Print config to response for debugging
+            backend = settings.EMAIL_BACKEND
+            host = settings.EMAIL_HOST
+            user = settings.EMAIL_HOST_USER
+            
+            print(f"Testing email to {email} using {backend} via {host}")
+            
+            send_mail(
+                "Test Email from Chess App",
+                "If you received this, SMTP is working!",
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+            return Response({
+                "success": True,
+                "message": f"Email sent to {email}",
+                "config": {
+                    "backend": backend,
+                    "host": host,
+                    "user": user[:3] + "***" if user else "None"
+                }
+            })
+        except Exception as e:
+            import traceback
+            tb = traceback.format_exc()
+            return Response({
+                "success": False,
+                "message": f"Email Failed: {str(e)}",
+                "traceback": tb,
+                "config_debug": {
+                    "backend": settings.EMAIL_BACKEND,
+                    "host": settings.EMAIL_HOST,
+                    "user_configured": bool(settings.EMAIL_HOST_USER),
+                    "password_configured": bool(settings.EMAIL_HOST_PASSWORD)
+                }
+            }, status=200)
+
 User = get_user_model()
 
 class SendOTPView(APIView):
