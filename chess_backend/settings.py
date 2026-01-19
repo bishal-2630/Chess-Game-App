@@ -184,6 +184,8 @@ except Exception as e:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'kbishal177@gmail.com')
+# Debug Email Settings
+print(f"📧 EMAIL CONFIG: HOST={config('EMAIL_HOST_USER', default='NOT_SET')[:3]}*** | BACKEND={config('EMAIL_BACKEND', default='smtp')}")
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
