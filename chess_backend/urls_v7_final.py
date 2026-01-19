@@ -28,7 +28,11 @@ from auth_app.views import direct_rollback_check
 urlpatterns = [
     # Poison Pill Health Checks
     path('health-root-v6/', lambda r: JsonResponse({"root_rollout": "SUCCESS", "v": 6})),
-    path('health-v7-exorcist/', lambda r: JsonResponse({"status": "V7_EXORCIST_ACTIVE", "id": "FINAL_GHOSTBUSTER_V7"})),
+    path('health-v7-exorcist/', lambda r: JsonResponse({
+        "status": "V7_EXORCIST_ACTIVE", 
+        "deployment_id": "V7_EXORCIST_FINAL",
+        "timestamp": time.time()
+    })),
     
     # Admin
     path('admin/', admin.site.urls),
