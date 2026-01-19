@@ -11,10 +11,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Use config or fallback values
 SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
 import time
-DEBUG = True
+
+# Use Railway's environment variables
+DEBUG = config('DEBUG', default=False, cast=bool)
 ROOT_URLCONF = 'chess_backend.urls_v7_final'
 print(f"🚀 SERVER STARTING - TS: {time.time()} - DEBUG: {DEBUG} - URLCONF: {ROOT_URLCONF}")
-ALLOWED_HOSTS = ['*']
+
+# Use Railway's ALLOWED_HOSTS variable
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-production.up.railway.app')
 
 # Vercel hostname support
