@@ -44,13 +44,10 @@ class SignalingConsumer(AsyncWebsocketConsumer):
 
     # Receive message from WebSocket
     async def receive(self, text_data):
-        data = json.loads(text_data)
-        
-        # Handle different message types
-        message_type = data.get('type', 'signaling')
-        
-        if message_type == 'signaling':
-            # Forward signaling message to room group
+        try:
+            data = json.loads(text_data)
+            
+            # Unconditionally forward all signaling messages to room group
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -59,6 +56,8 @@ class SignalingConsumer(AsyncWebsocketConsumer):
                     'sender_channel_name': self.channel_name
                 }
             )
+        except Exception as e:
+            print(f"❌ Error in SignalingConsumer.receive: {e}")
 
     # Receive message from room group
     async def signaling_message(self, event):
