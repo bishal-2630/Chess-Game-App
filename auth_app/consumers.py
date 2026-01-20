@@ -22,6 +22,16 @@ class SignalingConsumer(AsyncWebsocketConsumer):
         await self.accept()
         print(f"✅ Connection accepted for room: {self.room_id}")
 
+        # Notify others in the room that we've joined
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'signaling_message',
+                'message': {'type': 'join'},
+                'sender_channel_name': self.channel_name
+            }
+        )
+
     async def disconnect(self, close_code):
         # Leave room group
         await self.channel_layer.group_discard(
