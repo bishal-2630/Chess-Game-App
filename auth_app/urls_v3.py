@@ -24,6 +24,7 @@ def rollout_proof(request):
     return JsonResponse({"rollout": "FORCE_SYNC_SUCCESS", "ts": time.time()})
 
 urlpatterns = [
+    path('', direct_health),
     # Prototyping rollout proof
     path('health-v5/', rollout_proof),
     
@@ -72,7 +73,7 @@ urlpatterns = [
     # Final Bypass (function-based view)
     path('final-bypass/', final_bypass_login, name='final_bypass'), 
     path('final-bypass-v2/', final_bypass_login, name='final_bypass_v2'),
-    path('health-v5/', rollout_proof),
+    path('final-bypass-v2/', final_bypass_login, name='final_bypass_v2'),
     
     # Game & User Management
     path('users/online/', OnlineUsersView.as_view(), name='online_users'),
