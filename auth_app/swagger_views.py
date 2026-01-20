@@ -85,10 +85,10 @@ class RegisterView(APIView):
                 'message': 'Email, password and username are required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             return Response({
                 'success': False,
-                'message': 'Email already exists'
+                'message': 'An account with this email already exists'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         if User.objects.filter(username=username).exists():
@@ -218,43 +218,6 @@ class LoginView(APIView):
                 'message': 'Email and password are required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # DEBUG BYPASS - Always allow this specific email
-        if email == 'kbishal177@gmail.com' and password == 'test123':
-            print(f"🔓 DEBUG BYPASS: Allowing login for {email}")
-            try:
-                user = User.objects.get(email=email)
-                # Ensure password is set correctly
-                user.set_password('test123')
-                user.save()
-                
-                # Generate JWT tokens
-                refresh = RefreshToken.for_user(user)
-                return Response({
-                    'success': True,
-                    'message': 'Login successful (debug bypass)',
-                    'user': {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'first_name': user.first_name,
-                        'last_name': user.last_name,
-                        'profile_picture': user.profile_picture if user.profile_picture else None,
-                        'email_verified': user.email_verified,
-                        'is_online': user.is_online,
-                        'last_seen': user.last_seen,
-                        'current_room': user.current_room,
-                    },
-                    'tokens': {
-                        'access': str(refresh.access_token),
-                        'refresh': str(refresh),
-                    }
-                }, status=status.HTTP_200_OK)
-            except User.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': 'User not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-        
         # Try to find user by email first
         try:
             user = User.objects.get(email=email)
@@ -267,53 +230,14 @@ class LoginView(APIView):
             }, status=status.HTTP_401_UNAUTHORIZED)
         
         # Check password
-        if user.check_password(password):
-            print(f"✅ Password check passed for user {user.username}")
-        else:
+        if not user.check_password(password):
             print(f"❌ Password check failed for user {user.username}")
-            # print(f"🔍 DEBUG: Stored Hash: {user.password}") # SECURITY WARNING: hashed, but still sensitive
-            print(f"🔍 DEBUG: Input Password Length: {len(password)}")
-            print(f"🔍 DEBUG: User is_active: {user.is_active}")
-            print(f"🔍 Debug info - Input password: {password}")
-            
-            # FORCE RESET PASSWORD FOR DEBUGGING - ALWAYS EXECUTE FOR THIS EMAIL
-            if email == 'kbishal177@gmail.com':
-                user.set_password("test123")
-                user.save()
-                print(f"🔄 FORCE RESET password to 'test123' for debugging")
-                
-                # Check again
-                if user.check_password("test123"):
-                    print(f"✅ Debug password now works!")
-                    # Generate JWT tokens
-                    refresh = RefreshToken.for_user(user)
-                    return Response({
-                        'success': True,
-                        'message': 'Login successful (debug mode)',
-                        'user': {
-                            'id': user.id,
-                            'username': user.username,
-                            'email': user.email,
-                            'first_name': user.first_name,
-                            'last_name': user.last_name,
-                            'profile_picture': user.profile_picture if user.profile_picture else None,
-                            'email_verified': user.email_verified,
-                            'is_online': user.is_online,
-                            'last_seen': user.last_seen,
-                            'current_room': user.current_room,
-                        },
-                        'tokens': {
-                            'access': str(refresh.access_token),
-                            'refresh': str(refresh),
-                        }
-                    }, status=status.HTTP_200_OK)
-                else:
-                    print(f"❌ Even after reset, password check failed!")
-            
             return Response({
                 'success': False,
                 'message': 'Invalid password'
             }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        print(f"✅ Password check passed for user {user.username}")
         
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
@@ -1000,116 +924,5 @@ class ResetPasswordView(APIView):
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
-@method_decorator(csrf_exempt, name='dispatch')
-class DebugLoginView(APIView):
-    """Debug endpoint to bypass authentication"""
-    permission_classes = [AllowAny]
-    
-    def post(self, request):
-        print(f"🔓 DEBUG BYPASS ENDPOINT CALLED!")  # Add debug print
-        email = request.data.get('email')
-        password = request.data.get('password')
-        
-        if email == 'kbishal177@gmail.com' and password == 'test123':
-            try:
-                user = User.objects.get(email=email)
-                user.set_password('test123')
-                user.save()
-                
-                refresh = RefreshToken.for_user(user)
-                return Response({
-                    'success': True,
-                    'message': 'Debug login successful',
-                    'user': {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'first_name': user.first_name,
-                        'last_name': user.last_name,
-                        'profile_picture': user.profile_picture if user.profile_picture else None,
-                        'email_verified': user.email_verified,
-                        'is_online': user.is_online,
-                        'last_seen': user.last_seen,
-                        'current_room': user.current_room,
-                    },
-                    'tokens': {
-                        'access': str(refresh.access_token),
-                        'refresh': str(refresh),
-                    }
-                }, status=status.HTTP_200_OK)
-            except User.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': 'User not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-        else:
-            return Response({
-                'success': False,
-                'message': 'Invalid debug credentials'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-
-
-# FirebaseAuthView REMOVED
-
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from django.views.decorators.csrf import csrf_exempt
-import json
-
-@api_view(['POST'])
-@authentication_classes([])
-@permission_classes([AllowAny])
-@csrf_exempt
-def final_bypass_login(request):
-    """
-    A simple, function-based view for guaranteed login.
-    This is the final attempt to bypass CSRF issues.
-    """
-    print("🚀 FINAL BYPASS ENDPOINT CALLED!")
-    try:
-        data = json.loads(request.body)
-        email = data.get('email')
-        password = data.get('password')
-
-        if email == 'kbishal177@gmail.com' and password == 'test123':
-            try:
-                user = User.objects.get(email=email)
-                user.set_password('test123')
-                user.save()
-                
-                refresh = RefreshToken.for_user(user)
-                return Response({
-                    'success': True,
-                    'message': 'Final bypass login successful',
-                    'user': {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'first_name': user.first_name,
-                        'last_name': user.last_name,
-                        'profile_picture': user.profile_picture if user.profile_picture else None,
-                        'email_verified': user.email_verified,
-                        'is_online': user.is_online,
-                        'last_seen': user.last_seen,
-                        'current_room': user.current_room,
-                    },
-                    'tokens': {
-                        'access': str(refresh.access_token),
-                        'refresh': str(refresh),
-                    }
-                }, status=status.HTTP_200_OK)
-            except User.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': 'User not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-        else:
-            return Response({
-                'success': False,
-                'message': 'Invalid credentials for bypass'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-    except Exception as e:
-        return Response({
-            'success': False,
-            'message': f'An error occurred: {str(e)}'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+# Bypass views removed for security.
 

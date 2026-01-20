@@ -6,8 +6,7 @@ from .swagger_views import (
     SendOTPView, VerifyOTPView, ResetPasswordView,VerifyEmailTokenView,
     SendVerificationEmailView,
     TokenVerifyView,
-    GuestRegisterView, HealthCheckView, DebugLoginView,
-    final_bypass_login
+    GuestRegisterView, HealthCheckView
 )
 from .views import ConnectivityCheckView, TestEmailView
 from .google_auth_views import GoogleLoginView
@@ -60,20 +59,6 @@ urlpatterns = [
     
     # Health Check
     path('health-new/', HealthCheckView.as_view(), name='health_check'),
-    
-    # Debug Login (temporary)
-    path('debug-login/', DebugLoginView.as_view(), name='debug_login'),
-    
-    # Emergency Bypass (guaranteed login)
-    path('bypass/', DebugLoginView.as_view(), name='emergency_bypass'),
-    
-    # Super Emergency Bypass (new endpoint)
-    path('emergency/', DebugLoginView.as_view(), name='super_emergency'),
-    
-    # Final Bypass (function-based view)
-    path('final-bypass/', final_bypass_login, name='final_bypass'), 
-    path('final-bypass-v2/', final_bypass_login, name='final_bypass_v2'),
-    path('final-bypass-v2/', final_bypass_login, name='final_bypass_v2'),
     
     # Game & User Management
     path('users/online/', OnlineUsersView.as_view(), name='online_users'),
