@@ -2,7 +2,10 @@ import secrets
 from datetime import datetime, timedelta
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.conf import settings
 import uuid
+import os
+import requests
 
 class User(AbstractUser):
     firebase_uid = models.CharField(max_length=255, unique=True, null=True, blank=True)
@@ -31,6 +34,50 @@ class OTP(models.Model):
     def mark_used(self):
         self.is_used = True
         self.save()
+        
+    def send_otp(self):
+        """Sends the OTP code via Resend API."""
+        try:
+            api_key = os.environ.get('RESEND_API_KEY', 're_fomKSfPW_BHFU1ayggtd7FtvvCrSj5GJd')
+            
+            if not api_key:
+                print(f"❌ RESEND_API_KEY missing. Printing OTP for {self.user.email}: {self.otp_code}")
+                return False
+
+            response = requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": "Chess Game <onboarding@resend.dev>",
+                    "to": [self.user.email],
+                    "subject": f"{self.purpose.replace('_', ' ').title()} OTP - Chess Game",
+                    "html": f"""
+                    <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                        <h2 style="color: #333;">Chess Game Verification</h2>
+                        <p>Your OTP code is:</p>
+                        <h1 style="color: #007bff; letter-spacing: 5px;">{self.otp_code}</h1>
+                        <p>This code will expire in 10 minutes.</p>
+                        <p>If you didn't request this, please ignore this email.</p>
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                        <p style="font-size: 12px; color: #999;">Best regards,<br>Bishal's Chess Game Team</p>
+                    </div>
+                    """
+                },
+                timeout=10
+            )
+            
+            if response.status_code in [200, 201]:
+                print(f"✅ OTP email sent to {self.user.email}")
+                return True
+            else:
+                print(f"❌ Resend API failed ({response.status_code}): {response.text}")
+                return False
+        except Exception as e:
+            print(f"❌ Error sending OTP email: {str(e)}")
+            return False
     
     @classmethod
     def generate_otp(cls, user, purpose='password_reset', expiry_minutes=10):
