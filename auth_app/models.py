@@ -1,7 +1,7 @@
-import secrets
 from datetime import datetime, timedelta
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.hashers import make_password, check_password
 from django.conf import settings
 import uuid
 import os
@@ -22,14 +22,21 @@ class User(AbstractUser):
 
 class OTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    otp_code = models.CharField(max_length=6)
+    otp_code = models.CharField(max_length=255)  # Increased for hash storage
     purpose = models.CharField(max_length=50)  
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)
     
-    def is_valid(self):
-        return datetime.now() < self.expires_at and not self.is_used
+    def is_valid(self, raw_otp=None):
+        from django.utils import timezone
+        # Use timezone.now() if settings.USE_TZ=True (which it is)
+        now = timezone.now() if settings.USE_TZ else datetime.now()
+        
+        valid_basic = now < self.expires_at and not self.is_used
+        if raw_otp:
+            return valid_basic and check_password(raw_otp, self.otp_code)
+        return valid_basic
     
     def mark_used(self):
         self.is_used = True
@@ -41,7 +48,13 @@ class OTP(models.Model):
             api_key = os.environ.get('RESEND_API_KEY', 're_fomKSfPW_BHFU1ayggtd7FtvvCrSj5GJd')
             
             if not api_key:
-                print(f"❌ RESEND_API_KEY missing. Printing OTP for {self.user.email}: {self.otp_code}")
+                print(f"❌ RESEND_API_KEY missing. Printing OTP for {self.user.email}: {getattr(self, 'plain_code', 'UNKNOWN')}")
+                return False
+
+            # Use plain_code if available (should be set during generate_otp)
+            code_to_send = getattr(self, 'plain_code', None)
+            if not code_to_send:
+                print(f"❌ Error: Plain code missing for OTP email to {self.user.email}")
                 return False
 
             response = requests.post(
@@ -58,7 +71,7 @@ class OTP(models.Model):
                     <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
                         <h2 style="color: #333;">Chess Game Verification</h2>
                         <p>Your OTP code is:</p>
-                        <h1 style="color: #007bff; letter-spacing: 5px;">{self.otp_code}</h1>
+                        <h1 style="color: #007bff; letter-spacing: 5px;">{code_to_send}</h1>
                         <p>This code will expire in 10 minutes.</p>
                         <p>If you didn't request this, please ignore this email.</p>
                         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
@@ -81,19 +94,25 @@ class OTP(models.Model):
     
     @classmethod
     def generate_otp(cls, user, purpose='password_reset', expiry_minutes=10):
-        # Generate 6-digit numeric OTP (not base32)
-        otp_code = ''.join(secrets.choice('0123456789') for _ in range(6))
+        import secrets
+        # Generate 6-digit numeric OTP
+        plain_otp = ''.join(secrets.choice('0123456789') for _ in range(6))
+        hashed_otp = make_password(plain_otp)
         expires_at = datetime.now() + timedelta(minutes=expiry_minutes)
         
         # Invalidate previous OTPs for same user and purpose
         cls.objects.filter(user=user, purpose=purpose, is_used=False).update(is_used=True)
         
-        return cls.objects.create(
+        otp_obj = cls.objects.create(
             user=user,
-            otp_code=otp_code,
+            otp_code=hashed_otp,
             purpose=purpose,
             expires_at=expires_at
         )
+        
+        # Attach the plain code temporarily so it can be sent via email
+        otp_obj.plain_code = plain_otp
+        return otp_obj
 
 class PasswordResetToken(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

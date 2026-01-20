@@ -905,19 +905,18 @@ class VerifyOTPView(APIView):
         try:
             user = User.objects.get(email=email)
             from .models import OTP
-            from django.utils import timezone
             
-            otp_obj = OTP.objects.get(
+            # Find the most recent unused OTP for this user
+            otp_obj = OTP.objects.filter(
                 user=user,
-                otp_code=otp_code,
                 purpose='password_reset',
                 is_used=False
-            )
+            ).order_by('-created_at').first()
             
-            if timezone.now() > otp_obj.expires_at:
+            if not otp_obj or not otp_obj.is_valid(otp_code):
                 return Response({
                     'success': False,
-                    'message': 'OTP expired'
+                    'message': 'Invalid or expired OTP'
                 })
             
             return Response({
@@ -925,7 +924,7 @@ class VerifyOTPView(APIView):
                 'message': 'OTP verified successfully'
             })
             
-        except (User.DoesNotExist, OTP.DoesNotExist):
+        except User.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'Invalid OTP or email'
@@ -973,19 +972,18 @@ class ResetPasswordView(APIView):
         try:
             user = User.objects.get(email=email)
             from .models import OTP
-            from django.utils import timezone
             
-            otp_obj = OTP.objects.get(
+            # Find the most recent unused OTP for this user
+            otp_obj = OTP.objects.filter(
                 user=user,
-                otp_code=otp_code,
                 purpose='password_reset',
                 is_used=False
-            )
+            ).order_by('-created_at').first()
             
-            if timezone.now() > otp_obj.expires_at:
+            if not otp_obj or not otp_obj.is_valid(otp_code):
                 return Response({
                     'success': False,
-                    'message': 'OTP expired'
+                    'message': 'Invalid or expired OTP'
                 })
             
             # Update password
@@ -1000,7 +998,7 @@ class ResetPasswordView(APIView):
                 'message': 'Password reset successfully'
             })
             
-        except (User.DoesNotExist, OTP.DoesNotExist):
+        except User.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'Invalid OTP or email'
