@@ -856,37 +856,43 @@ class SendOTPView(APIView):
             
             def send_otp_email(email_addr, otp_code):
                 try:
-                    from django.core.mail import send_mail
-                    from django.conf import settings
+                    import os
+                    import requests
                     
-                    # Use standard Django send_mail (SMTP)
-                    subject = "Password Reset OTP - Chess Game"
-                    html_content = f"""
-                    <p>Your OTP for password reset is: <strong>{otp_code}</strong></p>
-                    <p>This OTP will expire in 10 minutes.</p>
-                    <p>If you didn't request this, please ignore this email.</p>
-                    <p>Best regards,<br>Chess Game Team</p>
-                    """
+                    # Use the provided Resend API Key
+                    # Note: For security, the user should ALSO set this in Railway environment variables
+                    api_key = os.environ.get('RESEND_API_KEY', 're_fomKSfPW_BHFU1ayggtd7FtvvCrSj5GJd')
                     
-                    plain_message = f"Your OTP for password reset is: {otp_code}\nExpires in 10 minutes."
+                    print(f"📧 Attempting Resend API send to {email_addr}...")
                     
-                    print(f"📧 Attempting SMTP send to {email_addr} via {settings.EMAIL_HOST}:{settings.EMAIL_PORT}...")
-                    
-                    send_mail(
-                        subject,
-                        plain_message,
-                        settings.DEFAULT_FROM_EMAIL,
-                        [email_addr],
-                        fail_silently=False,
-                        html_message=html_content
+                    response = requests.post(
+                        "https://api.resend.com/emails",
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "from": "Chess Game <onboarding@resend.dev>",
+                            "to": [email_addr],
+                            "subject": "Password Reset OTP - Chess Game",
+                            "html": f"""
+                            <p>Your OTP for password reset is: <strong>{otp_code}</strong></p>
+                            <p>This OTP will expire in 10 minutes.</p>
+                            <p>If you didn't request this, please ignore this email.</p>
+                            <p>Best regards,<br>Chess Game Team</p>
+                            """
+                        },
+                        timeout=10
                     )
                     
-                    print(f"✅ Email sent via SMTP to {email_addr}")
-                    return True
+                    if response.status_code in [200, 201]:
+                        print(f"✅ Email sent via Resend to {email_addr}")
+                        return True
+                    else:
+                        print(f"❌ Resend API failed: {response.status_code} - {response.text}")
+                        return False
                 except Exception as e:
-                    print(f"❌ Email sending failed for {email_addr}: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
+                    print(f"❌ Resend API error for {email_addr}: {str(e)}")
                     return False
 
             # Start background thread
