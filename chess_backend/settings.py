@@ -61,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 print(f"🛠️ ACTIVE MIDDLEWARE: {MIDDLEWARE}")
 
 # REST API Security Configuration (No CSRF needed)

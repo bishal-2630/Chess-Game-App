@@ -345,7 +345,7 @@ class LogoutView(APIView):
     """
     Logout user and blacklist refresh token
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     
     @swagger_auto_schema(
         request_body=openapi.Schema(
