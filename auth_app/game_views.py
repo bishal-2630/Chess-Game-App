@@ -199,3 +199,34 @@ def cancel_invitation(request, invitation_id):
         'success': True,
         'message': 'Invitation cancelled'
     })
+
+class SendCallSignalView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        receiver_username = request.data.get('receiver_username')
+        room_id = request.data.get('room_id')
+        
+        try:
+            receiver = User.objects.get(username=receiver_username)
+        except User.DoesNotExist:
+             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+             
+        # Send WebSocket notification
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        room_group_name = f"user_{receiver.id}"
+        
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'call_invitation',
+                'caller': request.user.username,
+                'room_id': room_id,
+                'caller_picture': request.user.profile_picture
+            }
+        )
+        
+        return Response({'success': True})

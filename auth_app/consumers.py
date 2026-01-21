@@ -80,7 +80,7 @@ class SignalingConsumer(AsyncWebsocketConsumer):
 
 class UserNotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # Allow anonymous connections for now
+        # Allow anonymous connections for now (but they won't trigger online status)
         self.user_id = None
         if self.scope["user"].is_authenticated:
             self.user_id = self.scope["user"].id
@@ -91,6 +91,9 @@ class UserNotificationConsumer(AsyncWebsocketConsumer):
                 self.user_group_name,
                 self.channel_name
             )
+            
+            # Update user online status
+            await self.update_user_status(True)
             
             print(f"🔔 User {self.user_id} connecting to notifications")
         else:
@@ -105,6 +108,21 @@ class UserNotificationConsumer(AsyncWebsocketConsumer):
                 self.user_group_name,
                 self.channel_name
             )
+            
+            # Update user offline status
+            await self.update_user_status(False)
+
+    @database_sync_to_async
+    def update_user_status(self, is_online):
+        if self.scope["user"].is_authenticated:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                user = User.objects.get(id=self.scope["user"].id)
+                user.is_online = is_online
+                user.save()
+            except User.DoesNotExist:
+                pass
 
     async def game_invitation(self, event):
         """Handle incoming game invitation"""
@@ -128,4 +146,15 @@ class UserNotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'invitation_cancelled',
             'data': event['invitation']
+        }))
+
+    async def call_invitation(self, event):
+        """Handle incoming call signal"""
+        await self.send(text_data=json.dumps({
+            'type': 'call_invitation',
+            'data': {
+                'caller': event['caller'],
+                'room_id': event['room_id'],
+                'caller_picture': event.get('caller_picture')
+            }
         }))
