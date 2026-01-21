@@ -76,16 +76,13 @@ class GoogleLoginView(APIView):
                 user = User.objects.create_user(
                     username=username,
                     email=google_email,
-                    password=None,  # Google users don't have Django passwords
+                    password=None,  
                     first_name=first_name,
                     last_name=last_name,
                     google_id=google_id,
                     profile_picture=google_picture
                 )
             
-            # Login the user to create a session
-            #user.backend = 'django.contrib.auth.backends.ModelBackend'
-            #login(request, user)
             
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)

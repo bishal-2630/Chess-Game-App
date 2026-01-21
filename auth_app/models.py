@@ -15,8 +15,10 @@ class User(AbstractUser):
     email_verified = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     is_online = models.BooleanField(default=False)
-    last_seen = models.DateTimeField(auto_now=True)
+    last_seen = models.DateTimeField(null=True, blank=True)
     current_room = models.CharField(max_length=100, null=True, blank=True)
+
+    
     
     def __str__(self):
         return self.email
