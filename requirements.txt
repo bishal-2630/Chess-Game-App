@@ -15,3 +15,4 @@ whitenoise>=6.6.0
 drf-yasg>=1.21.7
 pyotp>=2.9.0
 gunicorn>=21.2.0
+paho-mqtt>=1.6.1

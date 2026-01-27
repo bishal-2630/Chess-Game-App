@@ -7,6 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import GameInvitation
 from .game_serializers import UserSerializer, GameInvitationSerializer, CreateInvitationSerializer
+from .mqtt_utils import publish_mqtt_notification
 
 User = get_user_model()
 
@@ -85,6 +86,13 @@ class SendInvitationView(APIView):
                     'type': 'game_invitation',
                     'invitation': GameInvitationSerializer(invitation).data
                 }
+            )
+            
+            # Send MQTT notification for background/offline support
+            publish_mqtt_notification(
+                invitation.receiver.username,
+                'game_invitation',
+                GameInvitationSerializer(invitation).data
             )
             
             return Response({
@@ -223,6 +231,17 @@ class SendCallSignalView(APIView):
             room_group_name,
             {
                 'type': 'call_invitation',
+                'caller': request.user.username,
+                'room_id': room_id,
+                'caller_picture': request.user.profile_picture
+            }
+        )
+        
+        # Send MQTT notification for background/offline support
+        publish_mqtt_notification(
+            receiver.username,
+            'call_invitation',
+            {
                 'caller': request.user.username,
                 'room_id': room_id,
                 'caller_picture': request.user.profile_picture
