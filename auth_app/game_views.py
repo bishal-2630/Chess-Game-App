@@ -194,3 +194,28 @@ class SendCallSignalView(APIView):
         )
         
         return Response({'success': True})
+
+class DeclineCallView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        caller_username = request.data.get('caller_username')
+        room_id = request.data.get('room_id')
+        
+        try:
+            caller = User.objects.get(username=caller_username)
+        except User.DoesNotExist:
+             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+             
+        # Send MQTT notification to caller that call was declined
+        publish_mqtt_notification(
+            caller.username,
+            'call_declined',
+            {
+                'decliner': request.user.username,
+                'room_id': room_id
+            }
+        )
+        
+        return Response({'success': True})
+

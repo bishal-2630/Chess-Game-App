@@ -13,7 +13,7 @@ from .google_auth_views import GoogleLoginView
 from .game_views import (
     OnlineUsersView, AllUsersView, UpdateOnlineStatusView,
     SendInvitationView, MyInvitationsView, RespondToInvitationView,
-    cancel_invitation, SendCallSignalView
+    cancel_invitation, SendCallSignalView, DeclineCallView
 )
 
 def direct_health(request):
@@ -69,4 +69,5 @@ urlpatterns = [
     path('invitations/<int:invitation_id>/respond/', RespondToInvitationView.as_view(), name='respond_invitation'),
     path('invitations/<int:invitation_id>/cancel/', cancel_invitation, name='cancel_invitation'),
     path('call/send/', SendCallSignalView.as_view(), name='send_call_signal'),
+    path('call/decline/', DeclineCallView.as_view(), name='decline_call'),
 ]
