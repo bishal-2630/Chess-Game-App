@@ -22,6 +22,13 @@ class SignalingConsumer(AsyncWebsocketConsumer):
         await self.accept()
         print(f"✅ Connection accepted for room: {self.room_id}")
 
+        # Send confirmation to the player who just connected
+        await self.send(text_data=json.dumps({
+            'type': 'connected',
+            'status': 'success',
+            'room_id': self.room_id
+        }))
+
         # Notify others in the room that we've joined
         await self.channel_layer.group_send(
             self.room_group_name,
