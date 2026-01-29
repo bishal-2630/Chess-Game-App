@@ -16,9 +16,13 @@ def publish_mqtt_notification(username, notification_type, payload):
     Publishes a notification message to the user's specific MQTT topic.
     Topic format: chess/user/{username}/notifications
     """
+    logger.info(f"🔔 MQTT PUBLISH: Starting publish for user '{username}', type '{notification_type}'")
+    
     client = mqtt.Client()
     try:
+        logger.info(f"🔌 MQTT: Connecting to broker {MQTT_BROKER}:{MQTT_PORT}")
         client.connect(MQTT_BROKER, MQTT_PORT, MQTT_KEEPALIVE)
+        logger.info(f"✅ MQTT: Connected to broker successfully")
         
         topic = f"{MQTT_TOPIC_PREFIX}{username}/notifications"
         message = {
@@ -26,20 +30,24 @@ def publish_mqtt_notification(username, notification_type, payload):
             'payload': payload
         }
         
+        logger.info(f"📤 MQTT: Publishing to topic '{topic}'")
+        logger.info(f"📦 MQTT: Message payload: {json.dumps(message)}")
+        
         result = client.publish(topic, json.dumps(message))
         
         # Wait for publish to complete (optional for small messages, but safer)
         result.wait_for_publish()
         
         if result.rc == mqtt.MQTT_ERR_SUCCESS:
-            logger.info(f"✅ MQTT notification sent to {username} on {topic}")
+            logger.info(f"✅ MQTT: Message published successfully to {username} on {topic}")
             return True
         else:
-            logger.error(f"❌ Failed to publish MQTT message to {username}: {result.rc}")
+            logger.error(f"❌ MQTT: Publish failed with return code {result.rc} for user {username}")
             return False
             
     except Exception as e:
-        logger.error(f"❌ MQTT Publish Error: {str(e)}")
+        logger.error(f"❌ MQTT: Exception during publish - {type(e).__name__}: {str(e)}")
         return False
     finally:
         client.disconnect()
+        logger.info(f"🔌 MQTT: Disconnected from broker")
