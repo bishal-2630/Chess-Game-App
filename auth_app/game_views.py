@@ -219,3 +219,27 @@ class DeclineCallView(APIView):
         
         return Response({'success': True})
 
+
+class CancelCallView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        receiver_username = request.data.get('receiver_username')
+        room_id = request.data.get('room_id')
+        
+        try:
+            receiver = User.objects.get(username=receiver_username)
+        except User.DoesNotExist:
+             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+             
+        # Send MQTT notification that call was cancelled by the caller
+        publish_mqtt_notification(
+            receiver.username,
+            'call_cancelled',
+            {
+                'caller': request.user.username,
+                'room_id': room_id
+            }
+        )
+        
+        return Response({'success': True})
