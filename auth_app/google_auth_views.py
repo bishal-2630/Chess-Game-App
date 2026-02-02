@@ -7,6 +7,7 @@ from django.contrib.auth import login
 from requests import RequestException
 import requests
 import json
+from drf_yasg.utils import swagger_auto_schema
 
 User = get_user_model()
 
@@ -16,6 +17,7 @@ class GoogleLoginView(APIView):
     """
     permission_classes = [permissions.AllowAny]
     
+    @swagger_auto_schema(auto_schema=None)
     def post(self, request):
         access_token = request.data.get('access_token')
         id_token = request.data.get('id_token')

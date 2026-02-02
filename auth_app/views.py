@@ -1,4 +1,5 @@
 from rest_framework import status, permissions
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
@@ -19,6 +20,7 @@ from .serializers import (
 class ConnectivityCheckView(APIView):
     permission_classes = [permissions.AllowAny]
     
+    @swagger_auto_schema(auto_schema=None)
     def get(self, request):
         results = {}
         # Test Google HTTP
@@ -71,6 +73,7 @@ class ConnectivityCheckView(APIView):
 class TestEmailView(APIView):
     permission_classes = [permissions.AllowAny]
     
+    @swagger_auto_schema(auto_schema=None)
     def post(self, request):
         email = request.data.get('email', 'kbishal177@gmail.com')
         try:

@@ -229,6 +229,7 @@ class SendVerificationEmailView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
+    @swagger_auto_schema(auto_schema=None)
     def post(self, request):
         """Send email verification link"""
         user = request.user
@@ -270,6 +271,7 @@ class VerifyEmailTokenView(APIView):
     """
     permission_classes = [AllowAny]
     
+    @swagger_auto_schema(auto_schema=None)
     def get(self, request):
         """Verify email using token (GET request for email links)"""
         token = request.GET.get('token')
@@ -441,6 +443,7 @@ class HealthCheckView(APIView):
     """
     permission_classes = [AllowAny]
     
+    @swagger_auto_schema(auto_schema=None)
     def get(self, request):
         from django.db import connection
         
