@@ -84,7 +84,7 @@ class RegisterView(APIView):
                 password=password
             )
             # user.is_active = True # create_user defaults to True usually, but safe to assume handling elsewhere or default model
-            print(f"✅ User registered: {username}")
+            print(f"User registered: {username}")
             
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
@@ -111,10 +111,13 @@ class RegisterView(APIView):
             }, status=status.HTTP_201_CREATED)
             
         except Exception as e:
+            print(f"Registration Error: {str(e)}")
+            traceback.print_exc()
             return Response({
                 'success': False,
-                'message': f'Registration failed: {str(e)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'message': f'Registration failed: {str(e)}',
+                'traceback': traceback.format_exc()
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ========== LOGIN ==========
@@ -139,50 +142,59 @@ class LoginView(APIView):
                 'message': 'Email and password are required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Try to find user by email first
         try:
-            user = User.objects.get(email=email)
-            print(f"👤 Found user: {user.username}, id={user.id}")
-        except User.DoesNotExist:
-            print(f"❌ No user found with email: {email}")
+            # Try to find user by email first
+            try:
+                user = User.objects.get(email=email)
+                print(f"Found user: {user.username}, id={user.id}")
+            except User.DoesNotExist:
+                print(f"No user found with email: {email}")
+                return Response({
+                    'success': False,
+                    'message': 'No account found with this email'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # Check password
+            if not user.check_password(password):
+                print(f"Password check failed for user {user.username}")
+                return Response({
+                    'success': False,
+                    'message': 'Invalid password'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            print(f"Password check passed for user {user.username}")
+            
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'success': True,
+                'message': 'Login successful',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'email_verified': user.email_verified,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'profile_picture': user.profile_picture,
+                    'is_online': user.is_online,
+                    'last_seen': user.last_seen.isoformat() if user.last_seen else None,
+                    'current_room': user.current_room
+                },
+                'tokens': {
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh)
+                }
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(f"Login Error: {str(e)}")
+            traceback.print_exc()
             return Response({
                 'success': False,
-                'message': 'No account found with this email'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        
-        # Check password
-        if not user.check_password(password):
-            print(f"❌ Password check failed for user {user.username}")
-            return Response({
-                'success': False,
-                'message': 'Invalid password'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        
-        print(f"✅ Password check passed for user {user.username}")
-        
-        # Generate JWT tokens
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            'success': True,
-            'message': 'Login successful',
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'email_verified': user.email_verified,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'profile_picture': user.profile_picture,
-                'is_online': user.is_online,
-                'last_seen': user.last_seen.isoformat() if user.last_seen else None,
-                'current_room': user.current_room
-            },
-            'tokens': {
-                'access': str(refresh.access_token),
-                'refresh': str(refresh)
-            }
-        }, status=status.HTTP_200_OK)
+                'message': f'Login failed: {str(e)}',
+                'traceback': traceback.format_exc()
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ========== LOGOUT ==========
