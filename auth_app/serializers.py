@@ -30,5 +30,41 @@ class PasswordResetSerializer(serializers.Serializer):
         
         return data
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 
+            'profile_picture', 'email_verified', 'is_online', 
+            'last_seen', 'current_room'
+        ]
+
+class TokenSerializer(serializers.Serializer):
+    access = serializers.CharField()
+    refresh = serializers.CharField()
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=6)
+    
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password']
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+class GuestRegisterSerializer(serializers.Serializer):
+    username = serializers.CharField()
+
+class AuthResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+    user = UserSerializer(required=False)
+    tokens = TokenSerializer(required=False)
+
 # class FirebaseAuthSerializer(serializers.Serializer):
 #     firebase_token = serializers.CharField(required=True)

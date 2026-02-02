@@ -7,6 +7,8 @@ from django.contrib.auth import login
 from requests import RequestException
 import requests
 import json
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 User = get_user_model()
 
@@ -16,6 +18,17 @@ class GoogleLoginView(APIView):
     """
     permission_classes = [permissions.AllowAny]
     
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['access_token'],
+            properties={
+                'access_token': openapi.Schema(type=openapi.TYPE_STRING, description='Google access token'),
+                'id_token': openapi.Schema(type=openapi.TYPE_STRING, description='Optional Google ID token'),
+            }
+        ),
+        responses={200: 'Google login successful', 401: 'Failed to verify token'}
+    )
     def post(self, request):
         access_token = request.data.get('access_token')
         id_token = request.data.get('id_token')

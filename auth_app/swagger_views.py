@@ -13,7 +13,12 @@ from django.conf import settings
 import pyotp
 import requests
 import traceback
-# from .serializers import FirebaseAuthSerializer  # REMOVED
+from .serializers import (
+    RegisterSerializer, LoginSerializer, LogoutSerializer, 
+    UserSerializer, TokenSerializer, AuthResponseSerializer,
+    GuestRegisterSerializer, EmailSerializer, OTPSerializer,
+    PasswordResetSerializer
+)
 
 User = get_user_model()
 
@@ -25,52 +30,8 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
     
     @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['email', 'password', 'username'],
-            properties={
-                'username': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='Unique username (min 3 chars, no spaces)'
-                ),
-                'email': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='Valid email address'
-                ),
-                'password': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='Password (min 6 characters)'
-                ),
-            }
-        ),
-        responses={
-            201: openapi.Response(
-                'User registered successfully', 
-                examples={
-                    'application/json': {
-                        'success': True,
-                        'user': {
-                            'id': 1,
-                            'username': 'testuser',
-                            'email': 'test@example.com'
-                        },
-                        'tokens': {
-                            'access': 'eyJhbGciOi...',
-                            'refresh': 'eyJhbGciOi...'
-                        }
-                    }
-                }
-            ),
-            400: openapi.Response(
-                'Bad Request',
-                examples={
-                    'application/json': {
-                        'success': False,
-                        'message': 'Email already exists'
-                    }
-                }
-            )
-        }
+        request_body=RegisterSerializer,
+        responses={201: AuthResponseSerializer, 400: 'Bad Request'}
     )
     def post(self, request):
         """Register a new user"""
@@ -164,48 +125,8 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
     
     @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['email', 'password'],
-            properties={
-                'email': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='Registered email address'
-                ),
-                'password': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='Account password'
-                ),
-            }
-        ),
-        responses={
-            200: openapi.Response(
-                'Login successful',
-                examples={
-                    'application/json': {
-                        'success': True,
-                        'user': {
-                            'id': 1,
-                            'username': 'testuser',
-                            'email': 'test@example.com'
-                        },
-                        'tokens': {
-                            'access': 'eyJhbGciOi...',
-                            'refresh': 'eyJhbGciOi...'
-                        }
-                    }
-                }
-            ),
-            401: openapi.Response(
-                'Invalid credentials',
-                examples={
-                    'application/json': {
-                        'success': False,
-                        'message': 'Invalid credentials'
-                    }
-                }
-            )
-        }
+        request_body=LoginSerializer,
+        responses={200: AuthResponseSerializer, 401: 'Invalid credentials'}
     )
     def post(self, request):
         """Login with email and password"""
@@ -272,36 +193,8 @@ class LogoutView(APIView):
     permission_classes = [AllowAny]
     
     @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['refresh'],
-            properties={
-                'refresh': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='Refresh token to blacklist'
-                ),
-            }
-        ),
-        responses={
-            200: openapi.Response(
-                'Logged out successfully',
-                examples={
-                    'application/json': {
-                        'success': True,
-                        'message': 'Successfully logged out'
-                    }
-                }
-            ),
-            400: openapi.Response(
-                'Invalid token',
-                examples={
-                    'application/json': {
-                        'success': False,
-                        'message': 'Invalid refresh token'
-                    }
-                }
-            )
-        }
+        request_body=LogoutSerializer,
+        responses={200: 'Logged out successfully'}
     )
     def post(self, request):
         """Logout user and blacklist refresh token"""
@@ -499,32 +392,10 @@ class TokenVerifyView(APIView):
             type=openapi.TYPE_OBJECT,
             required=['token'],
             properties={
-                'token': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='JWT access token to verify'
-                ),
+                'token': openapi.Schema(type=openapi.TYPE_STRING, description='Token to verify'),
             }
         ),
-        responses={
-            200: openapi.Response(
-                'Token is valid',
-                examples={
-                    'application/json': {
-                        'valid': True,
-                        'message': 'Token is valid'
-                    }
-                }
-            ),
-            401: openapi.Response(
-                'Token is invalid',
-                examples={
-                    'application/json': {
-                        'valid': False,
-                        'message': 'Token is invalid or expired'
-                    }
-                }
-            )
-        }
+        responses={200: 'Token is valid', 401: 'Token is invalid'}
     )
     def post(self, request):
         """Verify JWT token"""
@@ -570,36 +441,8 @@ class GuestRegisterView(APIView):
     permission_classes = [AllowAny]
     
     @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['username'],
-            properties={
-                'username': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='Guest username'
-                ),
-            }
-        ),
-        responses={
-            200: openapi.Response(
-                'Guest session created',
-                examples={
-                    'application/json': {
-                        'success': True,
-                        'message': 'Guest session created',
-                        'guest_user': {
-                            'id': 999,
-                            'username': 'GuestPlayer123',
-                            'is_guest': True
-                        },
-                        'tokens': {
-                            'access': 'eyJhbGciOi...',
-                            'refresh': 'eyJhbGciOi...'
-                        }
-                    }
-                }
-            )
-        }
+        request_body=GuestRegisterSerializer,
+        responses={200: AuthResponseSerializer}
     )
     def post(self, request):
         """Create a guest user session"""
@@ -733,20 +576,8 @@ class SendOTPView(APIView):
     permission_classes = [AllowAny]
     
     @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['email'],
-            properties={
-                'email': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='User email address'
-                ),
-            }
-        ),
-        responses={
-            200: openapi.Response('OTP sent successfully'),
-            400: openapi.Response('User not found')
-        }
+        request_body=EmailSerializer,
+        responses={200: 'OTP sent successfully', 400: 'Bad Request'}
     )
     def post(self, request):
         email = request.data.get('email')
@@ -804,14 +635,7 @@ class VerifyOTPView(APIView):
     permission_classes = [AllowAny]
     
     @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['email', 'otp'],
-            properties={
-                'email': openapi.Schema(type=openapi.TYPE_STRING),
-                'otp': openapi.Schema(type=openapi.TYPE_STRING),
-            }
-        ),
+        request_body=OTPSerializer,
         responses={200: 'OTP verified', 400: 'Invalid OTP'}
     )
     def post(self, request):
@@ -855,16 +679,7 @@ class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
     
     @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['email', 'otp', 'new_password', 'confirm_password'],
-            properties={
-                'email': openapi.Schema(type=openapi.TYPE_STRING),
-                'otp': openapi.Schema(type=openapi.TYPE_STRING),
-                'new_password': openapi.Schema(type=openapi.TYPE_STRING),
-                'confirm_password': openapi.Schema(type=openapi.TYPE_STRING),
-            }
-        ),
+        request_body=PasswordResetSerializer,
         responses={200: 'Password reset', 400: 'Reset failed'}
     )
     def post(self, request):
