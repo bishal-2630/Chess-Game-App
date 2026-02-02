@@ -8,17 +8,12 @@ from datetime import timedelta
 from .models import GameInvitation
 from .game_serializers import UserSerializer, GameInvitationSerializer, CreateInvitationSerializer
 from .mqtt_utils import publish_mqtt_notification
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 User = get_user_model()
 
 class OnlineUsersView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(
-        responses={200: 'List of online users'}
-    )
     def get(self, request):
         # Get users who were online in the last 5 minutes
         five_minutes_ago = timezone.now() - timedelta(minutes=5)
@@ -35,9 +30,6 @@ class OnlineUsersView(APIView):
 class AllUsersView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(
-        responses={200: 'List of all users'}
-    )
     def get(self, request):
         # Get all users except current user
         users = User.objects.exclude(id=request.user.id).order_by('-is_online', 'username')
@@ -50,16 +42,6 @@ class AllUsersView(APIView):
 class UpdateOnlineStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'is_online': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                'room_id': openapi.Schema(type=openapi.TYPE_STRING),
-            }
-        ),
-        responses={200: 'Status updated'}
-    )
     def post(self, request):
         user = request.user
         is_online = request.data.get('is_online', True)
@@ -82,10 +64,6 @@ class UpdateOnlineStatusView(APIView):
 class SendInvitationView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(
-        request_body=CreateInvitationSerializer,
-        responses={200: 'Invitation sent', 400: 'Bad Request'}
-    )
     def post(self, request):
         serializer = CreateInvitationSerializer(
             data=request.data,
@@ -113,9 +91,6 @@ class SendInvitationView(APIView):
 class MyInvitationsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(
-        responses={200: 'List of received invitations'}
-    )
     def get(self, request):
         # Get received invitations that are pending
         invitations = GameInvitation.objects.filter(
@@ -132,15 +107,6 @@ class MyInvitationsView(APIView):
 class RespondToInvitationView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'action': openapi.Schema(type=openapi.TYPE_STRING, description='accept or decline'),
-            }
-        ),
-        responses={200: 'Response recorded', 404: 'Not found'}
-    )
     def post(self, request, invitation_id):
         try:
             invitation = GameInvitation.objects.get(
@@ -176,10 +142,6 @@ class RespondToInvitationView(APIView):
             'invitation': GameInvitationSerializer(invitation).data
         })
 
-@swagger_auto_schema(
-    method='post',
-    responses={200: 'Invitation cancelled', 404: 'Not found'}
-)
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def cancel_invitation(request, invitation_id):
@@ -211,16 +173,6 @@ def cancel_invitation(request, invitation_id):
 class SendCallSignalView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'receiver_username': openapi.Schema(type=openapi.TYPE_STRING),
-                'room_id': openapi.Schema(type=openapi.TYPE_STRING),
-            }
-        ),
-        responses={200: 'Call signal sent'}
-    )
     def post(self, request):
         receiver_username = request.data.get('receiver_username')
         room_id = request.data.get('room_id')
@@ -246,16 +198,6 @@ class SendCallSignalView(APIView):
 class DeclineCallView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'caller_username': openapi.Schema(type=openapi.TYPE_STRING),
-                'room_id': openapi.Schema(type=openapi.TYPE_STRING),
-            }
-        ),
-        responses={200: 'Call declined'}
-    )
     def post(self, request):
         caller_username = request.data.get('caller_username')
         room_id = request.data.get('room_id')
@@ -281,16 +223,6 @@ class DeclineCallView(APIView):
 class CancelCallView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'receiver_username': openapi.Schema(type=openapi.TYPE_STRING),
-                'room_id': openapi.Schema(type=openapi.TYPE_STRING),
-            }
-        ),
-        responses={200: 'Call cancelled'}
-    )
     def post(self, request):
         receiver_username = request.data.get('receiver_username')
         room_id = request.data.get('room_id')

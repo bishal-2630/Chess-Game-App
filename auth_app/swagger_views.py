@@ -229,28 +229,6 @@ class SendVerificationEmailView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
-    @swagger_auto_schema(
-        responses={
-            200: openapi.Response(
-                'Verification email sent',
-                examples={
-                    'application/json': {
-                        'success': True,
-                        'message': 'Verification email sent'
-                    }
-                }
-            ),
-            400: openapi.Response(
-                'Email already verified',
-                examples={
-                    'application/json': {
-                        'success': False,
-                        'message': 'Email already verified'
-                    }
-                }
-            )
-        }
-    )
     def post(self, request):
         """Send email verification link"""
         user = request.user
@@ -292,44 +270,6 @@ class VerifyEmailTokenView(APIView):
     """
     permission_classes = [AllowAny]
     
-    @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter(
-                'token',
-                openapi.IN_QUERY,
-                description="Email verification token",
-                type=openapi.TYPE_STRING,
-                required=True
-            ),
-            openapi.Parameter(
-                'user_id',
-                openapi.IN_QUERY,
-                description="User ID to verify",
-                type=openapi.TYPE_INTEGER,
-                required=True
-            )
-        ],
-        responses={
-            200: openapi.Response(
-                'Email verified successfully',
-                examples={
-                    'application/json': {
-                        'success': True,
-                        'message': 'Email verified successfully'
-                    }
-                }
-            ),
-            400: openapi.Response(
-                'Invalid or expired token',
-                examples={
-                    'application/json': {
-                        'success': False,
-                        'message': 'Invalid or expired verification token'
-                    }
-                }
-            )
-        }
-    )
     def get(self, request):
         """Verify email using token (GET request for email links)"""
         token = request.GET.get('token')
@@ -501,21 +441,6 @@ class HealthCheckView(APIView):
     """
     permission_classes = [AllowAny]
     
-    @swagger_auto_schema(
-        responses={
-            200: openapi.Response(
-                'API is healthy',
-                examples={
-                    'application/json': {
-                        'status': 'healthy',
-                        'timestamp': '2024-01-01T12:00:00Z',
-                        'version': '1.0.0',
-                        'database': 'connected'
-                    }
-                }
-            )
-        }
-    )
     def get(self, request):
         from django.db import connection
         
