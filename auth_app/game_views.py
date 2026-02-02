@@ -149,7 +149,7 @@ class RespondToInvitationView(APIView):
             'invitation': GameInvitationSerializer(invitation).data
         })
 
-@swagger_auto_schema(auto_schema=None)
+@swagger_auto_schema(methods=['POST'], auto_schema=None)
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def cancel_invitation(request, invitation_id):
