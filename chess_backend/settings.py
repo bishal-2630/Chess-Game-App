@@ -229,8 +229,8 @@ SWAGGER_SETTINGS = {
     },
     'USE_SESSION_AUTH': False,
     'VALIDATOR_URL': None,
-    'DEFAULT_API_URL': 'https://chessgameauth.share.zrok.io',
 }
+
 
 CSRF_TRUSTED_ORIGINS = [
     "https://chessgameauth.share.zrok.io",
@@ -248,7 +248,12 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.vercel.app",
 ]
 
-SWAGGER_UI_OAUTH2_REDIRECT_URL = 'https://chessgameauth.share.zrok.io/swagger/oauth2-redirect.html'
+# Handle Swagger redirect dynamically for Vercel
+if VERCEL_URL:
+    SWAGGER_UI_OAUTH2_REDIRECT_URL = f'https://{VERCEL_URL}/swagger/oauth2-redirect.html'
+else:
+    SWAGGER_UI_OAUTH2_REDIRECT_URL = 'https://chessgameauth.share.zrok.io/swagger/oauth2-redirect.html'
+
 
 # GHOSTBUSTER CONFIG
 CSRF_FAILURE_VIEW = 'auth_app.views.csrf_failure'
