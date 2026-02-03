@@ -15,8 +15,12 @@ User = get_user_model()
 class OnlineUsersView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(auto_schema=None)
+    @swagger_auto_schema(
+        operation_description="Get list of users who are currently connected to the server.",
+        responses={200: 'List of online users'}
+    )
     def get(self, request):
+
         # Get users who were online in the last 5 minutes
         five_minutes_ago = timezone.now() - timedelta(minutes=5)
         online_users = User.objects.filter(
@@ -32,8 +36,12 @@ class OnlineUsersView(APIView):
 class AllUsersView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(auto_schema=None)
+    @swagger_auto_schema(
+        operation_description="Get list of all registered users in the system.",
+        responses={200: 'List of all users'}
+    )
     def get(self, request):
+
         # Get all users except current user
         users = User.objects.exclude(id=request.user.id).order_by('-is_online', 'username')
         serializer = UserSerializer(users, many=True)
@@ -45,8 +53,19 @@ class AllUsersView(APIView):
 class UpdateOnlineStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(auto_schema=None)
+    @swagger_auto_schema(
+        operation_description="Update the current user's online status and room assignment.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'is_online': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                'room_id': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={200: 'Status updated'}
+    )
     def post(self, request):
+
         user = request.user
         is_online = request.data.get('is_online', True)
         room_id = request.data.get('room_id', None)
@@ -68,8 +87,16 @@ class UpdateOnlineStatusView(APIView):
 class SendInvitationView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(auto_schema=None)
+    @swagger_auto_schema(
+        operation_description="""
+        Send a game invitation to another user.
+        **Triggers Real-time Event**: `game_invitation` via MQTT and WebSocket.
+        """,
+        request_body=CreateInvitationSerializer,
+        responses={200: 'Invitation sent', 400: 'Error'}
+    )
     def post(self, request):
+
         serializer = CreateInvitationSerializer(
             data=request.data,
             context={'request': request}
@@ -96,8 +123,12 @@ class SendInvitationView(APIView):
 class MyInvitationsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(auto_schema=None)
+    @swagger_auto_schema(
+        operation_description="Get all pending invitations received by the current user.",
+        responses={200: 'List of invitations'}
+    )
     def get(self, request):
+
         # Get received invitations that are pending
         invitations = GameInvitation.objects.filter(
             receiver=request.user,
@@ -113,8 +144,21 @@ class MyInvitationsView(APIView):
 class RespondToInvitationView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(auto_schema=None)
+    @swagger_auto_schema(
+        operation_description="""
+        Respond to a pending game invitation.
+        **Triggers Real-time Event**: `invitation_response` via MQTT and WebSocket.
+        """,
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'action': openapi.Schema(type=openapi.TYPE_STRING, enum=['accept', 'decline']),
+            }
+        ),
+        responses={200: 'Response processed'}
+    )
     def post(self, request, invitation_id):
+
         try:
             invitation = GameInvitation.objects.get(
                 id=invitation_id,
@@ -149,8 +193,16 @@ class RespondToInvitationView(APIView):
             'invitation': GameInvitationSerializer(invitation).data
         })
 
-@swagger_auto_schema(methods=['POST'], auto_schema=None)
+@swagger_auto_schema(
+    method='POST',
+    operation_description="""
+    Cancel a previously sent game invitation.
+    **Triggers Real-time Event**: `invitation_cancelled` via MQTT and WebSocket.
+    """,
+    responses={200: 'Invitation cancelled'}
+)
 @api_view(['POST'])
+
 @permission_classes([permissions.IsAuthenticated])
 def cancel_invitation(request, invitation_id):
     try:
@@ -181,8 +233,22 @@ def cancel_invitation(request, invitation_id):
 class SendCallSignalView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(auto_schema=None)
+    @swagger_auto_schema(
+        operation_description="""
+        Initiate a call signal to another user.
+        **Triggers Real-time Event**: `call_invitation` via MQTT.
+        """,
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'receiver_username': openapi.Schema(type=openapi.TYPE_STRING),
+                'room_id': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={200: 'Signal sent'}
+    )
     def post(self, request):
+
         receiver_username = request.data.get('receiver_username')
         room_id = request.data.get('room_id')
         
@@ -207,8 +273,22 @@ class SendCallSignalView(APIView):
 class DeclineCallView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(auto_schema=None)
+    @swagger_auto_schema(
+        operation_description="""
+        Decline an incoming call.
+        **Triggers Real-time Event**: `call_declined` via MQTT.
+        """,
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'caller_username': openapi.Schema(type=openapi.TYPE_STRING),
+                'room_id': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={200: 'Call declined'}
+    )
     def post(self, request):
+
         caller_username = request.data.get('caller_username')
         room_id = request.data.get('room_id')
         
@@ -233,8 +313,22 @@ class DeclineCallView(APIView):
 class CancelCallView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
-    @swagger_auto_schema(auto_schema=None)
+    @swagger_auto_schema(
+        operation_description="""
+        Cancel an outgoing call attempt.
+        **Triggers Real-time Event**: `call_cancelled` via MQTT.
+        """,
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'receiver_username': openapi.Schema(type=openapi.TYPE_STRING),
+                'room_id': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={200: 'Call cancelled'}
+    )
     def post(self, request):
+
         receiver_username = request.data.get('receiver_username')
         room_id = request.data.get('room_id')
         

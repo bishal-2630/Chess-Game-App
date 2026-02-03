@@ -15,6 +15,8 @@ from .game_views import (
     SendInvitationView, MyInvitationsView, RespondToInvitationView,
     cancel_invitation, SendCallSignalView, DeclineCallView, CancelCallView
 )
+from .realtime_docs import MQTTDocumentationView, WebSocketDocumentationView
+
 
 def direct_health(request):
     return JsonResponse({"status": "v3_direct_ok", "phase": "csrf_final_decisive"})
@@ -71,4 +73,8 @@ urlpatterns = [
     path('call/send/', SendCallSignalView.as_view(), name='send_call_signal'),
     path('call/decline/', DeclineCallView.as_view(), name='decline_call'),
     path('call/cancel/', CancelCallView.as_view(), name='cancel_call'),
+    
+    # Real-time Service Documentation (Swagger Only)
+    path('docs/mqtt/', MQTTDocumentationView.as_view(), name='docs_mqtt'),
+    path('docs/websockets/', WebSocketDocumentationView.as_view(), name='docs_websockets'),
 ]

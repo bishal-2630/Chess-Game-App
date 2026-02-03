@@ -10,11 +10,21 @@ schema_view = get_schema_view(
     openapi.Info(
         title="Chess Game Authentication API",
         default_version='v1',
-        description="Complete authentication system for Chess Game by Bishal\n\nGitHub: https://github.com/bishal-2630/Chess-Game-App",
+        description="""
+        Complete authentication and signaling system for Chess Game by Bishal.
+
+        ### Real-time Services
+        This project uses MQTT and WebSockets for real-time features.
+        - **MQTT**: Background notifications and persistent signaling. [Documentation](/api/auth/docs/mqtt/)
+        - **WebSockets**: Live in-game signaling and UI updates. [Documentation](/api/auth/docs/websockets/)
+
+        GitHub: https://github.com/bishal-2630/Chess-Game-App
+        """,
         terms_of_service="https://github.com/bishal-2630/Chess-Game-App",
         contact=openapi.Contact(email="kbishal177@gmail.com"),
         license=openapi.License(name="MIT License"),
     ),
+
     public=True,
     permission_classes=(AllowAny,),
 )
