@@ -9,6 +9,8 @@ from .models import GameInvitation
 from .game_serializers import UserSerializer, GameInvitationSerializer, CreateInvitationSerializer
 from .mqtt_utils import publish_mqtt_notification
 from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 
 User = get_user_model()
 
