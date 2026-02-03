@@ -463,25 +463,29 @@ class HealthCheckView(APIView):
         # Check database connection and engine
         db_status = 'connected'
         db_engine = 'unknown'
+        db_host = 'unknown'
         user_count = 0
         try:
             from django.db import connection
             connection.ensure_connection()
             db_engine = connection.vendor
+            db_host = connection.settings_dict.get('HOST', 'unknown')
             user_count = User.objects.count()
         except Exception as e:
             db_status = f'error: {str(e)}'
         
         return Response({
             'status': 'healthy',
-            'deploy_version': 'v3-swagger-diag-v1',
+            'deploy_version': 'v3-swagger-diag-v2',
             'timestamp': timezone.now().isoformat(),
             'service': 'Chess Game Authentication API',
             'database': {
                 'status': db_status,
                 'engine': db_engine,
+                'host': f"{db_host[:10]}..." if db_host and len(db_host) > 10 else db_host,
                 'user_count': user_count
             },
+
             'endpoints': {
                 'register': '/api/auth/register/',
                 'login': '/api/auth/login/',
