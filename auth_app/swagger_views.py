@@ -145,8 +145,9 @@ class LoginView(APIView):
         try:
             # Try to find user by email first
             try:
-                user = User.objects.get(email=email)
+                user = User.objects.get(email__iexact=email)
                 print(f"Found user: {user.username}, id={user.id}")
+
             except User.DoesNotExist:
                 print(f"No user found with email: {email}")
                 return Response({
@@ -459,32 +460,35 @@ class HealthCheckView(APIView):
     def get(self, request):
         from django.db import connection
         
-        # Check database connection
+        # Check database connection and engine
         db_status = 'connected'
+        db_engine = 'unknown'
+        user_count = 0
         try:
+            from django.db import connection
             connection.ensure_connection()
-        except:
-            db_status = 'disconnected'
+            db_engine = connection.vendor
+            user_count = User.objects.count()
+        except Exception as e:
+            db_status = f'error: {str(e)}'
         
         return Response({
             'status': 'healthy',
-            'deploy_version': 'v3-forced-update-2026-01-19-try2', # Tracer bullet force update
+            'deploy_version': 'v3-swagger-diag-v1',
             'timestamp': timezone.now().isoformat(),
             'service': 'Chess Game Authentication API',
-            'version': '1.0.0',
-            'database': db_status,
-            'debug_bypass_deployed': True,
+            'database': {
+                'status': db_status,
+                'engine': db_engine,
+                'user_count': user_count
+            },
             'endpoints': {
                 'register': '/api/auth/register/',
                 'login': '/api/auth/login/',
-                'logout': '/api/auth/logout/',
-                'send_otp': '/api/auth/send-otp/',
-                'verify_otp': '/api/auth/verify-otp/',
-                'reset_password': '/api/auth/reset-password/',
                 'swagger': '/swagger/',
-                'redoc': '/redoc/'
             }
         }, status=status.HTTP_200_OK)
+
     
 
 class DebugPasswordView(APIView):
