@@ -9,7 +9,8 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 
-                 'profile_picture', 'is_online', 'last_seen', 'current_room']
+                 'profile_picture', 'is_online', 'last_seen', 'current_room',
+                 'wins', 'draws', 'losses']
 
 class GameInvitationSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)

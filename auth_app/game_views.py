@@ -350,3 +350,38 @@ class CancelCallView(APIView):
         )
         
         return Response({'success': True})
+
+class RecordGameResultView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_description="Record a game result for the current user.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['result'],
+            properties={
+                'result': openapi.Schema(type=openapi.TYPE_STRING, enum=['win', 'draw', 'loss']),
+            }
+        ),
+        responses={200: 'Result recorded'}
+    )
+    def post(self, request):
+        user = request.user
+        result = request.data.get('result')
+        
+        if result == 'win':
+            user.wins += 1
+        elif result == 'draw':
+            user.draws += 1
+        elif result == 'loss':
+            user.losses += 1
+        else:
+            return Response({'error': 'Invalid result'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.save()
+        return Response({
+            'success': True, 
+            'wins': user.wins, 
+            'draws': user.draws, 
+            'losses': user.losses
+        })

@@ -17,6 +17,9 @@ class User(AbstractUser):
     is_online = models.BooleanField(default=False)
     last_seen = models.DateTimeField(null=True, blank=True)
     current_room = models.CharField(max_length=100, null=True, blank=True)
+    wins = models.IntegerField(default=0)
+    draws = models.IntegerField(default=0)
+    losses = models.IntegerField(default=0)
 
     
     
