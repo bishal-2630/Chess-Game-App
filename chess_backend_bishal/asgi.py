@@ -8,13 +8,13 @@ django.setup()
 
 # Import from existing middleware file
 from auth_app.middleware import JWTAuthMiddleware
-import chess_backend.routing
+import chess_backend_bishal.routing
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": JWTAuthMiddleware(
         URLRouter(
-            chess_backend.routing.websocket_urlpatterns
+            chess_backend_bishal.routing.websocket_urlpatterns
         )
     ),
 })

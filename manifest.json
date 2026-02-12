@@ -1,6 +1,6 @@
 {
-    "name": "chess_game",
-    "short_name": "chess_game",
+    "name": "chess_bishal",
+    "short_name": "chess_bishal",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
