@@ -19,6 +19,9 @@ print(f"🚀 SERVER STARTING - TS: {time.time()} - DEBUG: {DEBUG} - URLCONF: {RO
 
 # Use Railway's ALLOWED_HOSTS variable
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
+KOYEB_URL = config('KOYEB_PUBLIC_DOMAIN', default='positive-brianne-self2630-c40dbd11.koyeb.app')
+if KOYEB_URL:
+    ALLOWED_HOSTS.append(KOYEB_URL)
 RAILWAY_HOSTNAME = config('RAILWAY_STATIC_URL', default='chess-game-app-production.up.railway.app')
 
 # Vercel hostname support
