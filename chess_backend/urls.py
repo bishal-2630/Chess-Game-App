@@ -48,7 +48,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # API
-    path('api/auth/', include('auth_app.urls_v3')),
+    path('api/auth/', include('auth_app.urls')),
     
     # Ghost Check
     path('ghost-check/', direct_rollback_check),

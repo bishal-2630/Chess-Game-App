@@ -12,6 +12,7 @@ venv/
 *.pot
 db.sqlite3
 db.sqlite3-journal
+staticfiles/
 media/
 *.backup
 

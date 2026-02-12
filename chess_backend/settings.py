@@ -14,7 +14,7 @@ import time
 
 # Use Railway's environment variables
 DEBUG = config('DEBUG', default=False, cast=bool)
-ROOT_URLCONF = 'chess_backend.urls_v7_final'
+ROOT_URLCONF = 'chess_backend.urls'
 print(f"🚀 SERVER STARTING - TS: {time.time()} - DEBUG: {DEBUG} - URLCONF: {ROOT_URLCONF}")
 
 # Use Railway's ALLOWED_HOSTS variable
