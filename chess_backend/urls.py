@@ -58,6 +58,6 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('swagger.json/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     
-    # Root URL - Serve Flutter app
-    path('', views.serve_flutter_app, name='serve_flutter_app'),
+    # Root URL - Serve Flutter app (SPA catch-all)
+    re_path(r'^(?P<path>.*)$', views.serve_flutter_app, name='serve_flutter_app'),
 ]

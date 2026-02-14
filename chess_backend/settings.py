@@ -122,6 +122,13 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+# Session Cookie Configuration (for WebView cookie injection)
+SESSION_COOKIE_SECURE = True  # HTTPS only
+SESSION_COOKIE_HTTPONLY = False  # Allow JavaScript access in WebView
+SESSION_COOKIE_SAMESITE = 'None'  # Allow cross-origin for WebView
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 days
+SESSION_SAVE_EVERY_REQUEST = True  # Keep session alive
+
 # ROOT_URLCONF is already set at the top
 
 TEMPLATES = [

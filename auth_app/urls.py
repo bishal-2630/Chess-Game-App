@@ -8,6 +8,7 @@ from .swagger_views import (
     TokenVerifyView,
     GuestRegisterView, HealthCheckView
 )
+from .web_session_views import WebSessionView
 from .views import ConnectivityCheckView, TestEmailView
 from .google_auth_views import GoogleLoginView
 from .game_views import (
@@ -59,6 +60,9 @@ urlpatterns = [
     
     # Token Operations
     path('token/verify/', TokenVerifyView.as_view(), name='verify_token'),
+    
+    # Web Session (Cookie Injection)
+    path('web-session/', WebSessionView.as_view(), name='web_session'),
     
     # Health Check
     path('health-new/', HealthCheckView.as_view(), name='health_check'),
