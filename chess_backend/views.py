@@ -59,3 +59,11 @@ def _serve_file(file_path):
         return HttpResponse(content, content_type=content_type)
     except Exception as e:
         return HttpResponse(f"Error serving file: {str(e)}", status=500)
+
+def serve_assetlinks(request):
+    """Serve the .well-known/assetlinks.json file for App Links verification"""
+    file_path = settings.BASE_DIR / '.well-known' / 'assetlinks.json'
+    if file_path.exists():
+        with open(file_path, 'r') as f:
+            return HttpResponse(f.read(), content_type='application/json')
+    return HttpResponse('File not found', status=404)

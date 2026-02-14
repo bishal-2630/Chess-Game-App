@@ -59,5 +59,6 @@ urlpatterns = [
     path('swagger.json/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     
     # Root URL - Serve Flutter app (SPA catch-all)
+    path('.well-known/assetlinks.json', views.serve_assetlinks, name='assetlinks'),
     re_path(r'^(?P<path>.*)$', views.serve_flutter_app, name='serve_flutter_app'),
 ]
