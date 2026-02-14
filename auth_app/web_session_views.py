@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 from datetime import timedelta
+from django.contrib.auth import login
 import secrets
 
 
@@ -34,24 +35,12 @@ class WebSessionView(APIView):
         try:
             user = request.user
             
-            # Create a new session
-            session_key = secrets.token_urlsafe(32)
+            # Use Django's login system to associate the user with the session correctly
+            # This sets _auth_user_id and other required keys for AuthenticationMiddleware
+            login(request, user)
             
             # Set session expiration (7 days to match JWT refresh token)
-            expiration = timezone.now() + timedelta(days=7)
-            
-            # Create session data
-            session_data = {
-                'user_id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'authenticated': True,
-                'created_at': timezone.now().isoformat(),
-            }
-            
-            # Store session in Django's session framework
-            request.session.update(session_data)
-            request.session.set_expiry(expiration)
+            request.session.set_expiry(60 * 60 * 24 * 7)
             
             # Get the session key
             actual_session_key = request.session.session_key
@@ -62,7 +51,7 @@ class WebSessionView(APIView):
             response_data = {
                 'success': True,
                 'session_key': actual_session_key,
-                'expires_at': expiration.isoformat(),
+                'expires_at': (timezone.now() + timedelta(days=7)).isoformat(),
                 'user': {
                     'id': user.id,
                     'username': user.username,
