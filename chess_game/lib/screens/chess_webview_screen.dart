@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../services/cookie_injection_service.dart';
 import '../services/config.dart';
+import '../services/django_auth_service.dart';
 
 class ChessWebViewScreen extends StatefulWidget {
   final String? gameId;
@@ -19,11 +22,33 @@ class ChessWebViewScreen extends StatefulWidget {
 
 class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
   final CookieInjectionService _cookieService = CookieInjectionService();
+  final DjangoAuthService _authService = DjangoAuthService();
   InAppWebViewController? _webViewController;
   bool _isLoading = true;
   bool _cookiesInjected = false;
   String? _errorMessage;
   double _progress = 0;
+
+  String _getAuthUserScript() {
+    final accessToken = _authService.accessToken;
+    final refreshToken = _authService.currentRefreshToken;
+    final userData = _authService.currentUser;
+
+    if (accessToken == null) return '';
+
+    // shared_preferences web uses 'flutter.' prefix and encodes values as JSON strings
+    final script = StringBuffer();
+    script.write("localStorage.setItem('flutter.auth_token', '\"$accessToken\"');");
+    if (refreshToken != null) {
+      script.write("localStorage.setItem('flutter.refresh_token', '\"$refreshToken\"');");
+    }
+    if (userData != null) {
+      final userDataJson = json.encode(userData).replaceAll("'", "\\'");
+      script.write("localStorage.setItem('flutter.user_data', '$userDataJson');");
+    }
+    
+    return script.toString();
+  }
 
   @override
   void initState() {
@@ -131,6 +156,12 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
           initialUrlRequest: URLRequest(
             url: WebUri(_webUrl),
           ),
+          initialUserScripts: UnmodifiableListView<UserScript>([
+            UserScript(
+              source: _getAuthUserScript(),
+              injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+            ),
+          ]),
           initialSettings: InAppWebViewSettings(
             javaScriptEnabled: true,
             domStorageEnabled: true,

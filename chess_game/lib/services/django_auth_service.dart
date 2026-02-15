@@ -41,6 +41,7 @@ class DjangoAuthService {
   bool get isGuest => _isGuest;
   String? get guestName => _guestName;
   String? get accessToken => _accessToken;
+  String? get currentRefreshToken => _refreshToken;
 
   Future<void> initialize({bool autoConnectMqtt = true}) async {
     final prefs = await SharedPreferences.getInstance();
