@@ -49,6 +49,7 @@ final authService = DjangoAuthService();
 // Global router for deep link navigation
 final GoRouter _globalRouter = GoRouter(
   initialLocation: authService.isLoggedIn ? '/chess' : '/login',
+  refreshListenable: authService,
   routes: [
     ShellRoute(
       builder: (context, state, child) {
@@ -171,9 +172,10 @@ final GoRouter _globalRouter = GoRouter(
       return '/login';
     }
 
-    if (isLoggedIn && (currentPath == '/login' || currentPath == '/register' || currentPath == '/forgot-password')) {
-      print('🚦 [Router] Logged in, redirecting away from auth page to /chess');
-      return '/chess';
+    if (isLoggedIn && (currentPath == '/login' || currentPath == '/register' || currentPath == '/forgot-password' || currentPath == '/web-bridge')) {
+      final next = DjangoAuthService.nextRoute ?? '/chess';
+      print('🚦 [Router] Logged in, redirecting to $next');
+      return next;
     }
     return null;
   },

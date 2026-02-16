@@ -13,7 +13,7 @@ import 'web_client_stub.dart'
     if (dart.library.html) 'web_client_web.dart'
     if (dart.library.js_util) 'web_client_web.dart';
 
-class DjangoAuthService {
+class DjangoAuthService extends ChangeNotifier {
   // Singleton pattern
   static final DjangoAuthService _instance = DjangoAuthService._internal();
   factory DjangoAuthService() => _instance;
@@ -66,14 +66,17 @@ class DjangoAuthService {
       if (hasUrlTokens) {
         print('🌐 [Initialize] URL Bridge detected. Prioritizing bootstrap...');
         await _bootstrapWebSession();
+        notifyListeners(); // NOTIFY
       } else if (_currentUser == null) {
         // Normal bootstrap if no tokens in URL
         await _bootstrapWebSession();
+        if (_currentUser != null) notifyListeners(); // NOTIFY
       }
     }
 
     if (_currentUser != null && autoConnectMqtt && _currentUser?['username'] != null) {
       MqttService().connect(_currentUser!['username']);
+      notifyListeners(); // NOTIFY Just in case
     }
 
     // Clear fragment AFTER initialization is complete to avoid race conditions
@@ -204,6 +207,22 @@ class DjangoAuthService {
     if (_currentUser != null) {
       await prefs.setString(_userKey, json.encode(_currentUser));
     }
+    notifyListeners(); // NOTIFY
+  }
+
+  Future<void> signOut() async {
+    _accessToken = null;
+    _refreshToken = null;
+    _currentUser = null;
+    _isGuest = false;
+    _guestName = null;
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+    await prefs.remove(_refreshKey);
+    await prefs.remove(_userKey);
+    
+    notifyListeners(); // NOTIFY
   }
 
   /// Helper for authenticated requests that handles token refresh automatically
@@ -290,12 +309,14 @@ class DjangoAuthService {
     _isGuest = true;
     _guestName = name;
     _currentUser = null;
+    notifyListeners();
   }
 
   // Guest logout
   void logoutGuest() {
     _isGuest = false;
     _guestName = null;
+    notifyListeners();
   }
 
   // Email/Password Login
@@ -668,40 +689,6 @@ class DjangoAuthService {
       }
 
       // Sign out from Google
-      try {
-        await _googleSignIn.signOut();
-      } catch (e) {
-      }
-
-      // 2. INFORMLY CALL BACKEND (Don't block UI if this is slow)
-      if (tokenToBlacklist != null) {
-        final url = '${_baseUrl}logout/';
-
-        try {
-          await http
-              .post(
-                Uri.parse(url),
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-                },
-                body: json.encode({'refresh': tokenToBlacklist}),
-              )
-              .timeout(const Duration(seconds: 3));
-        } catch (e) {
-        }
-      }
-
-      print('✅ Signed out successfully');
-    } catch (e) {
-      print('❌ Sign out error: $e');
-      // Still clear local state even if logout fails
-      _currentUser = null;
-      _isGuest = false;
-      _guestName = null;
-    }
-  }
-
   // Inject cookies for web view
   Future<void> _injectCookies(String rawCookie) async {
     try {
