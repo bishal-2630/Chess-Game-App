@@ -209,7 +209,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Chess Game',
+      title: 'chess_bishal',
       scaffoldMessengerKey: scaffoldMessengerKey,
       routerConfig: _globalRouter,
       debugShowCheckedModeBanner: false,
