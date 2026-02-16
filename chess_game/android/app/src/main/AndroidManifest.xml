@@ -54,11 +54,12 @@
                 <data android:host="game"/>
             </intent-filter>
             
-            <!-- Deep Link: HTTPS URLs (App Links) -->
+            <!-- Deep Link: HTTP/HTTPS URLs (App Links) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="http"/>
                 <data android:scheme="https"/>
                 <data android:host="positive-brianne-self2630-c40dbd11.koyeb.app"/>
                 <data android:path="/"/>
