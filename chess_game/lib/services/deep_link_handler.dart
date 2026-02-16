@@ -89,18 +89,21 @@ class DeepLinkHandler {
     final queryParams = uri.queryParameters;
 
     // Determine the type of deep link
-    if (path.contains('/play')) {
+    final String scheme = uri.scheme;
+    final String host = uri.host;
+
+    if (path.contains('/play') || host == 'play') {
       return DeepLinkData(
         type: DeepLinkType.play,
         gameId: queryParams['gameId'],
         roomId: queryParams['roomId'],
       );
-    } else if (path.contains('/game/')) {
-      // Extract game ID from path like /game/123
+    } else if (path.contains('/game/') || host == 'game') {
+      // Extract game ID from path like /game/123 or host if it's chess://game/123
       final gameId = path.split('/').last;
       return DeepLinkData(
         type: DeepLinkType.game,
-        gameId: gameId,
+        gameId: gameId.isEmpty ? host : gameId,
       );
     } else if (path.contains('/profile')) {
       return DeepLinkData(

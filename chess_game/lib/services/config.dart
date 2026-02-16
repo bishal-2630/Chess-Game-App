@@ -50,7 +50,10 @@ class AppConfig {
   // ============================================================================
 
   static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:8000/api/auth/';
+    if (kIsWeb) {
+      // In production web, we use relative paths to the same host
+      return '/api/auth/';
+    }
 
     // Use HTTPS for production, HTTP for local development
     const protocol = _isDevelopment ? 'http' : 'https';
@@ -58,7 +61,10 @@ class AppConfig {
   }
 
   static String get socketUrl {
-    if (kIsWeb) return "ws://localhost:8000/ws/call/";
+    if (kIsWeb) {
+      // Use relative path for websocket on web
+      return 'wss://${Uri.base.host}/ws/call/';
+    }
 
     // Use WSS for production, WS for local development
     const protocol = _isDevelopment ? 'ws' : 'wss';
