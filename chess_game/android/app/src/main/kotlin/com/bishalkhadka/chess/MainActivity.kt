@@ -1,4 +1,4 @@
-package com.example.chess_bishal
+package com.bishalkhadka.chess
 
 import android.os.Bundle
 import android.os.Build
