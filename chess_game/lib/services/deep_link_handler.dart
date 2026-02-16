@@ -38,12 +38,9 @@ class DeepLinkHandler {
       final endpoint = '${AppConfig.baseUrl}magic-token/generate/';
       print('🔗 [Transfer] Calling Generate Token at $endpoint');
       
-      final response = await http.post(
-        Uri.parse(endpoint),
-        headers: {
-          'Authorization': 'Bearer ${authService.accessToken}',
-          'Content-Type': 'application/json',
-        },
+      final response = await authService.authenticatedRequest(
+        endpoint,
+        method: 'POST',
       );
 
       print('🔗 [Transfer] API Response: ${response.statusCode}');

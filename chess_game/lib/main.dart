@@ -121,24 +121,30 @@ class MyApp extends StatelessWidget {
             GoRoute(
               path: '/play',
               redirect: (context, state) {
-                // If on mobile and logged in, transfer to browser instead of showing WebView
+                final authService = DjangoAuthService();
                 if (!kIsWeb && authService.isLoggedIn) {
-                  DeepLinkHandler().performSessionTransfer(state.uri);
-                  return '/chess'; // Stay on home screen while Chrome opens
+                   print('🚦 [Router] /play Intercepted -> Session Transfer Triggered');
+                   DeepLinkHandler().performSessionTransfer(state.uri);
+                   return '/chess';
                 }
-                return '/web-chess';
+                return null; // Show WebView for Guest/Web
               },
+              builder: (context, state) => const ChessWebViewScreen(),
             ),
             GoRoute(
               path: '/game/:gameId',
               redirect: (context, state) {
-                final gameId = state.pathParameters['gameId'];
-                // If on mobile and logged in, transfer to browser
+                final authService = DjangoAuthService();
                 if (!kIsWeb && authService.isLoggedIn) {
-                  DeepLinkHandler().performSessionTransfer(state.uri);
-                  return '/chess';
+                   print('🚦 [Router] /game Intercepted -> Session Transfer Triggered');
+                   DeepLinkHandler().performSessionTransfer(state.uri);
+                   return '/chess';
                 }
-                return '/web-chess?gameId=$gameId';
+                return null;
+              },
+              builder: (context, state) {
+                final gameId = state.pathParameters['gameId'];
+                return ChessWebViewScreen(gameId: gameId);
               },
             ),
           ],
@@ -148,17 +154,22 @@ class MyApp extends StatelessWidget {
         final authService = DjangoAuthService();
         final isLoggedIn = authService.isLoggedIn;
         final currentPath = state.uri.path;
+        
+        print('🚦 [Router] Redirect Check: path=$currentPath, isLoggedIn=$isLoggedIn');
+
         final isAuthPage = currentPath == '/login' ||
             currentPath == '/register' ||
             currentPath == '/forgot-password';
 
         // Force authentication check
         if (!isLoggedIn && !isAuthPage) {
+          print('🚦 [Router] Not logged in, redirecting to /login');
           return '/login';
         }
 
         // If logged in and trying to access auth pages, go to chess
         if (isLoggedIn && isAuthPage) {
+          print('🚦 [Router] Logged in, redirecting away from auth page to /chess');
           return '/chess';
         }
         return null;

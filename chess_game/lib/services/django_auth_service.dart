@@ -165,6 +165,47 @@ class DjangoAuthService {
     }
   }
 
+  /// Helper for authenticated requests that handles token refresh automatically
+  Future<http.Response> authenticatedRequest(
+    String url, {
+    String method = 'GET',
+    Map<String, String>? headers,
+    dynamic body,
+  }) async {
+    final Map<String, String> authHeaders = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
+      ...?headers,
+    };
+
+    final uri = Uri.parse(url);
+    late http.Response response;
+
+    if (method == 'POST') {
+      response = await http.post(uri, headers: authHeaders, body: body);
+    } else {
+      response = await http.get(uri, headers: authHeaders);
+    }
+
+    // Handle 401: Refresh and retry once
+    if (response.statusCode == 401 && _refreshToken != null) {
+      print('🔄 [Auth] 401 detected. Attempting token refresh...');
+      final success = await refreshToken();
+      if (success && _accessToken != null) {
+        print('🔄 [Auth] Refresh successful. Retrying request...');
+        authHeaders['Authorization'] = 'Bearer $_accessToken';
+        if (method == 'POST') {
+          response = await http.post(uri, headers: authHeaders, body: body);
+        } else {
+          response = await http.get(uri, headers: authHeaders);
+        }
+      }
+    }
+
+    return response;
+  }
+
   String get _baseUrl {
     return AppConfig.baseUrl;
   }
