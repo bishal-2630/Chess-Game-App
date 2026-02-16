@@ -1,5 +1,4 @@
 import 'package:http/http.dart' as http;
-import 'package:http/browser_client.dart' as http_browser;
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -8,7 +7,9 @@ import '../../services/config.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../services/mqtt_service.dart';
-import 'package:http/http.dart';
+import 'web_client_stub.dart'
+    if (dart.library.html) 'web_client_web.dart'
+    if (dart.library.js_util) 'web_client_web.dart';
 
 class DjangoAuthService {
   // Singleton pattern
@@ -71,10 +72,10 @@ class DjangoAuthService {
       print('🌐 Attempting web session bootstrap...');
       final url = '${_baseUrl}web-session/';
       
-      late Response response;
+      late http.Response response;
       if (kIsWeb) {
-        // Important: withCredentials=true sends the browser's session cookie to the API
-        final client = http_browser.BrowserClient()..withCredentials = true;
+        // Use the cross-platform helper to get a client withCredentials
+        final client = getBrowserClient();
         response = await client.get(
           Uri.parse(url),
           headers: {
