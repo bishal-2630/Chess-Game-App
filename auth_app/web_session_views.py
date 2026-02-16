@@ -67,26 +67,49 @@ class WebSessionView(APIView):
     def get(self, request):
         """
         Bootstrap endpoint for Flutter Web.
-        If the browser has a valid session cookie, return JWT tokens.
+        If the browser has a valid session cookie OR valid JWT, 
+        return JWT tokens and ensure session cookie is set.
         """
         if not request.user.is_authenticated:
-            print(f"🍪 [WebSessionView] GET Bootstrap: UNAUTHORIZED (No Session)")
+            print(f"🍪 [WebSessionView] GET Bootstrap: UNAUTHORIZED")
             return Response(
-                {"success": False, "error": "Not authenticated via session"},
+                {"success": False, "error": "Not authenticated"},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        print(f"🍪 [WebSessionView] GET Bootstrap: SUCCESS for {request.user.username}")
-        from rest_framework_simplejwt.tokens import RefreshToken
-        refresh = RefreshToken.for_user(request.user)
+        user = request.user
+        print(f"🍪 [WebSessionView] GET Bootstrap: SUCCESS for {user.username}")
         
-        return Response({
+        # Ensure session cookie is set/refreshed for the browser
+        login(request, user)
+        request.session.set_expiry(60 * 60 * 24 * 7)
+        
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(user)
+        
+        response_data = {
             "success": True,
             "access": str(refresh.access_token),
             "refresh": str(refresh),
             "user": {
-                "id": request.user.id,
-                "username": request.user.username,
-                "email": request.user.email,
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
             }
-        }, status=status.HTTP_200_OK)
+        }
+        
+        response = Response(response_data, status=status.HTTP_200_OK)
+        # Re-inject cookie as a safety measure
+        expires_delta = timedelta(days=7)
+        expiration = timezone.now() + expires_delta
+        response.set_cookie(
+            key='sessionid',
+            value=request.session.session_key,
+            max_age=60 * 60 * 24 * 7,
+            expires=expiration,
+            path='/',
+            secure=True,
+            httponly=False,
+            samesite='Lax',
+        )
+        return response
