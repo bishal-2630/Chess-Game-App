@@ -40,6 +40,7 @@ class WebSessionView(APIView):
             login(request, user)
             
             # Set session expiration (7 days to match JWT refresh token)
+            expires_delta = timedelta(days=7)
             request.session.set_expiry(60 * 60 * 24 * 7)
             
             # Get the session key
@@ -48,10 +49,11 @@ class WebSessionView(APIView):
                 request.session.create()
                 actual_session_key = request.session.session_key
             
+            expiration = timezone.now() + expires_delta
             response_data = {
                 'success': True,
                 'session_key': actual_session_key,
-                'expires_at': (timezone.now() + timedelta(days=7)).isoformat(),
+                'expires_at': expiration.isoformat(),
                 'user': {
                     'id': user.id,
                     'username': user.username,

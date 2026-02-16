@@ -64,7 +64,7 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
 
     // Inject cookies before loading the page
     final success = await _cookieService.injectAuthCookies(
-      customUrl: widget.customUrl,
+      customUrl: _webUrl,
     );
 
     if (success) {

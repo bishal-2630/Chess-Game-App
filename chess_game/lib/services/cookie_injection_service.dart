@@ -77,12 +77,12 @@ class CookieInjectionService {
       final expiresAt = result['expires_at'];
       
       // Determine the URL to inject cookies for
-      String baseUrl = customUrl ?? AppConfig.baseUrl;
-      Uri uri = Uri.parse(baseUrl);
+      String targetUrl = customUrl ?? AppConfig.baseUrl;
+      Uri uri = Uri.parse(targetUrl);
       
       // Create cookie
       await _cookieManager.setCookie(
-        url: WebUri(baseUrl),
+        url: WebUri(targetUrl),
         name: 'sessionid',
         value: sessionKey,
         domain: uri.host,
