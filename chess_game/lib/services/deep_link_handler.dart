@@ -27,7 +27,7 @@ class DeepLinkHandler {
     try {
       print('🔗 Generating magic token for session transfer...');
       final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}api/auth/magic-token/generate/'),
+        Uri.parse('${AppConfig.baseUrl}magic-token/generate/'),
         headers: {
           'Authorization': 'Bearer ${authService.accessToken}',
           'Content-Type': 'application/json',
@@ -40,7 +40,7 @@ class DeepLinkHandler {
         
         // Prepare verification URL (which sets cookies and redirects)
         final verifyUrl = Uri.parse(
-          '${AppConfig.baseUrl}api/auth/magic-token/verify/?token=$token&next=${uri.path}'
+          '${AppConfig.baseUrl}magic-token/verify/?token=$token&next=${uri.path}'
         );
         
         print('🌐 Launching system browser for authenticated session: $verifyUrl');
