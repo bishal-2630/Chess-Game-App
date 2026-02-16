@@ -10,29 +10,47 @@ import os
 def serve_flutter_app(request, path=''):
     """
     Serve the compiled Flutter web app (index.html) for SPA routes.
-    Assets are served via Whitenoise/STATIC_URL, but this handles
-    deep links like /play, /game/:id by returning the entry point.
+    Prevents shadowing API and Admin paths.
     """
-    path = path.lstrip('/')
-    
-    # Check if we should serve a static asset manually (fallback)
-    # Primarily for assets that might not be under /static/ URL
-    if path and '.' in Path(path).name:
-        # Check STATIC_ROOT (staticfiles) first
-        static_file = settings.STATIC_ROOT / path
+    # 1. Protection: If this path starts with api/ or admin/, and we reached here,
+    # it means the URL didn't match any pattern. Return a 404 instead of index.html
+    # to prevent Flutter from trying to "render" an API error.
+    clean_path = path.lstrip('/')
+    if clean_path.startswith(('api/', 'admin/', 'swagger/')):
+        return HttpResponse(f"Not Found: {path}", status=404)
+
+    # 2. Check for Static Assets
+    # If the path has an extension, it's likely a file.
+    if '.' in os.path.basename(clean_path):
+        # Look in STATIC_ROOT (Collected static)
+        static_file = settings.STATIC_ROOT / clean_path
         if static_file.exists():
             return _serve_file(static_file)
-            
-    # For all non-file routes (deep links), serve index.html
-    # Try STATIC_ROOT/index.html first (collected static)
+        
+        # Look in STATICFILES_DIRS (Development build)
+        for static_dir in settings.STATICFILES_DIRS:
+            static_file = Path(static_dir) / clean_path
+            if static_file.exists():
+                return _serve_file(static_file)
+
+        # If it's a missing file request, don't serve index.html
+        return HttpResponse(f"Asset not found: {path}", status=404)
+
+    # 3. SPA Fallback: Serve index.html for all deep links
+    # Try STATIC_ROOT/index.html first
     index_path = settings.STATIC_ROOT / 'index.html'
-    
+    if not index_path.exists():
+        for static_dir in settings.STATICFILES_DIRS:
+            p = Path(static_dir) / 'index.html'
+            if p.exists():
+                index_path = p
+                break
+
     if index_path.exists():
         with open(index_path, 'r', encoding='utf-8') as f:
             return HttpResponse(f.read(), content_type='text/html')
             
-    # Fallback to the public template if staticfiles build is missing
-    # (This ensures we don't break if staticfiles creates an issue)
+    # Final fallback
     return render(request, 'chess_web.html')
 
 def _serve_file(file_path):
