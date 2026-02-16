@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'django_auth_service.dart';
-import '../config.dart';
+import 'config.dart';
 
 class DeepLinkHandler {
   // Singleton pattern
