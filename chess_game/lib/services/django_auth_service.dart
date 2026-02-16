@@ -211,18 +211,57 @@ class DjangoAuthService extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    _accessToken = null;
-    _refreshToken = null;
-    _currentUser = null;
-    _isGuest = false;
-    _guestName = null;
-    
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
-    await prefs.remove(_refreshKey);
-    await prefs.remove(_userKey);
-    
-    notifyListeners(); // NOTIFY
+    try {
+      final String? tokenToBlacklist = _refreshToken;
+
+      // 1. CLEAR LOCAL STATE IMMEDIATELY (Instant UI response)
+      _currentUser = null;
+      _isGuest = false;
+      _guestName = null;
+      _accessToken = null;
+      _refreshToken = null;
+
+      // Disconnect MQTT (User goes offline)
+      MqttService().disconnect();
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_tokenKey);
+      await prefs.remove(_refreshKey);
+      await prefs.remove(_userKey);
+
+      // Clear cookies
+      try {
+        await _clearCookies();
+      } catch (e) {
+        print('🍪 Sign out error clearing cookies: $e');
+      }
+
+      // Sign out from Google
+      try {
+        await _googleSignIn.signOut();
+      } catch (e) {
+        print('📧 Sign out error clearing google session: $e');
+      }
+
+      // Optional: inform backend about token blacklist
+      if (tokenToBlacklist != null) {
+        // We do this non-blockingly
+        unawaited(http.post(
+          Uri.parse('${_baseUrl}logout/'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({'refresh': tokenToBlacklist}),
+        ).timeout(const Duration(seconds: 3)).catchError((_) => http.Response('', 500)));
+      }
+
+      print('✅ Signed out successfully');
+      notifyListeners();
+    } catch (e) {
+      print('❌ Sign out error: $e');
+      _currentUser = null;
+      _isGuest = false;
+      _guestName = null;
+      notifyListeners();
+    }
   }
 
   /// Helper for authenticated requests that handles token refresh automatically
@@ -661,35 +700,6 @@ class DjangoAuthService extends ChangeNotifier {
     }
   }
 
-  // Sign out
-  Future<void> signOut() async {
-    try {
-
-      // Capture refresh token before clearing
-      final String? tokenToBlacklist = _refreshToken;
-
-      // 1. CLEAR LOCAL STATE IMMEDIATELY (Instant UI response)
-      _currentUser = null;
-      _isGuest = false;
-      _guestName = null;
-      _accessToken = null;
-      _refreshToken = null;
-
-      // Disconnect MQTT (User goes offline)
-      MqttService().disconnect();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_tokenKey);
-      await prefs.remove(_refreshKey);
-      await prefs.remove(_userKey);
-
-      // Clear cookies
-      try {
-        await _clearCookies();
-      } catch (e) {
-      }
-
-      // Sign out from Google
-  // Inject cookies for web view
   Future<void> _injectCookies(String rawCookie) async {
     try {
       Uri uri = Uri.parse(_baseUrl);
