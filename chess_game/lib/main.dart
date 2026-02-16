@@ -149,28 +149,24 @@ final GoRouter _globalRouter = GoRouter(
         ),
         GoRoute(
           path: '/web-bridge',
-          redirect: (context, state) {
-             // This path is hit (in Chrome) after the magic-token verification.
-             // authentication is handled automatically in DjangoAuthService.initialize()
-             final nextParam = state.uri.queryParameters['next'];
-             final next = nextParam ?? DjangoAuthService.nextRoute ?? '/chess';
-             print('🌐 [Router] WebBridge: Finalizing transfer to $next');
-             return next;
-          }
+          builder: (context, state) {
+            final nextParam = state.uri.queryParameters['next'];
+            return BootstrappingScreen(nextRoute: nextParam);
+          },
         ),
       ],
     ),
   ],
   redirect: (context, state) {
+    final currentPath = state.uri.path;
+    final isLoggedIn = authService.isLoggedIn;
+    
     // 1. CRITICAL: Wait for authentication to finish its background checks (especially on Web)
     if (!authService.isInitialized) {
-      print('🚦 [Router] Auth initializing... waiting at ${state.uri.path}');
+      print('🚦 [Router] Auth initializing... waiting at $currentPath');
       return null; // Stay here while we check the bridge
     }
 
-    final isLoggedIn = authService.isLoggedIn;
-    final currentPath = state.uri.path;
-    
     print('🚦 [Router] Redirect Check: path=$currentPath, isLoggedIn=$isLoggedIn');
 
     final isAuthPage = currentPath == '/login' ||
@@ -428,5 +424,42 @@ class _IncomingCallWrapperState extends State<IncomingCallWrapper> {
   @override
   Widget build(BuildContext context) {
     return widget.child;
+  }
+}
+
+class BootstrappingScreen extends StatelessWidget {
+  final String? nextRoute;
+  const BootstrappingScreen({super.key, this.nextRoute});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1E1E1E),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: Colors.blue),
+            const SizedBox(height: 24),
+            const Text(
+              'Configuring Secure Session',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Finalizing bridge transfer...',
+              style: TextStyle(color: Colors.white.withOpacity(0.7)),
+            ),
+            if (kDebugMode) ...[
+              const SizedBox(height: 20),
+              Text(
+                'Next: ${nextRoute ?? "Default"}',
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ]
+          ],
+        ),
+      ),
+    );
   }
 }

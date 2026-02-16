@@ -92,6 +92,9 @@ class DjangoAuthService extends ChangeNotifier {
 
   Future<bool> _handleUrlTokens() async {
     try {
+      final currentUrl = Uri.base.toString();
+      print('🌐 [URL-Bridge] Checking tokens in: $currentUrl');
+      
       // 1. Check Query Parameters (Reliable for SPA web-bridge)
       final access = Uri.base.queryParameters['access'];
       final refresh = Uri.base.queryParameters['refresh'];
@@ -101,7 +104,10 @@ class DjangoAuthService extends ChangeNotifier {
         print('✅ [URL-Bridge] Captured tokens from QueryParams');
         _accessToken = access;
         _refreshToken = refresh;
-        if (next != null) _nextRoute = next;
+        if (next != null) {
+          _nextRoute = next;
+          print('✅ [URL-Bridge] Captured next route: $_nextRoute');
+        }
         await _saveAuthData();
         return true;
       }
