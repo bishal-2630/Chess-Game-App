@@ -56,13 +56,19 @@ class DjangoAuthService {
       _currentUser = json.decode(userData);
     }
 
-    // WEB BOOTSTRAP: If on web and no current user (or forced by session_transfer flag)
+    // URL FRAGMENT BOOTSTRAP: High-reliability bridge via URL hash (#token=...)
+    bool urlBootstrapSuccess = false;
+    if (kIsWeb) {
+      urlBootstrapSuccess = await _handleUrlTokens();
+    }
+
+    // SESSION BOOTSTRAP: Fallback to session cookie bootstrap
     bool forceBootstrap = false;
     if (kIsWeb) {
       forceBootstrap = Uri.base.queryParameters['session_transfer'] == 'success';
     }
 
-    if (kIsWeb && (_currentUser == null || forceBootstrap)) {
+    if (kIsWeb && !urlBootstrapSuccess && (_currentUser == null || forceBootstrap)) {
       await _bootstrapWebSession();
     }
 
@@ -71,34 +77,56 @@ class DjangoAuthService {
     }
   }
 
-  /// Bootstrap authentication on Web using session cookies
+  Future<bool> _handleUrlTokens() async {
+    try {
+      final fragment = Uri.base.fragment;
+      if (fragment.isEmpty) return false;
+
+      print('🌐 [URL-Bridge] Parsing hash fragment...');
+      final params = Uri.splitQueryString(fragment);
+      
+      final access = params['access'];
+      final refresh = params['refresh'];
+      
+      if (access != null && refresh != null) {
+        print('✅ [URL-Bridge] Captured tokens from URL');
+        _accessToken = access;
+        _refreshToken = refresh;
+        await _saveAuthData();
+        return true;
+      }
+    } catch (e) {
+      print('❌ [URL-Bridge] Error: $e');
+    }
+    return false;
+  }
+
+  /// Bootstrap authentication on Web using session cookies OR captured JWT
   Future<void> _bootstrapWebSession() async {
     try {
       final flag = Uri.base.queryParameters['session_transfer'];
       print('🌐 [Bootstrap] Attempting web session bootstrap (forced=$flag)...');
       final url = '${_baseUrl}web-session/';
-      print('🌐 [Bootstrap] calling GET $url');
       
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      
+      // If we have an access token (from URL bridge), use it to bootstrap user data
+      if (_accessToken != null) {
+        headers['Authorization'] = 'Bearer $_accessToken';
+        print('🌐 [Bootstrap] Using captured JWT in headers');
+      }
+
       late http.Response response;
       if (kIsWeb) {
-        // Important: withCredentials=true sends the browser's session cookie to the API
+        // withCredentials=true sends session cookies
         final client = getBrowserClient();
-        response = await client.get(
-          Uri.parse(url),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        );
+        response = await client.get(Uri.parse(url), headers: headers);
         client.close();
       } else {
-        response = await http.get(
-          Uri.parse(url),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        );
+        response = await http.get(Uri.parse(url), headers: headers);
       }
 
       print('🌐 [Bootstrap] Response: ${response.statusCode}');
@@ -106,16 +134,17 @@ class DjangoAuthService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
-          _accessToken = data['access'];
-          _refreshToken = data['refresh'];
+          // If we didn't have tokens or they changed, update them
+          _accessToken = data['access'] ?? _accessToken;
+          _refreshToken = data['refresh'] ?? _refreshToken;
           _currentUser = data['user'];
           await _saveAuthData();
           print('✅ [Bootstrap] SUCCESS for ${_currentUser?['username']}');
         } else {
-          print('ℹ️ [Bootstrap] No session found in 200 OK: ${response.body}');
+          print('ℹ️ [Bootstrap] No session/user in 200 OK: ${response.body}');
         }
       } else if (response.statusCode == 401) {
-         print('ℹ️ [Bootstrap] Unauthorized (No active session cookie set in browser)');
+         print('ℹ️ [Bootstrap] Unauthorized (No valid session or token)');
       } else {
         print('❌ [Bootstrap] API Error: ${response.statusCode} - ${response.body}');
       }

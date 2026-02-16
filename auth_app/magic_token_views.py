@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import timedelta
 import logging
 
@@ -33,11 +34,12 @@ class GenerateMagicTokenView(APIView):
 def verify_magic_token(request):
     """
     Plain Django view to handle magic token verification.
+    Redirects to the app with JWT tokens in the URL fragment.
     """
     token_str = request.GET.get('token')
     next_url = request.GET.get('next', '/')
     
-    print(f"🪄 [VerifyMagicToken] Attempting verification for token: {token_str[:8]}...")
+    print(f"🪄 [VerifyMagicToken] Start for token: {token_str[:8]}...")
     
     if not token_str:
         return HttpResponse("No token provided", status=400)
@@ -45,43 +47,32 @@ def verify_magic_token(request):
     try:
         handshake = MagicHandshake.objects.get(token=token_str)
     except (MagicHandshake.DoesNotExist, ValueError):
-        print(f"❌ [VerifyMagicToken] Invalid or missing token")
         return HttpResponse("Invalid token", status=404)
         
     if not handshake.is_valid():
-        print(f"❌ [VerifyMagicToken] Token expired or used: {handshake.token}")
         return HttpResponse("Token expired or already used", status=400)
         
-    # LOG THE USER IN
     user = handshake.user
-    login(request, user)
-    
-    # Save session explicitly to be sure
-    request.session.save()
-    session_key = request.session.session_key
-    
-    print(f"✅ [VerifyMagicToken] User {user.username} logged in. Session: {session_key[:8]}...")
-    
     handshake.is_used = True
     handshake.save()
     
-    # Add a success flag so Flutter Web knows to bootstrap
-    if '?' in next_url:
-        target = f"{next_url}&session_transfer=success"
-    else:
-        target = f"{next_url}?session_transfer=success"
-        
+    # Generate JWT tokens for the bridge
+    refresh = RefreshToken.for_user(user)
+    access_token = str(refresh.access_token)
+    refresh_token = str(refresh)
+    
+    print(f"✅ [VerifyMagicToken] Success for {user.username}. Redirecting with tokens.")
+
+    # BRIDGE: Bundle tokens in the URL fragment (#)
+    # This is more secure (not sent to server) and bypasses all cookie issues.
+    fragment = f"access={access_token}&refresh={refresh_token}&session_transfer=success"
+    
+    # Ensure next_url doesn't already have a fragment
+    base_url = next_url.split('#')[0]
+    target = f"{base_url}#{fragment}"
+    
     response = redirect(target)
     
-    # Force the cookie with Lax for maximum reliability on same-site
-    response.set_cookie(
-        'sessionid', 
-        session_key,
-        max_age=60 * 60 * 24 * 7,
-        secure=True, 
-        httponly=False,
-        samesite='Lax',
-        path='/'
-    )
-    
+    # Still set the session cookie as a fallback for pure web users
+    login(request, user)
     return response
