@@ -37,6 +37,7 @@ class DjangoAuthService {
   String? _guestName;
   String? _accessToken;
   String? _refreshToken;
+  static String? _nextRoute;
 
   // Getters
   Map<String, dynamic>? get currentUser => _currentUser;
@@ -45,6 +46,7 @@ class DjangoAuthService {
   String? get guestName => _guestName;
   String? get accessToken => _accessToken;
   String? get currentRefreshToken => _refreshToken;
+  static String? get nextRoute => _nextRoute;
 
   Future<void> initialize({bool autoConnectMqtt = true}) async {
     final prefs = await SharedPreferences.getInstance();
@@ -57,38 +59,60 @@ class DjangoAuthService {
     }
 
     // URL FRAGMENT BOOTSTRAP: High-reliability bridge via URL hash (#token=...)
-    bool urlBootstrapSuccess = false;
     if (kIsWeb) {
-      urlBootstrapSuccess = await _handleUrlTokens();
-    }
-
-    // SESSION BOOTSTRAP: Retrieve user data if we have tokens (captured or stored)
-    if (kIsWeb && _currentUser == null) {
-      await _bootstrapWebSession();
+      final hasUrlTokens = await _handleUrlTokens();
+      if (hasUrlTokens) {
+        print('🌐 [Initialize] URL Bridge detected. Prioritizing bootstrap...');
+        await _bootstrapWebSession();
+      } else if (_currentUser == null) {
+        // Normal bootstrap if no tokens in URL
+        await _bootstrapWebSession();
+      }
     }
 
     if (_currentUser != null && autoConnectMqtt && _currentUser?['username'] != null) {
       MqttService().connect(_currentUser!['username']);
+    }
+
+    // Clear fragment AFTER initialization is complete to avoid race conditions
+    if (kIsWeb) {
+      clearUrlFragment();
     }
   }
 
   Future<bool> _handleUrlTokens() async {
     try {
       final fragment = Uri.base.fragment;
-      if (fragment.isEmpty) return false;
+      if (fragment.isEmpty) {
+        // Fallback: check query parameters too just in case
+        final access = Uri.base.queryParameters['access'];
+        final refresh = Uri.base.queryParameters['refresh'];
+        if (access != null && refresh != null) {
+          print('✅ [URL-Bridge] Captured tokens from QueryParams');
+          _accessToken = access;
+          _refreshToken = refresh;
+          await _saveAuthData();
+          return true;
+        }
+        return false;
+      }
 
-      print('🌐 [URL-Bridge] Parsing hash fragment...');
+      print('🌐 [URL-Bridge] Parsing hash fragment: $fragment');
       final params = Uri.splitQueryString(fragment);
       
       final access = params['access'];
       final refresh = params['refresh'];
+      final next = params['next'];
       
       if (access != null && refresh != null) {
-        print('✅ [URL-Bridge] Captured tokens from URL');
+        print('✅ [URL-Bridge] Captured tokens from Fragment');
         _accessToken = access;
         _refreshToken = refresh;
+        if (next != null) {
+          _nextRoute = next;
+          print('✅ [URL-Bridge] Captured redirect path: $_nextRoute');
+        }
         await _saveAuthData();
-        clearUrlFragment();
         return true;
       }
     } catch (e) {
@@ -100,24 +124,26 @@ class DjangoAuthService {
   /// Bootstrap authentication on Web using session cookies OR captured JWT
   Future<void> _bootstrapWebSession() async {
     try {
-      final flag = Uri.base.queryParameters['session_transfer'];
-      print('🌐 [Bootstrap] Attempting web session bootstrap (forced=$flag)...');
-      final url = '${_baseUrl}web-session/';
+      print('🌐 [Bootstrap] Attempting web session bootstrap...');
       
+      if (kIsWeb) {
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          const SnackBar(content: Text('Finalizing secure session...'), duration: Duration(seconds: 2)),
+        );
+      }
+
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       };
       
-      // If we have an access token (from URL bridge), use it to bootstrap user data
       if (_accessToken != null) {
         headers['Authorization'] = 'Bearer $_accessToken';
-        print('🌐 [Bootstrap] Using captured JWT in headers');
+        print('🌐 [Bootstrap] Using JWT in headers: ${_accessToken!.substring(0, 10)}...');
       }
 
       late http.Response response;
       if (kIsWeb) {
-        // withCredentials=true sends session cookies
         final client = getBrowserClient();
         response = await client.get(Uri.parse(url), headers: headers);
         client.close();
@@ -125,24 +151,36 @@ class DjangoAuthService {
         response = await http.get(Uri.parse(url), headers: headers);
       }
 
-      print('🌐 [Bootstrap] Response: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
-          // If we didn't have tokens or they changed, update them
           _accessToken = data['access'] ?? _accessToken;
           _refreshToken = data['refresh'] ?? _refreshToken;
           _currentUser = data['user'];
           await _saveAuthData();
           print('✅ [Bootstrap] SUCCESS for ${_currentUser?['username']}');
+          
+          if (kIsWeb) {
+            scaffoldMessengerKey.currentState?.showSnackBar(
+              SnackBar(
+                content: Text('Welcome back, ${_currentUser?['username']}! 👋'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
         } else {
-          print('ℹ️ [Bootstrap] No session/user in 200 OK: ${response.body}');
+          print('ℹ️ [Bootstrap] 200 OK but success=false: ${response.body}');
         }
-      } else if (response.statusCode == 401) {
-         print('ℹ️ [Bootstrap] Unauthorized (No valid session or token)');
       } else {
-        print('❌ [Bootstrap] API Error: ${response.statusCode} - ${response.body}');
+        print('❌ [Bootstrap] API Error: ${response.statusCode}');
+        if (kIsWeb && _accessToken != null) {
+          scaffoldMessengerKey.currentState?.showSnackBar(
+            SnackBar(
+              content: Text('Session bridge failed (${response.statusCode}). Please log in.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
     } catch (e) {
       print('❌ [Bootstrap] Network/Exception: $e');

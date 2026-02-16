@@ -144,7 +144,10 @@ final GoRouter _globalRouter = GoRouter(
         GoRoute(
           path: '/web-bridge',
           redirect: (context, state) {
-             final next = state.uri.queryParameters['next'] ?? '/chess';
+             // This path is hit (in Chrome) after the magic-token verification.
+             // authentication is handled automatically in DjangoAuthService.initialize()
+             final nextParam = state.uri.queryParameters['next'];
+             final next = nextParam ?? DjangoAuthService.nextRoute ?? '/chess';
              print('🌐 [Router] WebBridge: Finalizing transfer to $next');
              return next;
           }

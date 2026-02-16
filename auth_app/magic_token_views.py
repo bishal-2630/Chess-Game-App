@@ -63,14 +63,14 @@ def verify_magic_token(request):
     
     print(f"✅ [VerifyMagicToken] Success for {user.username}. Redirecting with tokens.")
 
-    # BRIDGE: Bundle tokens in the URL fragment (#)
+    # BRIDGE: Bundle tokens AND next_url in the URL fragment (#)
     # This is more secure (not sent to server) and bypasses all cookie issues.
-    fragment = f"access={access_token}&refresh={refresh_token}&session_transfer=success"
+    # We move 'next' to the fragment as well to prevent it from being lost 
+    # during Flutter Web routing initialization.
+    fragment = f"access={access_token}&refresh={refresh_token}&next={next_url}&session_transfer=success"
     
-    # Ensure next_url doesn't already have a fragment
     # We redirect to a special path /web-bridge that the app DOES NOT intercept
-    # to ensure Chrome stays in the browser and doesn't bounce back to the app.
-    target = f"/web-bridge?next={next_url}#{fragment}"
+    target = f"/web-bridge#{fragment}"
     
     response = redirect(target)
     
