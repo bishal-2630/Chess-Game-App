@@ -134,6 +134,7 @@ class DjangoAuthService {
         );
       }
 
+      final url = '${_baseUrl}web-session/';
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
