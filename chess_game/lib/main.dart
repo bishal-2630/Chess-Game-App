@@ -42,149 +42,157 @@ void main() async {
   runApp(const MyApp());
 }
 
-// Global router for deep link navigation
-late final GoRouter _globalRouter;
+final authService = DjangoAuthService();
 
-class MyApp extends StatelessWidget {
+// Global router for deep link navigation
+final GoRouter _globalRouter = GoRouter(
+  initialLocation: authService.isLoggedIn ? '/chess' : '/login',
+  routes: [
+    ShellRoute(
+      builder: (context, state, child) {
+        return IncomingCallWrapper(child: child);
+      },
+      routes: [
+        GoRoute(
+          path: '/login',
+          builder: (context, state) => const LoginScreen(),
+        ),
+        GoRoute(
+          path: '/register',
+          builder: (context, state) => const RegisterScreen(),
+        ),
+        GoRoute(
+          path: '/forgot-password',
+          builder: (context, state) => const ForgotPasswordScreen(),
+        ),
+        GoRoute(
+          path: '/chess',
+          builder: (context, state) {
+            final roomId = state.uri.queryParameters['roomId'];
+            final color = state.uri.queryParameters['color'];
+            final opponentName = state.uri.queryParameters['opponentName'];
+            return ChessScreen(roomId: roomId, color: color, opponentName: opponentName);
+          },
+        ),
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen(),
+        ),
+        GoRoute(
+          path: '/call',
+          builder: (context, state) {
+            final roomId = state.uri.queryParameters['roomId'] ?? 'testroom';
+            final otherUserName = state.uri.queryParameters['otherUserName'] ??
+                state.uri.queryParameters['callerName'] ??
+                'Unknown';
+            final isCaller = state.uri.queryParameters['isCaller'] == 'true';
+
+            return CallScreen(
+              roomId: roomId,
+              otherUserName: otherUserName,
+              isCaller: isCaller,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/users',
+          builder: (context, state) => const UserListScreen(),
+        ),
+        GoRoute(
+          path: '/invitations',
+          builder: (context, state) => const InvitationsScreen(),
+        ),
+        GoRoute(
+          path: '/web-chess',
+          builder: (context, state) {
+            final gameId = state.uri.queryParameters['gameId'];
+            return ChessWebViewScreen(gameId: gameId);
+          },
+        ),
+        GoRoute(
+          path: '/play',
+          redirect: (context, state) {
+            if (!kIsWeb && authService.isLoggedIn) {
+              print('🚦 [Router] /play Intercepted -> Session Transfer Triggered');
+              DeepLinkHandler().performSessionTransfer(state.uri);
+              return '/chess';
+            }
+            if (kIsWeb) return '/users';
+            return null;
+          },
+          builder: (context, state) => const ChessWebViewScreen(),
+        ),
+        GoRoute(
+          path: '/game/:gameId',
+          redirect: (context, state) {
+            final gameId = state.pathParameters['gameId'];
+            if (!kIsWeb && authService.isLoggedIn) {
+              print('🚦 [Router] /game Intercepted -> Session Transfer Triggered');
+              DeepLinkHandler().performSessionTransfer(state.uri);
+              return '/chess';
+            }
+            if (kIsWeb) return '/chess?roomId=$gameId';
+            return null;
+          },
+          builder: (context, state) {
+            final gameId = state.pathParameters['gameId'];
+            return ChessWebViewScreen(gameId: gameId);
+          },
+        ),
+        GoRoute(
+          path: '/web-bridge',
+          redirect: (context, state) {
+             final next = state.uri.queryParameters['next'] ?? '/chess';
+             print('🌐 [Router] WebBridge: Finalizing transfer to $next');
+             return next;
+          }
+        ),
+      ],
+    ),
+  ],
+  redirect: (context, state) {
+    final isLoggedIn = authService.isLoggedIn;
+    final currentPath = state.uri.path;
+    
+    print('🚦 [Router] Redirect Check: path=$currentPath, isLoggedIn=$isLoggedIn');
+
+    final isAuthPage = currentPath == '/login' ||
+        currentPath == '/register' ||
+        currentPath == '/forgot-password' ||
+        currentPath == '/web-bridge';
+
+    if (!isLoggedIn && !isAuthPage) {
+      print('🚦 [Router] Not logged in, redirecting to /login');
+      return '/login';
+    }
+
+    if (isLoggedIn && (currentPath == '/login' || currentPath == '/register' || currentPath == '/forgot-password')) {
+      print('🚦 [Router] Logged in, redirecting away from auth page to /chess');
+      return '/chess';
+    }
+    return null;
+  },
+);
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final authService = DjangoAuthService();
-    final GoRouter router = GoRouter(
-      initialLocation: authService.isLoggedIn ? '/chess' : '/login',
-      routes: [
-        ShellRoute(
-          builder: (context, state, child) {
-            return IncomingCallWrapper(child: child);
-          },
-          routes: [
-            GoRoute(
-              path: '/login',
-              builder: (context, state) => const LoginScreen(),
-            ),
-            GoRoute(
-              path: '/register',
-              builder: (context, state) => const RegisterScreen(),
-            ),
-            GoRoute(
-              path: '/forgot-password',
-              builder: (context, state) => const ForgotPasswordScreen(),
-            ),
-            GoRoute(
-              path: '/chess',
-              builder: (context, state) {
-                final roomId = state.uri.queryParameters['roomId'];
-                final color = state.uri.queryParameters['color'];
-                final opponentName = state.uri.queryParameters['opponentName'];
-                return ChessScreen(roomId: roomId, color: color, opponentName: opponentName);
-              },
-            ),
-            GoRoute(
-              path: '/profile',
-              builder: (context, state) => const ProfileScreen(),
-            ),
-            GoRoute(
-              path: '/call',
-              builder: (context, state) {
-                final roomId =
-                    state.uri.queryParameters['roomId'] ?? 'testroom';
-                final otherUserName =
-                    state.uri.queryParameters['otherUserName'] ??
-                        state.uri.queryParameters['callerName'] ??
-                        'Unknown';
-                final isCaller =
-                    state.uri.queryParameters['isCaller'] == 'true';
+  State<MyApp> createState() => _MyAppState();
+}
 
-                return CallScreen(
-                  roomId: roomId,
-                  otherUserName: otherUserName,
-                  isCaller: isCaller,
-                );
-              },
-            ),
-            GoRoute(
-              path: '/users',
-              builder: (context, state) => const UserListScreen(),
-            ),
-            GoRoute(
-              path: '/invitations',
-              builder: (context, state) => const InvitationsScreen(),
-            ),
-            GoRoute(
-              path: '/web-chess',
-              builder: (context, state) {
-                final gameId = state.uri.queryParameters['gameId'];
-                return ChessWebViewScreen(gameId: gameId);
-              },
-            ),
-            GoRoute(
-              path: '/play',
-              redirect: (context, state) {
-                final authService = DjangoAuthService();
-                if (!kIsWeb && authService.isLoggedIn) {
-                   print('🚦 [Router] /play Intercepted -> Session Transfer Triggered');
-                   DeepLinkHandler().performSessionTransfer(state.uri);
-                   return '/chess';
-                }
-                return null; // Show WebView for Guest/Web
-              },
-              builder: (context, state) => const ChessWebViewScreen(),
-            ),
-            GoRoute(
-              path: '/game/:gameId',
-              redirect: (context, state) {
-                final authService = DjangoAuthService();
-                if (!kIsWeb && authService.isLoggedIn) {
-                   print('🚦 [Router] /game Intercepted -> Session Transfer Triggered');
-                   DeepLinkHandler().performSessionTransfer(state.uri);
-                   return '/chess';
-                }
-                return null;
-              },
-              builder: (context, state) {
-                final gameId = state.pathParameters['gameId'];
-                return ChessWebViewScreen(gameId: gameId);
-              },
-            ),
-          ],
-        ),
-      ],
-      redirect: (context, state) {
-        final authService = DjangoAuthService();
-        final isLoggedIn = authService.isLoggedIn;
-        final currentPath = state.uri.path;
-        
-        print('🚦 [Router] Redirect Check: path=$currentPath, isLoggedIn=$isLoggedIn');
-
-        final isAuthPage = currentPath == '/login' ||
-            currentPath == '/register' ||
-            currentPath == '/forgot-password';
-
-        // Force authentication check
-        if (!isLoggedIn && !isAuthPage) {
-          print('🚦 [Router] Not logged in, redirecting to /login');
-          return '/login';
-        }
-
-        // If logged in and trying to access auth pages, go to chess
-        if (isLoggedIn && isAuthPage) {
-          print('🚦 [Router] Logged in, redirecting away from auth page to /chess');
-          return '/chess';
-        }
-        return null;
-      },
-    );
-
-    // Store router globally for deep link navigation
-    _globalRouter = router;
-
-    // Initialize deep link handler
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
     _initializeDeepLinks();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Chess Game',
-      routerConfig: router,
+      routerConfig: _globalRouter,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -197,9 +205,7 @@ class MyApp extends StatelessWidget {
     final deepLinkHandler = DeepLinkHandler();
     
     deepLinkHandler.initialize((Uri uri) async {
-      final authService = DjangoAuthService();
       print('📎 [DeepLink] Incoming: $uri');
-      print('📎 [DeepLink] App State - isLoggedIn: ${authService.isLoggedIn}');
       
       // If we are on mobile and logged in, transfer session to system browser
       if (!kIsWeb && authService.isLoggedIn) {
@@ -208,22 +214,18 @@ class MyApp extends StatelessWidget {
         return; 
       }
 
-      // Parse the deep link for internal navigation (Fallback or Guest)
       final linkData = deepLinkHandler.parseDeepLink(uri);
       print('📎 [DeepLink] Parsed Model: $linkData');
       
-      // Only navigate internally if we are NOT doing a session transfer
       switch (linkData.type) {
         case DeepLinkType.play:
-          print('📎 [DeepLink] Routing to /web-chess');
-          _globalRouter.go('/web-chess');
+          _globalRouter.go('/play'); // Will trigger the redirect logic appropriately
           break;
         case DeepLinkType.game:
           if (linkData.gameId != null) {
-            print('📎 [DeepLink] Routing to /web-chess?gameId=${linkData.gameId}');
-            _globalRouter.go('/web-chess?gameId=${linkData.gameId}');
+            _globalRouter.go('/game/${linkData.gameId}');
           } else {
-             _globalRouter.go('/web-chess');
+             _globalRouter.go('/play');
           }
           break;
         case DeepLinkType.profile:

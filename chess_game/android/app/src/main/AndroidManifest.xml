@@ -62,10 +62,9 @@
                 <data android:scheme="http"/>
                 <data android:scheme="https"/>
                 <data android:host="positive-brianne-self2630-c40dbd11.koyeb.app"/>
-                <data android:path="/"/>
+                <!-- ONLY intercept specific trigger paths. Do NOT use broad matchers here. -->
                 <data android:pathPrefix="/play"/>
                 <data android:pathPrefix="/game"/>
-                <data android:pathPattern="/.*"/>
             </intent-filter>
         </activity>
         <service
@@ -79,12 +78,13 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-    <!-- Required to query activities that can process text, see:
-         https://developer.android.com/training/package-visibility and
-         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
-
-         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <!-- Required to query activities that can process text and browsers -->
     <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
