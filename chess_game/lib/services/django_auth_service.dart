@@ -51,11 +51,43 @@ class DjangoAuthService {
     final userData = prefs.getString(_userKey);
     if (userData != null) {
       _currentUser = json.decode(userData);
+    }
 
-      // Auto-connect MQTT if we have a session
-      if (autoConnectMqtt && _currentUser?['username'] != null) {
-        MqttService().connect(_currentUser!['username']);
+    // WEB BOOTSTRAP: If on web and no current user, check if we have a session cookie
+    if (kIsWeb && _currentUser == null) {
+      await _bootstrapWebSession();
+    }
+
+    if (_currentUser != null && autoConnectMqtt && _currentUser?['username'] != null) {
+      MqttService().connect(_currentUser!['username']);
+    }
+  }
+
+  /// Bootstrap authentication on Web using session cookies
+  Future<void> _bootstrapWebSession() async {
+    try {
+      print('🌐 Attempting web session bootstrap...');
+      final url = '${_baseUrl}web-session/';
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          _accessToken = data['access'];
+          _refreshToken = data['refresh'];
+          _currentUser = data['user'];
+          await _saveAuthData();
+          print('✅ Web session bootstrapped successfully for ${_currentUser?['username']}');
+        }
       }
+    } catch (e) {
+      print('❌ Web bootstrap failed: $e');
     }
   }
 

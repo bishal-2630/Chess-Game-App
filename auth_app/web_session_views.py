@@ -3,47 +3,29 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
-from django.contrib.sessions.models import Session
+from rest_framework.authentication import SessionAuthentication
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import login
-import secrets
-
 
 class WebSessionView(APIView):
     """
-    Generate a session cookie from a valid JWT token.
-    This allows Flutter app to inject cookies into WebView for seamless web authentication.
+    Generate a session cookie from a valid JWT token OR bootstrap JWT from session.
     """
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         """
         Accept JWT token, return session cookie.
-        
-        Request:
-            Authorization: Bearer <jwt_token>
-        
-        Response:
-            {
-                "success": true,
-                "session_key": "abc123...",
-                "expires_at": "2024-02-20T12:00:00Z"
-            }
         """
         try:
             user = request.user
-            
-            # Use Django's login system to associate the user with the session correctly
-            # This sets _auth_user_id and other required keys for AuthenticationMiddleware
             login(request, user)
             
-            # Set session expiration (7 days to match JWT refresh token)
             expires_delta = timedelta(days=7)
             request.session.set_expiry(60 * 60 * 24 * 7)
             
-            # Get the session key
             actual_session_key = request.session.session_key
             if not actual_session_key:
                 request.session.create()
@@ -61,29 +43,46 @@ class WebSessionView(APIView):
                 }
             }
             
-            # Create response with session cookie
             response = Response(response_data, status=status.HTTP_200_OK)
-            
-            # Set the session cookie in the response
             response.set_cookie(
                 key='sessionid',
                 value=actual_session_key,
-                max_age=60 * 60 * 24 * 7,  # 7 days
+                max_age=60 * 60 * 24 * 7,
                 expires=expiration,
                 path='/',
-                domain=None,  # Will use current domain
-                secure=True,  # HTTPS only
-                httponly=False,  # Allow JavaScript access for WebView
-                samesite='None',  # Allow cross-origin for WebView
+                domain=None,
+                secure=True,
+                httponly=False,
+                samesite='None',
             )
-            
             return response
-            
         except Exception as e:
             return Response(
-                {
-                    'success': False,
-                    'error': f'Failed to create web session: {str(e)}'
-                },
+                {'success': False, 'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    def get(self, request):
+        """
+        Bootstrap endpoint for Flutter Web.
+        If the browser has a valid session cookie, return JWT tokens.
+        """
+        if not request.user.is_authenticated:
+            return Response(
+                {"success": False, "error": "Not authenticated via session"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(request.user)
+        
+        return Response({
+            "success": True,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": request.user.id,
+                "username": request.user.username,
+                "email": request.user.email,
+            }
+        }, status=status.HTTP_200_OK)
