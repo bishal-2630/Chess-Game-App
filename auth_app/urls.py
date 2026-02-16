@@ -8,7 +8,6 @@ from .swagger_views import (
     TokenVerifyView,
     GuestRegisterView, HealthCheckView
 )
-from .web_session_views import WebSessionView
 from .views import ConnectivityCheckView, TestEmailView
 from .google_auth_views import GoogleLoginView
 from .game_views import (
@@ -18,6 +17,9 @@ from .game_views import (
     RecordGameResultView
 )
 from .realtime_docs import MQTTDocumentationView, WebSocketDocumentationView
+from .web_session_views import WebSessionView
+from .magic_token_views import GenerateMagicTokenView, VerifyMagicTokenView
+
 
 
 def direct_health(request):
@@ -33,6 +35,10 @@ urlpatterns = [
     
     # Direct Health (No dependency on swagger_views)
     path('health-direct/', direct_health),
+    
+    # Magic Link Session Transfer
+    path('magic-token/generate/', GenerateMagicTokenView.as_view(), name='generate_magic_token'),
+    path('magic-token/verify/', VerifyMagicTokenView.as_view(), name='verify_magic_token'),
     
     # Core Authentication
     path('register/', RegisterView.as_view(), name='register'),
