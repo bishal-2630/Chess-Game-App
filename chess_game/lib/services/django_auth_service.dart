@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:http/browser_client.dart' as http_browser;
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ import '../../services/config.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../services/mqtt_service.dart';
+import 'package:http/http.dart';
 
 class DjangoAuthService {
   // Singleton pattern
@@ -68,13 +70,28 @@ class DjangoAuthService {
     try {
       print('🌐 Attempting web session bootstrap...');
       final url = '${_baseUrl}web-session/';
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      );
+      
+      late Response response;
+      if (kIsWeb) {
+        // Important: withCredentials=true sends the browser's session cookie to the API
+        final client = http_browser.BrowserClient()..withCredentials = true;
+        response = await client.get(
+          Uri.parse(url),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        );
+        client.close();
+      } else {
+        response = await http.get(
+          Uri.parse(url),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        );
+      }
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -84,10 +101,16 @@ class DjangoAuthService {
           _currentUser = data['user'];
           await _saveAuthData();
           print('✅ Web session bootstrapped successfully for ${_currentUser?['username']}');
+        } else {
+          print('ℹ️ Web session bootstrap: No active session found');
         }
+      } else if (response.statusCode == 401) {
+         print('ℹ️ Web session bootstrap: Unauthorized (No active session cookie)');
+      } else {
+        print('❌ Web session bootstrap error: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('❌ Web bootstrap failed: $e');
+      print('❌ Web bootstrap failed error: $e');
     }
   }
 
