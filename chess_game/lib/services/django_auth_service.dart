@@ -56,8 +56,13 @@ class DjangoAuthService {
       _currentUser = json.decode(userData);
     }
 
-    // WEB BOOTSTRAP: If on web and no current user, check if we have a session cookie
-    if (kIsWeb && _currentUser == null) {
+    // WEB BOOTSTRAP: If on web and no current user (or forced by session_transfer flag)
+    bool forceBootstrap = false;
+    if (kIsWeb) {
+      forceBootstrap = Uri.base.queryParameters['session_transfer'] == 'success';
+    }
+
+    if (kIsWeb && (_currentUser == null || forceBootstrap)) {
       await _bootstrapWebSession();
     }
 

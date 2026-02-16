@@ -18,7 +18,7 @@ from .game_views import (
 )
 from .realtime_docs import MQTTDocumentationView, WebSocketDocumentationView
 from .web_session_views import WebSessionView
-from .magic_token_views import GenerateMagicTokenView, VerifyMagicTokenView
+from .magic_token_views import GenerateMagicTokenView, verify_magic_token
 
 
 
@@ -38,7 +38,7 @@ urlpatterns = [
     
     # Magic Link Session Transfer
     path('magic-token/generate/', GenerateMagicTokenView.as_view(), name='generate_magic_token'),
-    path('magic-token/verify/', VerifyMagicTokenView.as_view(), name='verify_magic_token'),
+    path('magic-token/verify/', verify_magic_token, name='verify_magic_token'),
     
     # Core Authentication
     path('register/', RegisterView.as_view(), name='register'),
