@@ -62,13 +62,8 @@ class DjangoAuthService {
       urlBootstrapSuccess = await _handleUrlTokens();
     }
 
-    // SESSION BOOTSTRAP: Fallback to session cookie bootstrap
-    bool forceBootstrap = false;
-    if (kIsWeb) {
-      forceBootstrap = Uri.base.queryParameters['session_transfer'] == 'success';
-    }
-
-    if (kIsWeb && !urlBootstrapSuccess && (_currentUser == null || forceBootstrap)) {
+    // SESSION BOOTSTRAP: Retrieve user data if we have tokens (captured or stored)
+    if (kIsWeb && _currentUser == null) {
       await _bootstrapWebSession();
     }
 
@@ -93,6 +88,7 @@ class DjangoAuthService {
         _accessToken = access;
         _refreshToken = refresh;
         await _saveAuthData();
+        clearUrlFragment();
         return true;
       }
     } catch (e) {
