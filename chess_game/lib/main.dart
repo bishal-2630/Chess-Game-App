@@ -120,12 +120,24 @@ class MyApp extends StatelessWidget {
             ),
             GoRoute(
               path: '/play',
-              redirect: (context, state) => '/web-chess',
+              redirect: (context, state) {
+                // If on mobile and logged in, transfer to browser instead of showing WebView
+                if (!kIsWeb && authService.isLoggedIn) {
+                  DeepLinkHandler().performSessionTransfer(state.uri);
+                  return '/chess'; // Stay on home screen while Chrome opens
+                }
+                return '/web-chess';
+              },
             ),
             GoRoute(
               path: '/game/:gameId',
               redirect: (context, state) {
                 final gameId = state.pathParameters['gameId'];
+                // If on mobile and logged in, transfer to browser
+                if (!kIsWeb && authService.isLoggedIn) {
+                  DeepLinkHandler().performSessionTransfer(state.uri);
+                  return '/chess';
+                }
                 return '/web-chess?gameId=$gameId';
               },
             ),
@@ -174,31 +186,33 @@ class MyApp extends StatelessWidget {
     final deepLinkHandler = DeepLinkHandler();
     
     deepLinkHandler.initialize((Uri uri) async {
-      print('📎 Processing deep link: $uri');
+      final authService = DjangoAuthService();
+      print('📎 [DeepLink] Incoming: $uri');
+      print('📎 [DeepLink] App State - isLoggedIn: ${authService.isLoggedIn}');
       
       // If we are on mobile and logged in, transfer session to system browser
-      // This fulfills the user requirement: "opening the app is not the best way... 
-      // we should be implementing cookie injection from flutter to chess-game website"
-      final authService = DjangoAuthService();
       if (!kIsWeb && authService.isLoggedIn) {
+        print('📎 [DeepLink] Mobile + Authenticated. Triggering Session Transfer...');
         await deepLinkHandler.performSessionTransfer(uri);
-        return; // Exit and let the system browser handle the authenticated link
+        return; 
       }
 
-      // Parse the deep link
+      // Parse the deep link for internal navigation (Fallback or Guest)
       final linkData = deepLinkHandler.parseDeepLink(uri);
-      print('📎 Parsed link data: $linkData');
+      print('📎 [DeepLink] Parsed Model: $linkData');
       
-      // Route based on link type
+      // Only navigate internally if we are NOT doing a session transfer
       switch (linkData.type) {
         case DeepLinkType.play:
+          print('📎 [DeepLink] Routing to /web-chess');
           _globalRouter.go('/web-chess');
           break;
         case DeepLinkType.game:
           if (linkData.gameId != null) {
+            print('📎 [DeepLink] Routing to /web-chess?gameId=${linkData.gameId}');
             _globalRouter.go('/web-chess?gameId=${linkData.gameId}');
           } else {
-            _globalRouter.go('/web-chess');
+             _globalRouter.go('/web-chess');
           }
           break;
         case DeepLinkType.profile:

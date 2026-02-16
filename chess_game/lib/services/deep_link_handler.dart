@@ -16,44 +16,53 @@ class DeepLinkHandler {
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
 
+  Future<void> _launchSystemBrowser(String verifyUrl) async {
+    final uri = Uri.parse(verifyUrl);
+    print('🌐 [Launcher] Attempting launchUrl: $uri');
+    final success = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    print('🌐 [Launcher] Success: $success');
+    if (!success) {
+       print('❌ [Launcher] Failed to launch external browser for $uri');
+    }
+  }
+
   /// Bridge the app session to the system browser
   Future<void> performSessionTransfer(Uri uri) async {
     final authService = DjangoAuthService();
     if (!authService.isLoggedIn) {
-      print('⚠️ Cannot transfer session: User not logged in');
+      print('⚠️ [Transfer] Aborting: Not logged in');
       return;
     }
 
     try {
-      print('🔗 Generating magic token for session transfer...');
+      final endpoint = '${AppConfig.baseUrl}magic-token/generate/';
+      print('🔗 [Transfer] Calling Generate Token at $endpoint');
+      
       final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}magic-token/generate/'),
+        Uri.parse(endpoint),
         headers: {
           'Authorization': 'Bearer ${authService.accessToken}',
           'Content-Type': 'application/json',
         },
       );
 
+      print('🔗 [Transfer] API Response: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final token = data['handshake_token'];
         
-        // Prepare verification URL (which sets cookies and redirects)
-        final verifyUrl = Uri.parse(
-          '${AppConfig.baseUrl}magic-token/verify/?token=$token&next=${uri.path}'
-        );
+        // Prepare verification URL
+        // Example: https://.../api/auth/magic-token/verify/?token=...&next=/play
+        final verifyUrl = '${AppConfig.baseUrl}magic-token/verify/?token=$token&next=${uri.path}';
         
-        print('🌐 Launching system browser for authenticated session: $verifyUrl');
-        
-        // Launch in external browser
-        if (!await launchUrl(verifyUrl, mode: LaunchMode.externalApplication)) {
-          throw 'Could not launch $verifyUrl';
-        }
+        print('🌐 [Transfer] Final Verify URL: $verifyUrl');
+        await _launchSystemBrowser(verifyUrl);
       } else {
-        print('❌ Failed to generate magic token: ${response.statusCode}');
+        print('❌ [Transfer] Failed: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('❌ Session transfer error: $e');
+      print('❌ [Transfer] EXCEPTION: $e');
     }
   }
 
