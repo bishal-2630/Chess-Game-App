@@ -20,6 +20,7 @@ class WebSessionView(APIView):
         Accept JWT token, return session cookie.
         """
         try:
+            print(f"🍪 [WebSessionView] POST called by {request.user.username}")
             user = request.user
             login(request, user)
             
@@ -53,10 +54,11 @@ class WebSessionView(APIView):
                 domain=None,
                 secure=True,
                 httponly=False,
-                samesite='None',
+                samesite='Lax',
             )
             return response
         except Exception as e:
+            print(f"❌ [WebSessionView] POST Error: {e}")
             return Response(
                 {'success': False, 'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -68,11 +70,13 @@ class WebSessionView(APIView):
         If the browser has a valid session cookie, return JWT tokens.
         """
         if not request.user.is_authenticated:
+            print(f"🍪 [WebSessionView] GET Bootstrap: UNAUTHORIZED (No Session)")
             return Response(
                 {"success": False, "error": "Not authenticated via session"},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
+        print(f"🍪 [WebSessionView] GET Bootstrap: SUCCESS for {request.user.username}")
         from rest_framework_simplejwt.tokens import RefreshToken
         refresh = RefreshToken.for_user(request.user)
         
