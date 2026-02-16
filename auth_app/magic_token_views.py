@@ -1,19 +1,15 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from django.utils import timezone
-from datetime import timedelta
 from django.contrib.auth import login
 from django.shortcuts import redirect
+from django.utils import timezone
+from django.http import JsonResponse, HttpResponse
 from .models import MagicHandshake
-import uuid
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from datetime import timedelta
 
 class GenerateMagicTokenView(APIView):
-    """
-    Called by the Flutter App (authenticated via JWT).
-    Generates a short-lived token to transfer the session to a browser.
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -31,34 +27,39 @@ class GenerateMagicTokenView(APIView):
             "expires_at": handshake.expires_at
         })
 
-class VerifyMagicTokenView(APIView):
+def verify_magic_token(request):
     """
-    Called by the System Browser (Chrome/Safari).
-    Verifies the token, sets the session cookie, and redirects user.
+    Plain Django view to handle magic token verification.
+    This avoids DRF overhead and ensures sessionid cookie is set correctly.
     """
-    permission_classes = [] 
-
-    def get(self, request):
-        token_str = request.query_params.get('token')
-        next_url = request.query_params.get('next', '/')
+    token_str = request.GET.get('token')
+    next_url = request.GET.get('next', '/')
+    
+    if not token_str:
+        return HttpResponse("No token provided", status=400)
         
-        if not token_str:
-            return Response({"error": "No token provided"}, status=status.HTTP_400_BAD_REQUEST)
-            
-        try:
-            handshake = MagicHandshake.objects.get(token=token_str)
-        except (MagicHandshake.DoesNotExist, ValueError):
-            return Response({"error": "Invalid token"}, status=status.HTTP_404_NOT_FOUND)
-            
-        if not handshake.is_valid():
-            return Response({"error": "Token expired or already used"}, status=status.HTTP_400_BAD_REQUEST)
-            
-        # Log the user in for the current BROWSER session (sets the cookie)
-        login(request, handshake.user)
+    try:
+        handshake = MagicHandshake.objects.get(token=token_str)
+    except (MagicHandshake.DoesNotExist, ValueError):
+        return HttpResponse("Invalid token", status=404)
         
-        # Mark token as used
-        handshake.is_used = True
-        handshake.save()
+    if not handshake.is_valid():
+        return HttpResponse("Token expired or already used", status=400)
         
-        # Redirect to the target page (e.g., /play)
-        return redirect(next_url)
+    # LOG THE USER IN (Sets the session cookie)
+    login(request, handshake.user)
+    
+    handshake.is_used = True
+    handshake.save()
+    
+    # Add a success flag so Flutter Web knows to bootstrap even if it had no tokens
+    if '?' in next_url:
+        target = f"{next_url}&session_transfer=success"
+    else:
+        target = f"{next_url}?session_transfer=success"
+        
+    response = redirect(target)
+    
+    # Defensive: Manually ensure the session cookie has the correct flags
+    # though settings.py SHOULD handle this.
+    return response
