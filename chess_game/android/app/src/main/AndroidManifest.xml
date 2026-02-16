@@ -61,8 +61,10 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https"/>
                 <data android:host="positive-brianne-self2630-c40dbd11.koyeb.app"/>
+                <data android:path="/"/>
                 <data android:pathPrefix="/play"/>
                 <data android:pathPrefix="/game"/>
+                <data android:pathPattern="/.*"/>
             </intent-filter>
         </activity>
         <service
