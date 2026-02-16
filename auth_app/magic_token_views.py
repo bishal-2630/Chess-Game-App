@@ -68,8 +68,9 @@ def verify_magic_token(request):
     fragment = f"access={access_token}&refresh={refresh_token}&session_transfer=success"
     
     # Ensure next_url doesn't already have a fragment
-    base_url = next_url.split('#')[0]
-    target = f"{base_url}#{fragment}"
+    # We redirect to a special path /web-bridge that the app DOES NOT intercept
+    # to ensure Chrome stays in the browser and doesn't bounce back to the app.
+    target = f"/web-bridge?next={next_url}#{fragment}"
     
     response = redirect(target)
     
