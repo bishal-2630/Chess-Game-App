@@ -19,6 +19,7 @@ from .game_views import (
 from .realtime_docs import MQTTDocumentationView, WebSocketDocumentationView
 from .web_session_views import WebSessionView
 from .magic_token_views import GenerateMagicTokenView, verify_magic_token
+from rest_framework_simplejwt.views import TokenRefreshView
 
 
 
@@ -66,6 +67,7 @@ urlpatterns = [
     
     # Token Operations
     path('token/verify/', TokenVerifyView.as_view(), name='verify_token'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='get_new_access_token'),
     
     # Web Session (Cookie Injection)
     path('web-session/', WebSessionView.as_view(), name='web_session'),
