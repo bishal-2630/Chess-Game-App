@@ -323,7 +323,7 @@ class DjangoAuthService extends ChangeNotifier {
   }
 
   String get _baseUrl {
-    return AppConfig.baseUrl;
+    return AppConfig.baseUrl; // Centralized in lib/services/config.dart
   }
 
   // Refresh Token

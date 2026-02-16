@@ -52,7 +52,7 @@ class AppConfig {
   static String get baseUrl {
     if (kIsWeb) {
       // Use absolute origin to ensure reliability in different routing modes
-      final origin = Uri.base.origin;
+      final origin = Uri.base.origin.isEmpty ? 'https://$_productionHost' : Uri.base.origin;
       return '$origin/api/auth/';
     }
 
