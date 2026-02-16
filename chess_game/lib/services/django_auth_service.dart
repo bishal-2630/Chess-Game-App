@@ -40,17 +40,23 @@ class DjangoAuthService extends ChangeNotifier {
   String? _accessToken;
   String? _refreshToken;
   static String? _nextRoute;
+  bool _isInitialized = false;
 
   // Getters
   Map<String, dynamic>? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null || _isGuest;
   bool get isGuest => _isGuest;
+  bool get isInitialized => _isInitialized;
   String? get guestName => _guestName;
   String? get accessToken => _accessToken;
   String? get currentRefreshToken => _refreshToken;
   static String? get nextRoute => _nextRoute;
 
   Future<void> initialize({bool autoConnectMqtt = true}) async {
+    print('🚀 [Auth] Initializing...');
+    _isInitialized = false;
+    notifyListeners();
+    
     final prefs = await SharedPreferences.getInstance();
     _accessToken = prefs.getString(_tokenKey);
     _refreshToken = prefs.getString(_refreshKey);
@@ -77,12 +83,11 @@ class DjangoAuthService extends ChangeNotifier {
 
     if (_currentUser != null && autoConnectMqtt && _currentUser?['username'] != null) {
       MqttService().connect(_currentUser!['username']);
-      notifyListeners();
     }
 
-    if (kIsWeb) {
-      clearUrlFragment();
-    }
+    print('✅ [Auth] Initialization complete. isLoggedIn=${isLoggedIn}');
+    _isInitialized = true;
+    notifyListeners();
   }
 
   Future<bool> _handleUrlTokens() async {
@@ -137,6 +142,8 @@ class DjangoAuthService extends ChangeNotifier {
       }
 
       final url = '${_baseUrl}web-session/';
+      print('🌐 [Bootstrap] Final URL: $url');
+      
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -144,17 +151,23 @@ class DjangoAuthService extends ChangeNotifier {
       
       if (_accessToken != null) {
         headers['Authorization'] = 'Bearer $_accessToken';
-        print('🌐 [Bootstrap] Using JWT in headers: ${_accessToken!.substring(0, 10)}...');
+        print('🌐 [Bootstrap] Using JWT: ${_accessToken!.substring(0, 10)}...');
+      } else {
+        print('🌐 [Bootstrap] No JWT found, relying on session cookies');
       }
 
       late http.Response response;
       if (kIsWeb) {
+        print('🌐 [Bootstrap] Using BrowserClient (withCredentials=true)');
         final client = getBrowserClient();
         response = await client.get(Uri.parse(url), headers: headers);
         client.close();
       } else {
         response = await http.get(Uri.parse(url), headers: headers);
       }
+
+      print('🌐 [Bootstrap] Response Code: ${response.statusCode}');
+      print('🌐 [Bootstrap] Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

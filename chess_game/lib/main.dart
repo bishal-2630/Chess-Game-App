@@ -26,7 +26,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MqttService.isMainIsolate = true;
 
-  await DjangoAuthService().initialize();
+  // Initialize Auth Service (Non-blocking so UI starts immediately)
+  final authService = DjangoAuthService();
+  authService.initialize();
 
   // Initialize MQTT Service (sets up local notifications)
   final mqttService = MqttService();
@@ -34,11 +36,8 @@ void main() async {
   // Isolate listener is mobile-only
   if (!kIsWeb) {
     mqttService.initializeIsolateListener(isBackground: false);
-  }
-
-  // Initialize Background Service for persistent connection (Mobile only)
-  if (!kIsWeb) {
-    await BackgroundServiceInstance.initializeService();
+    // Background service is mobile only
+    BackgroundServiceInstance.initializeService();
   }
 
   runApp(const MyApp());
@@ -157,6 +156,12 @@ final GoRouter _globalRouter = GoRouter(
     ),
   ],
   redirect: (context, state) {
+    // 1. CRITICAL: Wait for authentication to finish its background checks (especially on Web)
+    if (!authService.isInitialized) {
+      print('🚦 [Router] Auth initializing... waiting at ${state.uri.path}');
+      return null; // Stay here while we check the bridge
+    }
+
     final isLoggedIn = authService.isLoggedIn;
     final currentPath = state.uri.path;
     
@@ -172,9 +177,9 @@ final GoRouter _globalRouter = GoRouter(
       return '/login';
     }
 
-    if (isLoggedIn && (currentPath == '/login' || currentPath == '/register' || currentPath == '/forgot-password' || currentPath == '/web-bridge')) {
+    if (isLoggedIn && isAuthPage) {
       final next = DjangoAuthService.nextRoute ?? '/chess';
-      print('🚦 [Router] Logged in, redirecting to $next');
+      print('🚦 [Router] Logged in, reactively redirecting to $next');
       return next;
     }
     return null;

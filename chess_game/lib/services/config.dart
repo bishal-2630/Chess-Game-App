@@ -51,8 +51,9 @@ class AppConfig {
 
   static String get baseUrl {
     if (kIsWeb) {
-      // In production web, we use relative paths to the same host
-      return '/api/auth/';
+      // Use absolute origin to ensure reliability in different routing modes
+      final origin = Uri.base.origin;
+      return '$origin/api/auth/';
     }
 
     // Use HTTPS for production, HTTP for local development
