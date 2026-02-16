@@ -57,29 +57,29 @@ class DjangoAuthService extends ChangeNotifier {
 
     final userData = prefs.getString(_userKey);
     if (userData != null) {
-      _currentUser = json.decode(userData);
+      try {
+        _currentUser = json.decode(userData);
+      } catch (e) {
+        print('❌ [Auth] Error decoding stored user: $e');
+      }
     }
 
-    // URL FRAGMENT BOOTSTRAP: High-reliability bridge via URL hash (#token=...)
+    // URL BOOTSTRAP: Web bridge capture
     if (kIsWeb) {
       final hasUrlTokens = await _handleUrlTokens();
-      if (hasUrlTokens) {
-        print('🌐 [Initialize] URL Bridge detected. Prioritizing bootstrap...');
+      
+      // If we don't have a user, or we just got new tokens, bootstrap!
+      if (hasUrlTokens || _currentUser == null) {
+        print('🌐 [Initialize] Starting web bootstrap (hasUrlTokens=$hasUrlTokens)...');
         await _bootstrapWebSession();
-        notifyListeners(); // NOTIFY
-      } else if (_currentUser == null) {
-        // Normal bootstrap if no tokens in URL
-        await _bootstrapWebSession();
-        if (_currentUser != null) notifyListeners(); // NOTIFY
       }
     }
 
     if (_currentUser != null && autoConnectMqtt && _currentUser?['username'] != null) {
       MqttService().connect(_currentUser!['username']);
-      notifyListeners(); // NOTIFY Just in case
+      notifyListeners();
     }
 
-    // Clear fragment AFTER initialization is complete to avoid race conditions
     if (kIsWeb) {
       clearUrlFragment();
     }
@@ -87,38 +87,37 @@ class DjangoAuthService extends ChangeNotifier {
 
   Future<bool> _handleUrlTokens() async {
     try {
+      // 1. Check Query Parameters (Reliable for SPA web-bridge)
+      final access = Uri.base.queryParameters['access'];
+      final refresh = Uri.base.queryParameters['refresh'];
+      final next = Uri.base.queryParameters['next'];
+      
+      if (access != null && refresh != null) {
+        print('✅ [URL-Bridge] Captured tokens from QueryParams');
+        _accessToken = access;
+        _refreshToken = refresh;
+        if (next != null) _nextRoute = next;
+        await _saveAuthData();
+        return true;
+      }
+
+      // 2. Check Fragment (Fallback/Old style)
       final fragment = Uri.base.fragment;
-      if (fragment.isEmpty) {
-        // Fallback: check query parameters too just in case
-        final access = Uri.base.queryParameters['access'];
-        final refresh = Uri.base.queryParameters['refresh'];
-        if (access != null && refresh != null) {
-          print('✅ [URL-Bridge] Captured tokens from QueryParams');
-          _accessToken = access;
-          _refreshToken = refresh;
+      if (fragment.isNotEmpty) {
+        print('🌐 [URL-Bridge] Parsing hash fragment: $fragment');
+        final params = Uri.splitQueryString(fragment);
+        final fAccess = params['access'];
+        final fRefresh = params['refresh'];
+        final fNext = params['next'];
+        
+        if (fAccess != null && fRefresh != null) {
+          print('✅ [URL-Bridge] Captured tokens from Fragment');
+          _accessToken = fAccess;
+          _refreshToken = fRefresh;
+          if (fNext != null) _nextRoute = fNext;
           await _saveAuthData();
           return true;
         }
-        return false;
-      }
-
-      print('🌐 [URL-Bridge] Parsing hash fragment: $fragment');
-      final params = Uri.splitQueryString(fragment);
-      
-      final access = params['access'];
-      final refresh = params['refresh'];
-      final next = params['next'];
-      
-      if (access != null && refresh != null) {
-        print('✅ [URL-Bridge] Captured tokens from Fragment');
-        _accessToken = access;
-        _refreshToken = refresh;
-        if (next != null) {
-          _nextRoute = next;
-          print('✅ [URL-Bridge] Captured redirect path: $_nextRoute');
-        }
-        await _saveAuthData();
-        return true;
       }
     } catch (e) {
       print('❌ [URL-Bridge] Error: $e');
@@ -167,10 +166,12 @@ class DjangoAuthService extends ChangeNotifier {
           print('✅ [Bootstrap] SUCCESS for ${_currentUser?['username']}');
           
           if (kIsWeb) {
+            final method = (_accessToken != null) ? 'Secure Link' : 'Session Sync';
             scaffoldMessengerKey.currentState?.showSnackBar(
               SnackBar(
-                content: Text('Welcome back, ${_currentUser?['username']}! 👋'),
+                content: Text('Welcome back, ${_currentUser?['username']}! ($method) 👋'),
                 backgroundColor: Colors.green,
+                duration: const Duration(seconds: 4),
               ),
             );
           }
@@ -178,12 +179,15 @@ class DjangoAuthService extends ChangeNotifier {
           print('ℹ️ [Bootstrap] 200 OK but success=false: ${response.body}');
         }
       } else {
-        print('❌ [Bootstrap] API Error: ${response.statusCode}');
-        if (kIsWeb && _accessToken != null) {
+        print('❌ [Bootstrap] API Error: ${response.statusCode} - ${response.body}');
+        if (kIsWeb && (_accessToken != null || response.statusCode == 401)) {
+          // Only show error snackbar if we actually TRIED to bridge or it was an unexpected failure
           scaffoldMessengerKey.currentState?.showSnackBar(
             SnackBar(
-              content: Text('Session bridge failed (${response.statusCode}). Please log in.'),
-              backgroundColor: Colors.orange,
+              content: Text('Bridge sync failed (${response.statusCode}). Please log in manually.'),
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(label: 'Dismiss', onPressed: () {}, textColor: Colors.white),
             ),
           );
         }

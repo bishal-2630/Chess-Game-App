@@ -63,14 +63,11 @@ def verify_magic_token(request):
     
     print(f"✅ [VerifyMagicToken] Success for {user.username}. Redirecting with tokens.")
 
-    # BRIDGE: Bundle tokens AND next_url in the URL fragment (#)
-    # This is more secure (not sent to server) and bypasses all cookie issues.
-    # We move 'next' to the fragment as well to prevent it from being lost 
-    # during Flutter Web routing initialization.
-    fragment = f"access={access_token}&refresh={refresh_token}&next={next_url}&session_transfer=success"
+    # BRIDGE: Bundle tokens AND next_url in the URL query for better SPA compatibility
+    query_params = f"access={access_token}&refresh={refresh_token}&next={next_url}&session_sync=1"
     
-    # We redirect to a special path /web-bridge that the app DOES NOT intercept
-    target = f"/web-bridge#{fragment}"
+    # Use absolute URI to be safe across different proxy/forwarding setups
+    target = request.build_absolute_uri(f"/web-bridge?{query_params}")
     
     response = redirect(target)
     
