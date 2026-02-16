@@ -150,3 +150,14 @@ class GameInvitation(models.Model):
     
     def __str__(self):
         return f"{self.sender.username} → {self.receiver.username} ({self.status})"
+
+class MagicHandshake(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+
+    def is_valid(self):
+        from django.utils import timezone
+        return timezone.now() < self.expires_at and not self.is_used

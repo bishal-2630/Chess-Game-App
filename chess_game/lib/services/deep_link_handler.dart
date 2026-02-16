@@ -1,6 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'django_auth_service.dart';
+import '../config.dart';
 
 class DeepLinkHandler {
   // Singleton pattern
@@ -11,7 +16,49 @@ class DeepLinkHandler {
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
 
+  /// Bridge the app session to the system browser
+  Future<void> performSessionTransfer(Uri uri) async {
+    final authService = DjangoAuthService();
+    if (!authService.isLoggedIn) {
+      print('⚠️ Cannot transfer session: User not logged in');
+      return;
+    }
+
+    try {
+      print('🔗 Generating magic token for session transfer...');
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}api/auth/magic-token/generate/'),
+        headers: {
+          'Authorization': 'Bearer ${authService.accessToken}',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final token = data['handshake_token'];
+        
+        // Prepare verification URL (which sets cookies and redirects)
+        final verifyUrl = Uri.parse(
+          '${AppConfig.baseUrl}api/auth/magic-token/verify/?token=$token&next=${uri.path}'
+        );
+        
+        print('🌐 Launching system browser for authenticated session: $verifyUrl');
+        
+        // Launch in external browser
+        if (!await launchUrl(verifyUrl, mode: LaunchMode.externalApplication)) {
+          throw 'Could not launch $verifyUrl';
+        }
+      } else {
+        print('❌ Failed to generate magic token: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Session transfer error: $e');
+    }
+  }
+
   /// Initialize deep link listener
+
   Future<void> initialize(Function(Uri) onLinkReceived) async {
     // Handle initial link if app was opened via deep link
     try {

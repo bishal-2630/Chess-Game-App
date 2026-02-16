@@ -173,9 +173,18 @@ class MyApp extends StatelessWidget {
   void _initializeDeepLinks() {
     final deepLinkHandler = DeepLinkHandler();
     
-    deepLinkHandler.initialize((Uri uri) {
+    deepLinkHandler.initialize((Uri uri) async {
       print('📎 Processing deep link: $uri');
       
+      // If we are on mobile and logged in, transfer session to system browser
+      // This fulfills the user requirement: "opening the app is not the best way... 
+      // we should be implementing cookie injection from flutter to chess-game website"
+      final authService = DjangoAuthService();
+      if (!kIsWeb && authService.isLoggedIn) {
+        await deepLinkHandler.performSessionTransfer(uri);
+        return; // Exit and let the system browser handle the authenticated link
+      }
+
       // Parse the deep link
       final linkData = deepLinkHandler.parseDeepLink(uri);
       print('📎 Parsed link data: $linkData');
