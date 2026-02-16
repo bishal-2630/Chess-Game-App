@@ -74,12 +74,14 @@ class DjangoAuthService {
   /// Bootstrap authentication on Web using session cookies
   Future<void> _bootstrapWebSession() async {
     try {
-      print('🌐 Attempting web session bootstrap...');
+      final flag = Uri.base.queryParameters['session_transfer'];
+      print('🌐 [Bootstrap] Attempting web session bootstrap (forced=$flag)...');
       final url = '${_baseUrl}web-session/';
+      print('🌐 [Bootstrap] calling GET $url');
       
       late http.Response response;
       if (kIsWeb) {
-        // Use the cross-platform helper to get a client withCredentials
+        // Important: withCredentials=true sends the browser's session cookie to the API
         final client = getBrowserClient();
         response = await client.get(
           Uri.parse(url),
@@ -99,6 +101,8 @@ class DjangoAuthService {
         );
       }
 
+      print('🌐 [Bootstrap] Response: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -106,17 +110,17 @@ class DjangoAuthService {
           _refreshToken = data['refresh'];
           _currentUser = data['user'];
           await _saveAuthData();
-          print('✅ Web session bootstrapped successfully for ${_currentUser?['username']}');
+          print('✅ [Bootstrap] SUCCESS for ${_currentUser?['username']}');
         } else {
-          print('ℹ️ Web session bootstrap: No active session found');
+          print('ℹ️ [Bootstrap] No session found in 200 OK: ${response.body}');
         }
       } else if (response.statusCode == 401) {
-         print('ℹ️ Web session bootstrap: Unauthorized (No active session cookie)');
+         print('ℹ️ [Bootstrap] Unauthorized (No active session cookie set in browser)');
       } else {
-        print('❌ Web session bootstrap error: ${response.statusCode} - ${response.body}');
+        print('❌ [Bootstrap] API Error: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('❌ Web bootstrap failed error: $e');
+      print('❌ [Bootstrap] Network/Exception: $e');
     }
   }
 
