@@ -20,6 +20,8 @@ import 'dart:isolate';
 import 'dart:ui';
 import 'package:flutter_background_service/flutter_background_service.dart';
 
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MqttService.isMainIsolate = true;
@@ -192,6 +194,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Chess Game',
+      scaffoldMessengerKey: scaffoldMessengerKey,
       routerConfig: _globalRouter,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

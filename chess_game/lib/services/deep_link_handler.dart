@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'django_auth_service.dart';
 import 'config.dart';
+import '../main.dart'; // To access scaffoldMessengerKey
 
 class DeepLinkHandler {
   // Singleton pattern
@@ -34,6 +35,24 @@ class DeepLinkHandler {
       return;
     }
 
+    // Diagnostic UI feedback
+    scaffoldMessengerKey.currentState?.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            SizedBox(width: 15),
+            Text('Bridging session to Chrome...'),
+          ],
+        ),
+        duration: Duration(seconds: 5),
+      ),
+    );
+
     try {
       final endpoint = '${AppConfig.baseUrl}magic-token/generate/';
       print('🔗 [Transfer] Calling Generate Token at $endpoint');
@@ -54,12 +73,29 @@ class DeepLinkHandler {
         final verifyUrl = '${AppConfig.baseUrl}magic-token/verify/?token=$token&next=${uri.path}';
         
         print('🌐 [Transfer] Final Verify URL: $verifyUrl');
+        
+        // STABILITY DELAY: Wait 1 second to ensure the app is fully resumed
+        // before launching the external browser intent.
+        await Future.delayed(const Duration(seconds: 1));
+        
         await _launchSystemBrowser(verifyUrl);
       } else {
         print('❌ [Transfer] Failed: ${response.statusCode} - ${response.body}');
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text('Bridge failed (API ${response.statusCode}). Please log in again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       print('❌ [Transfer] EXCEPTION: $e');
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('Bridge failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
