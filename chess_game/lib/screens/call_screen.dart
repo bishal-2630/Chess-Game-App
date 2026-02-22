@@ -33,6 +33,7 @@ class _CallScreenState extends State<CallScreen> {
   bool _inCall = false;
   String _status = "Connecting...";
   bool _isMuted = false;
+  bool _isVideoOn = true;
   bool _isExiting = false;
   Timer? _callTimeoutTimer; // Add timer variable
 
@@ -254,34 +255,80 @@ class _CallScreenState extends State<CallScreen> {
       body: Column(
         children: [
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    child: Text(
-                      widget.otherUserName.isNotEmpty
-                          ? widget.otherUserName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(fontSize: 40),
+            child: _inCall
+                ? Stack(
+                    children: [
+                      RTCVideoView(
+                        _remoteRenderer,
+                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      ),
+                      Positioned(
+                        right: 20,
+                        top: 20,
+                        width: 120,
+                        height: 180,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white, width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: RTCVideoView(
+                              _localRenderer,
+                              mirror: true,
+                              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 20,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Text(
+                            "In call with ${widget.otherUserName}",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  blurRadius: 10.0,
+                                  color: Colors.black,
+                                  offset: Offset(2.0, 2.0),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          child: Text(
+                            widget.otherUserName.isNotEmpty
+                                ? widget.otherUserName[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(fontSize: 40),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          _status,
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    _status,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  if (_inCall) ...[
-                    const SizedBox(height: 20),
-                    const Icon(Icons.mic, size: 30, color: Colors.green),
-                    const Text("Audio Connected"),
-                  ]
-                ],
-              ),
-            ),
           ),
           if (!_isExiting)
             Padding(
@@ -300,7 +347,19 @@ class _CallScreenState extends State<CallScreen> {
                     heroTag: 'mute_btn',
                     child: Icon(_isMuted ? Icons.mic_off : Icons.mic),
                   ),
-                  const SizedBox(width: 32),
+                  const SizedBox(width: 16),
+                  FloatingActionButton(
+                    backgroundColor: _isVideoOn ? Colors.blue : Colors.blueGrey,
+                    onPressed: () {
+                      setState(() {
+                        _isVideoOn = !_isVideoOn;
+                        _signalingService.setVideoEnabled(_isVideoOn);
+                      });
+                    },
+                    heroTag: 'video_btn',
+                    child: Icon(_isVideoOn ? Icons.videocam : Icons.videocam_off),
+                  ),
+                  const SizedBox(width: 16),
                   FloatingActionButton(
                     backgroundColor: Colors.red,
                     onPressed: () {

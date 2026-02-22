@@ -259,7 +259,7 @@ class SignalingService {
       RTCVideoRenderer localVideo, RTCVideoRenderer remoteVideo) async {
     final Map<String, dynamic> mediaConstraints = {
       'audio': true,
-      'video': false, // Audio only call
+      'video': true,
     };
 
     try {
@@ -344,6 +344,12 @@ class SignalingService {
   void muteAudio(bool mute) {
     if (_localStream != null && _localStream!.getAudioTracks().isNotEmpty) {
       _localStream!.getAudioTracks()[0].enabled = !mute;
+    }
+  }
+
+  void setVideoEnabled(bool enabled) {
+    if (_localStream != null && _localStream!.getVideoTracks().isNotEmpty) {
+      _localStream!.getVideoTracks()[0].enabled = enabled;
     }
   }
 
