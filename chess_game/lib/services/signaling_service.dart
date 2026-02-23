@@ -26,6 +26,7 @@ class SignalingService {
   void Function()? onIncomingCall;
   void Function()? onCallAccepted;
   void Function()? onNewGame;
+  void Function(bool videoOn)? onRemoteVideoToggle;
 
   // Connection state callbacks
   void Function(bool isConnected)? onConnectionState;
@@ -138,6 +139,11 @@ class SignalingService {
       case 'call_rejected':
         if (onCallRejected != null) {
           onCallRejected!();
+        }
+        break;
+      case 'video_toggle':
+        if (onRemoteVideoToggle != null) {
+          onRemoteVideoToggle!(payload['videoOn']);
         }
         break;
       default:
@@ -350,6 +356,7 @@ class SignalingService {
   void setVideoEnabled(bool enabled) {
     if (_localStream != null && _localStream!.getVideoTracks().isNotEmpty) {
       _localStream!.getVideoTracks()[0].enabled = enabled;
+      _send('video_toggle', {'videoOn': enabled});
     }
   }
 

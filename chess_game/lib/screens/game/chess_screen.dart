@@ -63,6 +63,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
   bool _isConnectedToRoom = false;
   bool _isAudioOn = false;
   bool _isMuted = false;
+  bool _isVideoOn = false;
+  bool _isRemoteVideoOn = false;
   bool _isIncomingCall = false;
   String _callStatus = "";
   String? _playerColor; // 'w' or 'b' in multiplayer mode
@@ -234,6 +236,12 @@ class _ChessGameScreenState extends State<ChessScreen> {
       // Banner handles UI
     };
 
+    _signalingService.onRemoteVideoToggle = (enabled) {
+      setState(() {
+        _isRemoteVideoOn = enabled;
+      });
+    };
+
     _signalingService.onCallAccepted = () {
       setState(() {
         _isAudioOn = true;
@@ -350,6 +358,27 @@ class _ChessGameScreenState extends State<ChessScreen> {
       _isMuted = !_isMuted;
     });
     _signalingService.muteAudio(_isMuted);
+  }
+
+  void _toggleVideo() async {
+    // Request camera permission if enabling video for the first time
+    if (!_isVideoOn && !kIsWeb) {
+      var status = await Permission.camera.request();
+      if (status != PermissionStatus.granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Camera permission is required for video calls."),
+            backgroundColor: Colors.red,
+          ));
+        }
+        return;
+      }
+    }
+
+    setState(() {
+      _isVideoOn = !_isVideoOn;
+    });
+    _signalingService.setVideoEnabled(_isVideoOn);
   }
 
   void _onLogout() async {
@@ -495,6 +524,9 @@ class _ChessGameScreenState extends State<ChessScreen> {
         _isAudioOn = false;
         _isIncomingCall = false;
         _isCalling = false;
+        _isMuted = false;
+        _isVideoOn = false;
+        _isRemoteVideoOn = false;
       });
     } else {
       // Start or Accept Call
@@ -683,6 +715,9 @@ class _ChessGameScreenState extends State<ChessScreen> {
       _isConnectedToRoom = false;
       _isAudioOn = false;
       _isIncomingCall = false;
+      _isMuted = false;
+      _isVideoOn = false;
+      _isRemoteVideoOn = false;
       _callStatus = "Room Disconnected";
       _playerColor = null; // Back to local mode
     });
@@ -1985,49 +2020,6 @@ class _ChessGameScreenState extends State<ChessScreen> {
         backgroundColor: Colors.blue[800],
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          if (_showIncomingCallBanner) ...[
-            IconButton(
-              icon: const Icon(Icons.call, color: Colors.greenAccent),
-              onPressed: () async {
-                await MqttService().cancelCallNotification(broadcast: true);
-                setState(() {
-                  _showIncomingCallBanner = false;
-                  _isIncomingCall = true;
-                });
-                if (mounted) await _toggleAudio();
-              },
-              tooltip: 'Answer',
-            ),
-            IconButton(
-              icon: const Icon(Icons.call_end, color: Colors.redAccent),
-              onPressed: () async {
-                await MqttService().cancelCallNotification(broadcast: true);
-                setState(() => _showIncomingCallBanner = false);
-                await GameService.declineCall(
-                  callerUsername: _incomingCallFrom,
-                  roomId: _incomingCallRoomId,
-                );
-              },
-              tooltip: 'Decline',
-            ),
-          ] else if (_isCalling && !_isAudioOn) ...[
-            IconButton(
-              icon: const Icon(Icons.call_end, color: Colors.redAccent),
-              onPressed: _toggleAudio,
-              tooltip: 'Cancel Call',
-            ),
-          ] else if (_isAudioOn) ...[
-            IconButton(
-              icon: Icon(_isMuted ? Icons.mic_off : Icons.mic),
-              color: _isMuted ? Colors.redAccent : Colors.white,
-              onPressed: _toggleMute,
-              tooltip: _isMuted ? "Unmute" : "Mute",
-            ),
-            IconButton(
-              icon: const Icon(Icons.call_end, color: Colors.redAccent),
-              onPressed: _toggleAudio, // Ends audio call
-              tooltip: 'End Call',
-            ),
           ] else if (_isConnectedToRoom) ...[
             IconButton(
               icon: const Icon(Icons.call, color: Colors.white),
@@ -2050,24 +2042,25 @@ class _ChessGameScreenState extends State<ChessScreen> {
           Column(
             children: [
               // User Profile Header
-              // User Profile Header
-              // User Profile Header
-              GestureDetector(
-                onTap: () => context.go('/profile'),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  color: Colors.blue[50],
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Colors.blue[100],
-                        backgroundImage: _authService
-                                    .currentUser?['profile_picture'] !=
-                                null
-                            ? NetworkImage(
-                                _authService.currentUser!['profile_picture']!)
-                            : null,
+              if (_isAudioOn || _isCalling || _showIncomingCallBanner)
+                _buildCallInterface()
+              else
+                GestureDetector(
+                  onTap: () => context.go('/profile'),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    color: Colors.blue[50],
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Colors.blue[100],
+                          backgroundImage: _authService
+                                      .currentUser?['profile_picture'] !=
+                                  null
+                              ? NetworkImage(
+                                  _authService.currentUser!['profile_picture']!)
+                              : null,
                         child:
                             _authService.currentUser?['profile_picture'] == null
                                 ? Icon(
@@ -2380,6 +2373,189 @@ class _ChessGameScreenState extends State<ChessScreen> {
                 );
               }).toList(),
             ),
+    );
+  }
+
+  Widget _buildCallInterface() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      color: Colors.blue[900]?.withOpacity(0.9),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Local Player Box
+              Expanded(
+                child: _buildCallProfileBox(
+                  name: "You",
+                  renderer: _localRenderer,
+                  isCameraOn: _isVideoOn,
+                  isMuted: _isMuted,
+                  profilePic: _authService.currentUser?['profile_picture'],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Remote Player Box
+              Expanded(
+                child: _buildCallProfileBox(
+                  name: widget.opponentName ?? "Opponent",
+                  renderer: _remoteRenderer,
+                  isCameraOn: _isRemoteVideoOn,
+                  isMuted: false,
+                  profilePic: null,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Call Controls Row (State-specific)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (_showIncomingCallBanner) ...[
+                // Incoming Call: Accept / Decline
+                _buildCallControlButton(
+                  icon: Icons.call,
+                  color: Colors.green,
+                  onPressed: () async {
+                    await MqttService().cancelCallNotification(broadcast: true);
+                    setState(() {
+                      _showIncomingCallBanner = false;
+                      _isIncomingCall = true;
+                    });
+                    if (mounted) await _toggleAudio();
+                  },
+                ),
+                const SizedBox(width: 30),
+                _buildCallControlButton(
+                  icon: Icons.call_end,
+                  color: Colors.red,
+                  onPressed: () async {
+                    await MqttService().cancelCallNotification(broadcast: true);
+                    setState(() => _showIncomingCallBanner = false);
+                    await GameService.declineCall(
+                      callerUsername: _incomingCallFrom,
+                      roomId: _incomingCallRoomId,
+                    );
+                  },
+                ),
+              ] else if (_isCalling && !_isAudioOn) ...[
+                // Outgoing Call: Cancel
+                _buildCallControlButton(
+                  icon: Icons.call_end,
+                  color: Colors.red,
+                  onPressed: _toggleAudio,
+                ),
+                const SizedBox(width: 12),
+                const Text("Calling...",
+                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+              ] else if (_isAudioOn) ...[
+                // Active Call: Mute / Video / End
+                _buildCallControlButton(
+                  icon: _isMuted ? Icons.mic_off : Icons.mic,
+                  color: _isMuted ? Colors.red : Colors.white24,
+                  onPressed: _toggleMute,
+                ),
+                const SizedBox(width: 20),
+                _buildCallControlButton(
+                  icon: _isVideoOn ? Icons.videocam : Icons.videocam_off,
+                  color: _isVideoOn ? Colors.blue : Colors.white24,
+                  onPressed: _toggleVideo,
+                ),
+                const SizedBox(width: 20),
+                _buildCallControlButton(
+                  icon: Icons.call_end,
+                  color: Colors.red,
+                  onPressed: _toggleAudio,
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCallProfileBox({
+    required String name,
+    required RTCVideoRenderer renderer,
+    required bool isCameraOn,
+    required bool isMuted,
+    String? profilePic,
+  }) {
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        color: Colors.black45,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            // Background / Avatar
+            Center(
+              child: profilePic != null
+                  ? CircleAvatar(
+                      radius: 30,
+                      backgroundImage: NetworkImage(profilePic),
+                    )
+                  : Icon(Icons.person, size: 50, color: Colors.blue[100]),
+            ),
+            // Video Stream
+            if (isCameraOn)
+              RTCVideoView(
+                renderer,
+                objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                mirror: name == "You",
+              ),
+            // Name Overlay
+            Positioned(
+              bottom: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  name,
+                  style: const TextStyle(color: Colors.white, fontSize: 10),
+                ),
+              ),
+            ),
+            // Mute Icon
+            if (isMuted)
+              const Positioned(
+                top: 8,
+                right: 8,
+                child: Icon(Icons.mic_off, color: Colors.red, size: 16),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCallControlButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(30),
+      child: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white),
+      ),
     );
   }
 }
