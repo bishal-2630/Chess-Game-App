@@ -56,33 +56,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<void> _signUpWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final result = await _authService.signInWithGoogle();
-
-      if (result['success'] == true) {
-        _showSuccessSnackBar('Google registration successful!');
-        if (context.mounted) {
-          context.go('/chess');
-        }
-      } else {
-        _showErrorSnackBar(result['error'] ?? 'Registration cancelled');
-      }
-    } catch (e) {
-      _showErrorSnackBar('Google registration failed: ${e.toString()}');
-    } finally {
-      if (context.mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
   void _showSuccessSnackBar(String message) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -323,55 +296,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 const SizedBox(height: 20),
 
-                // Divider with "OR"
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: Colors.grey[300])),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        'OR',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: Colors.grey[300])),
-                  ],
-                ),
-
                 const SizedBox(height: 20),
-
-                // Google Sign-Up Button
-                OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _signUpWithGoogle,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    side: BorderSide(color: Colors.grey[300]!),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: 0,
-                  ),
-                  icon: Image.asset(
-                    'assets/google_logo.png',
-                    width: 24,
-                    height: 24,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.g_mobiledata, size: 28, color: Colors.blue);
-                    },
-                  ),
-                  label: const Text(
-                    'Sign up with Google',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
 
                 const SizedBox(height: 20),
 

@@ -2020,7 +2020,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
         backgroundColor: Colors.blue[800],
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          ] else if (_isConnectedToRoom) ...[
+          if (_isConnectedToRoom) ...[
             IconButton(
               icon: const Icon(Icons.call, color: Colors.white),
               onPressed: _toggleAudio,
@@ -2061,15 +2061,15 @@ class _ChessGameScreenState extends State<ChessScreen> {
                               ? NetworkImage(
                                   _authService.currentUser!['profile_picture']!)
                               : null,
-                        child:
-                            _authService.currentUser?['profile_picture'] == null
-                                ? Icon(
-                                    Icons.person,
-                                    size: 24,
-                                    color: Colors.blue[800],
-                                  )
-                                : null,
-                      ),
+                          child: _authService.currentUser?['profile_picture'] ==
+                                  null
+                              ? Icon(
+                                  Icons.person,
+                                  size: 24,
+                                  color: Colors.blue[800],
+                                )
+                              : null,
+                        ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

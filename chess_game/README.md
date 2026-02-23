@@ -1,6 +1,6 @@
-# chess_game
+# chess_game (F-Droid Branch)
 
-A new Flutter project.
+This branch is prepared for F-Droid. Proprietary SDKs like Google Sign-In have been removed to meet FOSS requirements.
 
 ## Getting Started
 
