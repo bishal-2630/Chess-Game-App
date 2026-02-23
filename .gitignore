@@ -12,7 +12,11 @@ venv/
 *.pot
 db.sqlite3
 db.sqlite3-journal
-# staticfiles/
+staticfiles/
+*.wasm
+*.bin
+*.apk
+*.jar
 media/
 *.backup
 
