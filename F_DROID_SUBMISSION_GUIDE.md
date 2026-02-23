@@ -29,7 +29,7 @@ Repo: https://github.com/bishal-2630/Chess-Game-App
 Builds:
   - versionName: 1.0.0
     versionCode: 1
-    commit: 7ce2d4fc9234dbfb64f60ba414d5dee2bfd54944
+    commit: 87d1ce24b872c038e932c8e88324f3abd7c80e07
     subdir: chess_game
     gradle:
       - yes
