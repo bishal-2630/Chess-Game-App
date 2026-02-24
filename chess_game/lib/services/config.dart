@@ -9,9 +9,9 @@ class AppConfig {
   // Set to true for local development, false for production
   static const bool _isDevelopment = false;
 
-  // Production Railway backend URL
+  // Production backend URL (Hugging Face Spaces)
   static const String _productionHost =
-      'positive-brianne-self2630-c40dbd11.koyeb.app';
+      'bishal26-chess-backend.hf.space';
 
   // Local development configuration
   static const String _physicalDeviceHost = '192.168.1.76:8000';
@@ -50,24 +50,15 @@ class AppConfig {
   // ============================================================================
 
   static String get baseUrl {
-    if (kIsWeb) {
-      // Use absolute origin to ensure reliability in different routing modes
-      final origin = Uri.base.origin.isEmpty ? 'https://$_productionHost' : Uri.base.origin;
-      return '$origin/api/auth/';
-    }
-
-    // Use HTTPS for production, HTTP for local development
+    // Always use the explicit production host so Vercel-hosted web builds
+    // call HuggingFace (not their own origin, which has no Django backend).
     const protocol = _isDevelopment ? 'http' : 'https';
     return '$protocol://$_host/api/auth/';
   }
 
   static String get socketUrl {
-    if (kIsWeb) {
-      // Use relative path for websocket on web
-      return 'wss://${Uri.base.host}/ws/call/';
-    }
-
-    // Use WSS for production, WS for local development
+    // Always use explicit production host for WebSockets.
+    // Vercel is serverless and cannot handle WS — HuggingFace does.
     const protocol = _isDevelopment ? 'ws' : 'wss';
     return "$protocol://$_host/ws/call/";
   }
