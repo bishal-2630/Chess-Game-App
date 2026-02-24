@@ -180,8 +180,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Do not call mkdir() at runtime on Vercel (read-only filesystem)
 if not STATIC_ROOT.exists():
-    STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+    try:
+        STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
 
 WHITENOISE_USE_FINDERS = True
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
@@ -192,7 +196,10 @@ try:
         STATICFILES_DIRS = [FLUTTER_WEB_PATH]
     else:
         dummy_path = BASE_DIR / "dummy_static"
-        dummy_path.mkdir(exist_ok=True)
+        try:
+            dummy_path.mkdir(exist_ok=True)
+        except OSError:
+            pass
         STATICFILES_DIRS = [dummy_path]
 except Exception as e:
     STATICFILES_DIRS = []

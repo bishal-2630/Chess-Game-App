@@ -155,8 +155,16 @@ class MqttService {
     }
   }
   
+  static bool _isPortListening = false;
+  
   void initializeIsolateListener({bool isBackground = false}) {
     if (kIsWeb) return; // Skip on Web
+
+    if (_isPortListening) {
+      print('⚠️ MQTT: Isolate port already being listened to, skipping');
+      return;
+    }
+    _isPortListening = true;
 
     // Use platform-agnostic handler
     registerIsolatePort(_listenerPort, isBackground);
