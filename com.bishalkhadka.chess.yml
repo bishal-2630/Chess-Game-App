@@ -1,0 +1,51 @@
+Categories:
+
+  - Games
+
+License: MIT
+
+AuthorName: Bishal Khadka
+
+WebSite: https://github.com/bishal-2630/Chess-Game-App
+
+SourceCode: https://github.com/bishal-2630/Chess-Game-App
+
+IssueTracker: https://github.com/bishal-2630/Chess-Game-App/issues
+
+RepoType: git
+
+Repo: https://github.com/bishal-2630/Chess-Game-App.git
+
+Builds:
+
+  - versionName: 1.0.0
+
+    versionCode: 1
+
+    commit: dcc598c8e21786caaff48107b117447e5cb8e376
+
+    subdir: chess_game
+
+    srclibs:
+
+      - flutter@3.24.5
+
+    build: $$flutter$$/bin/flutter config --no-analytics && $$flutter$$/bin/flutter pub get && $$flutter$$/bin/flutter build apk --release
+
+    output: build/app/outputs/flutter-apk/app-release.apk
+
+AutoName: Chess Game
+
+Description: |
+
+  A beautiful chess game with Django authentication.
+
+  Supports Email/Password and Guest login.
+
+  Completely Free and Open Source version, free of proprietary SDKs.
+
+Summary: A chess game with Django authentication.
+
+UpdateCheckMode: None
+
+AutoUpdateMode: None
