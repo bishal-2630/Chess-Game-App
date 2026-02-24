@@ -134,6 +134,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
             _showIncomingCallBanner = true;
             _incomingCallFrom = caller ?? 'Unknown';
             _incomingCallRoomId = roomId ?? '';
+            _isVideoOn = payload['initial_video'] == true; // Capture the caller's video preference
           });
         }
         // If user is not in a room, system notification will handle it
@@ -360,6 +361,40 @@ class _ChessGameScreenState extends State<ChessScreen> {
     _signalingService.muteAudio(_isMuted);
   }
 
+  void _showCallSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Start Call'),
+        content: Text('Call ${widget.opponentName ?? "Opponent"}?'),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.mic, color: Colors.green),
+            label: const Text('Audio Call'),
+            onPressed: () {
+              Navigator.pop(context);
+              if (!_isAudioOn) {
+                setState(() => _isVideoOn = false);
+                _toggleAudio();
+              }
+            },
+          ),
+          TextButton.icon(
+            icon: const Icon(Icons.videocam, color: Colors.blue),
+            label: const Text('Video Call'),
+            onPressed: () {
+              Navigator.pop(context);
+              if (!_isAudioOn) {
+                setState(() => _isVideoOn = true);
+                _toggleAudio();
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   void _toggleVideo() async {
     // Request camera permission if enabling video for the first time
     if (!_isVideoOn && !kIsWeb) {
@@ -533,7 +568,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
       try {
         if (_isIncomingCall) {
           // Accept
-          await _signalingService.acceptCall(_localRenderer, _remoteRenderer);
+          await _signalingService.acceptCall(_localRenderer, _remoteRenderer, videoEnabled: _isVideoOn);
           _startCallTimer();
           setState(() {
             _isAudioOn = true;
@@ -562,10 +597,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
           // Send notification to opponent
           await GameService.sendCallSignal(
             receiverUsername: widget.opponentName!, 
-            roomId: widget.roomId!
+            roomId: widget.roomId!,
+            initialVideo: _isVideoOn
           );
 
-          await _signalingService.startCall(_localRenderer, _remoteRenderer);
+          await _signalingService.startCall(_localRenderer, _remoteRenderer, videoEnabled: _isVideoOn);
         }
       } catch (e) {
         MqttService().stopAudio(broadcast: true); // Stop ringtone on error
@@ -574,7 +610,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
            _isCalling = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Could not start audio call: $e"),
+          content: Text("Could not start call: $e"),
           backgroundColor: Colors.red,
         ));
       }
@@ -2022,9 +2058,16 @@ class _ChessGameScreenState extends State<ChessScreen> {
         actions: [
           if (_isConnectedToRoom) ...[
             IconButton(
-              icon: const Icon(Icons.call, color: Colors.white),
-              onPressed: _toggleAudio,
-              tooltip: "Start Audio Call",
+              icon: Icon(_isAudioOn ? Icons.call_end : Icons.call, 
+                         color: _isAudioOn ? Colors.red : Colors.white),
+              onPressed: () {
+                if (_isAudioOn) {
+                  _toggleAudio(); // Ends call
+                } else {
+                  _showCallSelectionDialog();
+                }
+              },
+              tooltip: _isAudioOn ? "End Call" : "Call Opponent",
             ),
           ],
           
@@ -2142,12 +2185,10 @@ class _ChessGameScreenState extends State<ChessScreen> {
               // Chess Board
               Expanded(
                 child: Center(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      // Use the smaller dimension to keep board square and on screen
-                      final size =
-                          min(constraints.maxWidth, constraints.maxHeight) *
-                              0.9;
+                  child: Builder(
+                    builder: (context) {
+                      // Fix board size to screen width (90%) to prevent compression
+                      final size = MediaQuery.of(context).size.width * 0.9;
                       return Container(
                         width: size,
                         height: size,
@@ -2378,7 +2419,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
   Widget _buildCallInterface() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       color: Colors.blue[900]?.withOpacity(0.9),
       child: Column(
         children: [
@@ -2407,7 +2448,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           // Call Controls Row (State-specific)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -2484,7 +2525,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
     String? profilePic,
   }) {
     return Container(
-      height: 120,
+      height: 100, // Reduced from 120
       decoration: BoxDecoration(
         color: Colors.black45,
         borderRadius: BorderRadius.circular(12),
