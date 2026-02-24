@@ -94,11 +94,13 @@ final GoRouter _globalRouter = GoRouter(
                 state.uri.queryParameters['callerName'] ??
                 'Unknown';
             final isCaller = state.uri.queryParameters['isCaller'] == 'true';
+            final initialVideo = state.uri.queryParameters['initialVideo'] != 'false'; // Default to true for backward compatibility or if not specified
 
             return CallScreen(
               roomId: roomId,
               otherUserName: otherUserName,
               isCaller: isCaller,
+              initialVideo: initialVideo,
             );
           },
         ),
@@ -345,9 +347,11 @@ class _IncomingCallWrapperState extends State<IncomingCallWrapper> {
 
         final caller = payload['caller'];
         final roomId = payload['room_id'];
+        final initialVideo = payload['initial_video'] == true;
         try {
-          context.go('/call?roomId=$roomId&otherUserName=$caller&isCaller=false');
+          context.go('/call?roomId=$roomId&otherUserName=$caller&isCaller=false&initialVideo=$initialVideo');
         } catch (e) {
+          print('Error navigating to call: $e');
         }
       } else {
         // PER USER REQUEST: Do not show dialog box anymore.

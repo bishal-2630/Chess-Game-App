@@ -162,10 +162,10 @@ class SignalingService {
 
   // Initiator: Start a call
   Future<void> startCall(
-      RTCVideoRenderer localVideo, RTCVideoRenderer remoteVideo) async {
-    print("📞 startCall() initiated");
+      RTCVideoRenderer localVideo, RTCVideoRenderer remoteVideo, {bool videoEnabled = true}) async {
+    print("📞 startCall() initiated (video: $videoEnabled)");
     try {
-      await _openUserMedia(localVideo, remoteVideo);
+      await _openUserMedia(localVideo, remoteVideo, videoEnabled: videoEnabled);
       if (_localStream == null) {
         throw Exception("Failed to get local media stream");
       }
@@ -192,15 +192,15 @@ class SignalingService {
 
   // Receiver: Accept an incoming call
   Future<void> acceptCall(
-      RTCVideoRenderer localVideo, RTCVideoRenderer remoteVideo) async {
-    print("📞 acceptCall() initiated");
+      RTCVideoRenderer localVideo, RTCVideoRenderer remoteVideo, {bool videoEnabled = true}) async {
+    print("📞 acceptCall() initiated (video: $videoEnabled)");
     if (_pendingOffer == null) {
       print("❌ No pending offer to accept");
       return;
     }
 
     try {
-      await _openUserMedia(localVideo, remoteVideo);
+      await _openUserMedia(localVideo, remoteVideo, videoEnabled: videoEnabled);
       await _createPeerConnection(); 
 
       print("📞 Setting Remote Description (Offer)...");
@@ -285,11 +285,11 @@ class SignalingService {
   }
 
   Future<void> _openUserMedia(
-      RTCVideoRenderer localVideo, RTCVideoRenderer remoteVideo) async {
-    print("📞 _openUserMedia() initiated");
+      RTCVideoRenderer localVideo, RTCVideoRenderer remoteVideo, {bool videoEnabled = true}) async {
+    print("📞 _openUserMedia() initiated (video: $videoEnabled)");
     final Map<String, dynamic> mediaConstraints = {
       'audio': true,
-      'video': true,
+      'video': videoEnabled,
     };
 
     try {

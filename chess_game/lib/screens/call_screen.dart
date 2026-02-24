@@ -13,12 +13,14 @@ class CallScreen extends StatefulWidget {
   final String roomId;
   final String otherUserName;
   final bool isCaller;
+  final bool initialVideo;
 
   const CallScreen({
     super.key,
     required this.roomId,
     required this.otherUserName,
     this.isCaller = false,
+    this.initialVideo = false,
   });
 
   @override
@@ -33,14 +35,15 @@ class _CallScreenState extends State<CallScreen> {
   bool _inCall = false;
   String _status = "Connecting...";
   bool _isMuted = false;
-  bool _isVideoOn = true;
+  late bool _isVideoOn;
   bool _isExiting = false;
   Timer? _callTimeoutTimer; // Add timer variable
 
   @override
   void initState() {
     super.initState();
-    print("📞 CallScreen: initState called");
+    print("📞 CallScreen: initState called (initialVideo: ${widget.initialVideo})");
+    _isVideoOn = widget.initialVideo;
     MqttService().setInCall(true); // Mark as in-call
     
     // For Callee, stop the incoming ringtone and cancel notification
@@ -133,9 +136,9 @@ class _CallScreenState extends State<CallScreen> {
     _signalingService.onIncomingCall = () async {
       print("📞 Incoming call offer received callback");
       if (!widget.isCaller) {
-        print("📞 Accepting incoming call...");
+        print("📞 Accepting incoming call (video: $_isVideoOn)...");
         setState(() => _status = "Accepting call...");
-        await _signalingService.acceptCall(_localRenderer, _remoteRenderer);
+        await _signalingService.acceptCall(_localRenderer, _remoteRenderer, videoEnabled: _isVideoOn);
         setState(() {
           _inCall = true;
           _status = "Connected";
@@ -208,7 +211,7 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _startCall() async {
     try {
-      await _signalingService.startCall(_localRenderer, _remoteRenderer);
+      await _signalingService.startCall(_localRenderer, _remoteRenderer, videoEnabled: _isVideoOn);
     } catch (e) {
       print("Start call failed: $e");
     }

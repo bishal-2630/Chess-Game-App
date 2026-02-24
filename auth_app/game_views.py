@@ -253,6 +253,7 @@ class SendCallSignalView(APIView):
 
         receiver_username = request.data.get('receiver_username')
         room_id = request.data.get('room_id')
+        initial_video = request.data.get('initial_video', False)
         
         try:
             receiver = User.objects.get(username=receiver_username)
@@ -266,7 +267,8 @@ class SendCallSignalView(APIView):
             {
                 'caller': request.user.username,
                 'room_id': room_id,
-                'caller_picture': request.user.profile_picture
+                'caller_picture': request.user.profile_picture,
+                'initial_video': initial_video
             }
         )
         

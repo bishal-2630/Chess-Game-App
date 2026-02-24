@@ -324,20 +324,31 @@ class UserCard extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Call Button
+                // Call Button (Audio)
                 IconButton(
                   icon: const Icon(Icons.call),
                   color: Colors.green,
                   onPressed: () {
-                    // Generate a room ID for the call
                     final roomId =
                         'call_${DateTime.now().millisecondsSinceEpoch}';
                     MqttService().playSound('sounds/call_ringtone.mp3');
-                    // Navigate to call screen as Caller
                     context.push(
-                        '/call?roomId=$roomId&otherUserName=${user['username']}&isCaller=true');
+                        '/call?roomId=$roomId&otherUserName=${user['username']}&isCaller=true&initialVideo=false');
                   },
-                  tooltip: 'Call',
+                  tooltip: 'Audio Call',
+                ),
+                // Video Call Button
+                IconButton(
+                  icon: const Icon(Icons.videocam),
+                  color: Colors.blue,
+                  onPressed: () {
+                    final roomId =
+                        'call_${DateTime.now().millisecondsSinceEpoch}';
+                    MqttService().playSound('sounds/call_ringtone.mp3');
+                    context.push(
+                        '/call?roomId=$roomId&otherUserName=${user['username']}&isCaller=true&initialVideo=true');
+                  },
+                  tooltip: 'Video Call',
                 ),
                 // Challenge Button
                 IconButton(
