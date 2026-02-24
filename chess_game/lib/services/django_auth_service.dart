@@ -30,7 +30,7 @@ class DjangoAuthService extends ChangeNotifier {
   GoogleSignIn? __googleSignIn;
   GoogleSignIn get _googleSignIn => __googleSignIn ??= GoogleSignIn(
     serverClientId:
-        '1059251569808-94aeup33dh3tdrr844dlkqnoppqbv49p.apps.googleusercontent.com',
+        '1059251569808-kps5i78pn2tikdtbp6qk4vf3tolig578.apps.googleusercontent.com',
   );
 
   // User data storage
@@ -592,11 +592,13 @@ class DjangoAuthService extends ChangeNotifier {
 
         return {'success': false, 'error': errorMessage};
       }
-    } catch (e) {
+    } catch (e, stack) {
+      print('DEBUG: Google sign in error detail: $e');
+      print('DEBUG: Stack trace: $stack');
       return {
         'success': false,
         'error':
-            'Google sign in failed. Please make sure Google Play Services are updated.'
+            'Google sign in failed: $e. Please make sure Google Play Services are updated.'
       };
     }
   }

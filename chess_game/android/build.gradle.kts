@@ -1,3 +1,10 @@
+plugins {
+    id("com.android.application") apply false
+    id("kotlin-android") apply false
+    id("dev.flutter.flutter-gradle-plugin") apply false
+    id("com.google.gms.google-services") version "4.4.1" apply false
+}
+
 allprojects {
     repositories {
         google()
