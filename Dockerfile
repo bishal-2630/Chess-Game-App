@@ -21,9 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project
 COPY . /app/
 
-# Expose port (Back4App will use this to route traffic)
-EXPOSE 8080
+# Expose port (Hugging Face uses 7860 by default)
+EXPOSE 7860
 
 # Command to run the application
-# Use $PORT environment variable if provided, default to 8080
-CMD daphne -b 0.0.0.0 -p ${PORT:-8080} chess_backend.asgi:application
+# Use $PORT environment variable if provided, default to 7860
+CMD daphne -b 0.0.0.0 -p ${PORT:-7860} chess_backend.asgi:application
