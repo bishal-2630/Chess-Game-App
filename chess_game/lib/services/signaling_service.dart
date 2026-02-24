@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart'; // Added for kIsWeb
 import './websocket_helper.dart';
 
 typedef StreamStateCallback = void Function(MediaStream stream);
@@ -269,6 +271,16 @@ class SignalingService {
     };
 
     try {
+      // 1. Check & Request Permissions on Mobile
+      if (!kIsWeb) {
+        final micStatus = await Permission.microphone.request();
+        final cameraStatus = await Permission.camera.request();
+
+        if (micStatus.isDenied || cameraStatus.isDenied) {
+          throw Exception("Microphone or Camera permission denied");
+        }
+      }
+
       var stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
       _localStream = stream;
 
