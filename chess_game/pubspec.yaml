@@ -25,6 +25,7 @@ dependencies:
   device_info_plus: ^10.1.0
   app_links: ^3.5.0
   url_launcher: ^6.2.5
+  google_sign_in: ^6.2.1
 
 
 dev_dependencies:

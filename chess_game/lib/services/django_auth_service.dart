@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/config.dart';
 import '../main.dart'; // To access scaffoldMessengerKey
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../services/mqtt_service.dart';
 import 'web_client_stub.dart'
     if (dart.library.html) 'web_client_web.dart'
@@ -25,6 +26,12 @@ class DjangoAuthService extends ChangeNotifier {
   // Lazy-loaded components (UI only)
   CookieManager? __cookieManager;
   CookieManager get _cookieManager => __cookieManager ??= CookieManager.instance();
+
+  GoogleSignIn? __googleSignIn;
+  GoogleSignIn get _googleSignIn => __googleSignIn ??= GoogleSignIn(
+    serverClientId:
+        '1059251569808-94aeup33dh3tdrr844dlkqnoppqbv49p.apps.googleusercontent.com',
+  );
 
   // User data storage
   Map<String, dynamic>? _currentUser;
@@ -250,6 +257,13 @@ class DjangoAuthService extends ChangeNotifier {
         await _clearCookies();
       } catch (e) {
         print('🍪 Sign out error clearing cookies: $e');
+      }
+
+      // Sign out from Google
+      try {
+        await _googleSignIn.signOut();
+      } catch (e) {
+        print('📧 Sign out error clearing google session: $e');
       }
 
       // Optional: inform backend about token blacklist
@@ -508,6 +522,81 @@ class DjangoAuthService extends ChangeNotifier {
       return {
         'success': false,
         'error': 'Network error. Please check your connection.'
+      };
+    }
+  }
+
+  // Google Sign-In
+  Future<Map<String, dynamic>> signInWithGoogle() async {
+    logoutGuest(); // Clear guest state
+
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        return {'success': false, 'error': 'Sign in cancelled'};
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Send Google token to Django backend
+      final url = '${_baseUrl}google-login/';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'access_token': googleAuth.accessToken,
+          'id_token': googleAuth.idToken,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+
+        // Store user data
+        _currentUser = responseData['user'];
+
+        // Store tokens (Backend returns them at root level)
+        if (responseData['access'] != null) {
+          _accessToken = responseData['access'];
+          _refreshToken = responseData['refresh'];
+        } else if (responseData['tokens'] != null) {
+          // Fallback if backend changes
+          _accessToken = responseData['tokens']['access'];
+          _refreshToken = responseData['tokens']['refresh'];
+        }
+
+        await _saveAuthData();
+
+        // Handle cookies for web view
+        String? rawCookie = response.headers['set-cookie'];
+        if (rawCookie != null) {
+          await _injectCookies(rawCookie);
+        }
+
+
+        return {'success': true, 'user': _currentUser, 'tokens': responseData};
+      } else {
+        final errorData = json.decode(response.body);
+        String errorMessage = 'Google sign in failed';
+
+        if (errorData['detail'] != null) {
+          errorMessage = errorData['detail'];
+        } else if (errorData['error'] != null) {
+          errorMessage = errorData['error'];
+        }
+
+        return {'success': false, 'error': errorMessage};
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'error':
+            'Google sign in failed. Please make sure Google Play Services are updated.'
       };
     }
   }
