@@ -107,6 +107,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://chess-game-app-delta.vercel.app",
     "https://*.vercel.app",
     "https://positive-brianne-self2630-c40dbd11.koyeb.app",
+    "https://bishal26-chess-backend.hf.space",
 ]
 
 # For Swagger to work with zrok
@@ -259,6 +260,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://chess-game-app-delta.vercel.app",
     "https://*.vercel.app",
     "https://positive-brianne-self2630-c40dbd11.koyeb.app",
+    "https://bishal26-chess-backend.hf.space",
 ]
 
 # Handle Swagger redirect dynamically for Vercel
