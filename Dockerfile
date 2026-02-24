@@ -21,9 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project
 COPY . /app/
 
-# Expose port
+# Expose port (Back4App will use this to route traffic)
 EXPOSE 8080
 
 # Command to run the application
-# We use Daphne for WebSockets (ASGI)
-CMD daphne -b 0.0.0.0 -p 8080 chess_backend.asgi:application
+# Use $PORT environment variable if provided, default to 8080
+CMD daphne -b 0.0.0.0 -p ${PORT:-8080} chess_backend.asgi:application
