@@ -2379,10 +2379,13 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
   Widget _buildCallInterface() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-      color: Colors.blue[900]?.withOpacity(0.9),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.3), // Darker, more subtle background
+        border: const Border(bottom: BorderSide(color: Colors.white12, width: 0.5)),
+      ),
       child: Stack(
-        alignment: Alignment.bottomCenter,
+        alignment: Alignment.center, // Center the overlay buttons
         children: [
           Row(
             children: [
@@ -2410,15 +2413,15 @@ class _ChessGameScreenState extends State<ChessScreen> {
             ],
           ),
           
-          // OVERLAY CALL CONTROLS (Positioned at bottom center of the boxes)
+          // OVERLAY CALL CONTROLS (Floating in the center-bottom of the boxes)
           Positioned(
-            bottom: 12,
+            bottom: 6,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.white12),
+                color: Colors.black45,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white10),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -2437,7 +2440,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                         if (mounted) await _toggleAudio();
                       },
                     ),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: 16),
                     _buildCallControlButton(
                       icon: Icons.call_end,
                       color: Colors.red,
@@ -2457,23 +2460,23 @@ class _ChessGameScreenState extends State<ChessScreen> {
                       color: Colors.red,
                       onPressed: _toggleAudio,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     const Text("Calling...",
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, shadows: [Shadow(blurRadius: 2, color: Colors.black)])),
+                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                   ] else if (_isAudioOn) ...[
                     // Active Call: Mute / Video / End
                     _buildCallControlButton(
                       icon: _isMuted ? Icons.mic_off : Icons.mic,
-                      color: _isMuted ? Colors.red : Colors.white38,
+                      color: _isMuted ? Colors.red : Colors.white24,
                       onPressed: _toggleMute,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     _buildCallControlButton(
                       icon: _isVideoOn ? Icons.videocam : Icons.videocam_off,
-                      color: _isVideoOn ? Colors.blue : Colors.white38,
+                      color: _isVideoOn ? Colors.blue : Colors.white24,
                       onPressed: _toggleVideo,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     _buildCallControlButton(
                       icon: Icons.call_end,
                       color: Colors.red,
@@ -2497,7 +2500,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
     String? profilePic,
   }) {
     return Container(
-      height: 120, // Increased height as requested
+      height: 160, // Increased height significantly for "immersive" feel
       decoration: BoxDecoration(
         color: Colors.black45,
         borderRadius: BorderRadius.circular(12),
