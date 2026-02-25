@@ -319,58 +319,53 @@ class UserCard extends StatelessWidget {
               ),
             ),
 
-            // Invite button
-            // Actions
-                // Consolidated Call Button
-                IconButton(
-                  icon: const Icon(Icons.call),
-                  color: Colors.green,
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Start Call'),
-                        content: Text('Call ${user['username']}?'),
-                        actions: [
-                          TextButton.icon(
-                            icon: const Icon(Icons.mic, color: Colors.green),
-                            label: const Text('Audio Call'),
-                            onPressed: () {
-                              Navigator.pop(context);
-                              final roomId =
-                                  'call_${DateTime.now().millisecondsSinceEpoch}';
-                              MqttService().playSound('sounds/call_ringtone.mp3');
-                              context.push(
-                                  '/call?roomId=$roomId&otherUserName=${user['username']}&isCaller=true&initialVideo=false');
-                            },
-                          ),
-                          TextButton.icon(
-                            icon: const Icon(Icons.videocam, color: Colors.blue),
-                            label: const Text('Video Call'),
-                            onPressed: () {
-                              Navigator.pop(context);
-                              final roomId =
-                                  'call_${DateTime.now().millisecondsSinceEpoch}';
-                              MqttService().playSound('sounds/call_ringtone.mp3');
-                              context.push(
-                                  '/call?roomId=$roomId&otherUserName=${user['username']}&isCaller=true&initialVideo=true');
-                            },
-                          ),
-                        ],
+            // Consolidated Call Button
+            IconButton(
+              icon: const Icon(Icons.call),
+              color: Colors.green,
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Start Call'),
+                    content: Text('Call ${user['username']}?'),
+                    actions: [
+                      TextButton.icon(
+                        icon: const Icon(Icons.mic, color: Colors.green),
+                        label: const Text('Audio Call'),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          final roomId =
+                              'call_${DateTime.now().millisecondsSinceEpoch}';
+                          MqttService().playSound('sounds/call_ringtone.mp3');
+                          context.push(
+                              '/call?roomId=$roomId&otherUserName=${user['username']}&isCaller=true&initialVideo=false');
+                        },
                       ),
-                    );
-                  },
-                  tooltip: 'Call',
-                ),
-                // Challenge Button
-                IconButton(
-                  icon:
-                      Icon(isRecent ? Icons.hourglass_empty : Icons.play_arrow),
-                  color: isRecent ? Colors.grey : Colors.blue,
-                  onPressed: onInvite,
-                  tooltip: isRecent ? 'Sent (Expires in 1m)' : 'Challenge',
-                ),
-              ],
+                      TextButton.icon(
+                        icon: const Icon(Icons.videocam, color: Colors.blue),
+                        label: const Text('Video Call'),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          final roomId =
+                              'call_${DateTime.now().millisecondsSinceEpoch}';
+                          MqttService().playSound('sounds/call_ringtone.mp3');
+                          context.push(
+                              '/call?roomId=$roomId&otherUserName=${user['username']}&isCaller=true&initialVideo=true');
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+              tooltip: 'Call',
+            ),
+            // Challenge Button
+            IconButton(
+              icon: Icon(isRecent ? Icons.hourglass_empty : Icons.play_arrow),
+              color: isRecent ? Colors.grey : Colors.blue,
+              onPressed: onInvite,
+              tooltip: isRecent ? 'Sent (Expires in 1m)' : 'Challenge',
             ),
           ],
         ),
