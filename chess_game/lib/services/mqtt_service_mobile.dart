@@ -100,7 +100,7 @@ class MqttService {
     );
 
     const AndroidNotificationChannel callChannel = AndroidNotificationChannel(
-      'chess_incoming_calls_v6', // Fresh v6
+      'chess_incoming_calls_v7', // Fresh v7
       'Incoming Calls',
       description: 'Notifications for incoming calls',
       importance: Importance.max,
@@ -553,7 +553,7 @@ class MqttService {
     
     // Create notification with action buttons
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'chess_incoming_calls_v6', // v6
+      'chess_incoming_calls_v7', // v7
       'Incoming Calls',
       channelDescription: 'Notifications for incoming calls',
       importance: Importance.max,
