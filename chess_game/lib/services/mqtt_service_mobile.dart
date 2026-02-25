@@ -755,12 +755,21 @@ class MqttService {
     );
   }
 
-  Future<void> cancelOngoingCallNotification() async {
+  Future<void> cancelOngoingCallNotification({bool broadcast = true}) async {
     const int ongoingCallId = 777;
     try {
       await flutterLocalNotificationsPlugin.cancel(ongoingCallId);
     } catch (e) {
       print('Error cancelling ongoing call notification: $e');
+    }
+
+    if (broadcast) {
+      for (final portName in ['chess_game_main_port', 'chess_game_bg_port']) {
+        final sendPort = IsolateNameServer.lookupPortByName(portName);
+        if (sendPort != null) {
+          sendPort.send({'action': 'cancel_notification', 'id': ongoingCallId});
+        }
+      }
     }
   }
 
