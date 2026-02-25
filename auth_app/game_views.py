@@ -342,12 +342,14 @@ class CancelCallView(APIView):
              return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
              
         # Send MQTT notification that call was cancelled by the caller
+        initial_video = request.data.get('initial_video', False)
         publish_mqtt_notification(
             receiver.username,
             'call_cancelled',
             {
                 'caller': request.user.username,
-                'room_id': room_id
+                'room_id': room_id,
+                'initial_video': initial_video
             }
         )
         
