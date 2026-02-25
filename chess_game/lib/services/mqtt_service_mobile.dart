@@ -12,6 +12,7 @@ import 'dart:isolate';
 import 'game_service.dart';
 import 'django_auth_service.dart';
 import 'notification_handler.dart';
+import 'signaling_service.dart';
 
 // No handler here anymore, moved to notification_handler.dart
 
@@ -180,11 +181,19 @@ class MqttService {
           // Internal signal to clear UI or stop ringing
           _notificationController.add({'type': 'dismiss_call'});
         } else if (message['action'] == 'decline_call') {
+          // If we are in main isolate, send the network request
+          if (isMainIsolate) {
+            GameService.declineCall(
+              callerUsername: message['caller'],
+              roomId: message['roomId'],
+            );
+          }
           _notificationController.add({
             'type': 'decline_call', 
             'caller': message['caller'],
             'roomId': message['roomId'],
           });
+          setInCall(false); // Reset in-call status
         } else if (message['action'] == 'respond_invitation') {
           _notificationController.add({
             'type': 'respond_invitation',
@@ -198,6 +207,18 @@ class MqttService {
           }
         } else if (message['action'] == 'set_active_room') {
           _activeChessRoomId = message['roomId']?.toString();
+        } else if (message['action'] == 'navigate_to_call') {
+          _notificationController.add({
+            'type': 'navigate_to_call',
+            'roomId': message['roomId'],
+            'otherUser': message['otherUser'],
+          });
+        } else if (message['action'] == 'end_active_call') {
+          // Trigger signaling end from background action
+          SignalingService().sendEndCall();
+          SignalingService().stopAudio();
+          // Clear notification
+          cancelOngoingCallNotification(broadcast: false);
         }
       }
     });
@@ -418,6 +439,7 @@ class MqttService {
         '${payload['caller']}',
         roomId,
         json.encode(data),
+        initialVideo: payload['initial_video'] == true,
       );
     } else if (type == 'call_declined' || type == 'call_ended') {
       final String? roomId = payload != null ? payload['room_id']?.toString() : null;
@@ -440,7 +462,7 @@ class MqttService {
           
           // Show Missed Call Notification
           if (sender != null) {
-             _showMissedCallNotification(sender);
+             _showMissedCallNotification(sender, initialVideo: payload['initial_video'] == true);
           }
         } else {
            cancelCallNotification();
@@ -526,7 +548,9 @@ class MqttService {
     );
   }
 
-  Future<void> _showCallNotification(String caller, String roomId, String payload) async {
+  Future<void> _showCallNotification(String caller, String roomId, String payload, {bool initialVideo = false}) async {
+    final String callType = initialVideo ? "Video call" : "Audio call";
+    
     // Create notification with action buttons
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'chess_incoming_calls_v6', // v6
@@ -542,25 +566,11 @@ class MqttService {
       autoCancel: false, // Prevent swiping away
       playSound: false,
       enableVibration: true,
-      ticker: 'Incoming call from $caller', // Ensures notification appears
+      ticker: 'Incoming $callType from $caller', // Ensures notification appears
       styleInformation: BigTextStyleInformation(
         '$caller is calling you...',
-        contentTitle: 'Incoming Call',
+        contentTitle: callType,
       ),
-      actions: <AndroidNotificationAction>[
-        const AndroidNotificationAction(
-          'decline_action',
-          'Decline',
-          showsUserInterface: true, // Force foreground for reliability
-          cancelNotification: true, 
-        ),
-        const AndroidNotificationAction(
-          'accept_action',
-          'Accept',
-          showsUserInterface: true,
-          cancelNotification: true, 
-        ),
-      ],
     );
 
     final NotificationDetails notificationDetails =
@@ -571,14 +581,16 @@ class MqttService {
 
     await flutterLocalNotificationsPlugin.show(
       callNotificationId,
-      'Incoming Call',
+      callType,
       '$caller is calling you...',
       notificationDetails,
       payload: payload,
     );
   }
 
-  Future<void> _showMissedCallNotification(String caller) async {
+  Future<void> _showMissedCallNotification(String caller, {bool initialVideo = false}) async {
+    final String callType = initialVideo ? "Video Call" : "Audio Call";
+    
     // Create notification channel for missed calls if not exists
     // (Ideally create this in initialize(), but details here work too)
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
@@ -601,8 +613,8 @@ class MqttService {
 
     await flutterLocalNotificationsPlugin.show(
       notificationId,
-      'Missed Call',
-      'You missed a call from $caller',
+      'Missed $callType',
+      'You missed a $callType from $caller',
       notificationDetails,
       payload: 'missed_call',
     );
@@ -656,6 +668,7 @@ class MqttService {
       await flutterLocalNotificationsPlugin.cancel(888).catchError((_) {});
       await flutterLocalNotificationsPlugin.cancel(999).catchError((_) {});
       await flutterLocalNotificationsPlugin.cancel(777).catchError((_) {}); // CLEAR ONGOING NOTIFICATION
+      _isInCall = false; // RESET STATE
     } catch (e) {
       print('Notification cancellation error: $e');
     }
@@ -665,9 +678,10 @@ class MqttService {
       for (final portName in ['chess_game_main_port', 'chess_game_bg_port']) {
         final sendPort = IsolateNameServer.lookupPortByName(portName);
         if (sendPort != null) {
+          // Force cleanup of common notification IDs
           sendPort.send({'action': 'cancel_notification', 'id': 999});
           sendPort.send({'action': 'cancel_notification', 'id': 888});
-          sendPort.send({'action': 'cancel_notification', 'id': 777}); // BROADCAST 777 CLEAR
+          sendPort.send({'action': 'cancel_notification', 'id': 777}); // ADDED 777
           sendPort.send({'action': 'dismiss_call'});
         }
       }
@@ -771,6 +785,7 @@ class MqttService {
         }
       }
     }
+    _isInCall = false; // RESET STATE
   }
 
   void onConnected() {

@@ -9,6 +9,10 @@ import './websocket_helper.dart';
 typedef StreamStateCallback = void Function(MediaStream stream);
 
 class SignalingService {
+  static final SignalingService _instance = SignalingService._internal();
+  factory SignalingService() => _instance;
+  SignalingService._internal();
+
   WebSocketChannel? _channel;
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;

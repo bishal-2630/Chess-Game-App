@@ -38,6 +38,7 @@ class _CallScreenState extends State<CallScreen> {
   late bool _isVideoOn;
   bool _isRemoteVideoOn = false;
   bool _isExiting = false;
+  bool _isSpeakerOn = false; // Add speaker state
   Timer? _callTimeoutTimer; // Add timer variable
 
   @override
@@ -203,7 +204,8 @@ class _CallScreenState extends State<CallScreen> {
 
     // 2. If Caller, send notification to invitee and play calling tone
     if (widget.isCaller) {
-      setState(() => _status = "Calling ${widget.otherUserName}...");
+      final callType = widget.initialVideo ? "Video" : "Audio";
+      setState(() => _status = "$callType Calling ${widget.otherUserName}...");
       // Sound already started in UserListScreen
 
       // Delay slightly to ensure WS is connecting? sending via HTTP is independent.
@@ -321,7 +323,7 @@ class _CallScreenState extends State<CallScreen> {
           ),
 
           // 4. Control Bar (Bottom Overlay)
-          if (_inCall && !_isExiting)
+          if ((_inCall || widget.isCaller) && !_isExiting)
             Positioned(
               bottom: 40,
               left: 0,
@@ -443,26 +445,35 @@ class _CallScreenState extends State<CallScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        if (_inCall) ...[
+          _buildControlCircle(
+            icon: _isMuted ? Icons.mic_off : Icons.mic,
+            color: _isMuted ? Colors.red : Colors.white24,
+            onPressed: () {
+              setState(() {
+                _isMuted = !_isMuted;
+                _signalingService.muteAudio(_isMuted);
+              });
+            },
+          ),
+          const SizedBox(width: 20),
+          _buildControlCircle(
+            icon: _isVideoOn ? Icons.videocam : Icons.videocam_off,
+            color: _isVideoOn ? Colors.blue : Colors.white24,
+            onPressed: () {
+              setState(() {
+                _isVideoOn = !_isVideoOn;
+                _signalingService.setVideoEnabled(_isVideoOn);
+              });
+            },
+          ),
+          const SizedBox(width: 20),
+        ],
+        // Speaker Toggle (Always visible during call/ringing)
         _buildControlCircle(
-          icon: _isMuted ? Icons.mic_off : Icons.mic,
-          color: _isMuted ? Colors.red : Colors.white24,
-          onPressed: () {
-            setState(() {
-              _isMuted = !_isMuted;
-              _signalingService.muteAudio(_isMuted);
-            });
-          },
-        ),
-        const SizedBox(width: 20),
-        _buildControlCircle(
-          icon: _isVideoOn ? Icons.videocam : Icons.videocam_off,
-          color: _isVideoOn ? Colors.blue : Colors.white24,
-          onPressed: () {
-            setState(() {
-              _isVideoOn = !_isVideoOn;
-              _signalingService.setVideoEnabled(_isVideoOn);
-            });
-          },
+          icon: _isSpeakerOn ? Icons.volume_up : Icons.volume_down,
+          color: _isSpeakerOn ? Colors.blue : Colors.white24,
+          onPressed: _toggleSpeaker,
         ),
         const SizedBox(width: 20),
         _buildControlCircle(
@@ -473,14 +484,22 @@ class _CallScreenState extends State<CallScreen> {
               GameService.cancelCall(
                 receiverUsername: widget.otherUserName,
                 roomId: widget.roomId,
+                initialVideo: widget.initialVideo,
               );
             }
             _signalingService.sendEndCall();
-            context.go('/users');
+            _handleCallEnd("Call Cancelled");
           },
         ),
       ],
     );
+  }
+
+  void _toggleSpeaker() {
+    setState(() {
+      _isSpeakerOn = !_isSpeakerOn;
+      Helper.setSpeakerphoneOn(_isSpeakerOn);
+    });
   }
 
   Widget _buildControlCircle({

@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 class CallNotificationBanner extends StatefulWidget {
   final String callerName;
+  final bool initialVideo;
   final VoidCallback onAnswer;
   final VoidCallback onDecline;
 
   const CallNotificationBanner({
     super.key,
     required this.callerName,
+    this.initialVideo = false,
     required this.onAnswer,
     required this.onDecline,
   });
@@ -51,7 +53,7 @@ class _CallNotificationBannerState extends State<CallNotificationBanner>
                 return Transform.scale(
                   scale: 1.0 + (_pulseController.value * 0.2),
                   child: Icon(
-                    Icons.phone_in_talk,
+                    widget.initialVideo ? Icons.videocam : Icons.phone_in_talk,
                     color: Colors.white,
                     size: 28,
                   ),
@@ -66,7 +68,7 @@ class _CallNotificationBannerState extends State<CallNotificationBanner>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Incoming Call',
+                    widget.initialVideo ? 'Incoming Video Call' : 'Incoming Audio Call',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 12,

@@ -11,7 +11,6 @@ import 'dart:math';
 import 'dart:async';
 import 'package:permission_handler/permission_handler.dart';
 import '../../services/mqtt_service.dart';
-import '../../widgets/call_notification_banner.dart';
 
 class ChessScreen extends StatefulWidget {
   final String? roomId;
@@ -2453,6 +2452,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
                         );
                       },
                     ),
+                    const SizedBox(width: 12),
+                    Text(
+                      _isVideoOn ? "Incoming Video Call" : "Incoming Audio Call",
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
                   ] else if (_isCalling && !_isAudioOn) ...[
                     // Outgoing Call: Cancel
                     _buildCallControlButton(
@@ -2461,8 +2465,10 @@ class _ChessGameScreenState extends State<ChessScreen> {
                       onPressed: _toggleAudio,
                     ),
                     const SizedBox(width: 10),
-                    const Text("Calling...",
-                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text(
+                      _isVideoOn ? "Video Calling..." : "Audio Calling...",
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
                   ] else if (_isAudioOn) ...[
                     // Active Call: Mute / Video / End
                     _buildCallControlButton(

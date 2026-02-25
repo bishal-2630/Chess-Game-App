@@ -86,6 +86,7 @@ void notificationTapBackground(NotificationResponse response) async {
         // Force cleanup of common notification IDs
         sendPort.send({'action': 'cancel_notification', 'id': 999});
         sendPort.send({'action': 'cancel_notification', 'id': 888});
+        sendPort.send({'action': 'cancel_notification', 'id': 777}); // ADDED 777
         
         print('✅ [BG-FATAL] Port Signal SENT: $portName');
       } else {

@@ -299,6 +299,7 @@ class GameService {
   static Future<Map<String, dynamic>> cancelCall({
     required String receiverUsername,
     required String roomId,
+    bool initialVideo = false,
   }) async {
     try {
       final response = await _authenticatedRequest(
@@ -307,6 +308,7 @@ class GameService {
         body: json.encode({
           'receiver_username': receiverUsername,
           'room_id': roomId,
+          'initial_video': initialVideo,
         }),
       );
 
