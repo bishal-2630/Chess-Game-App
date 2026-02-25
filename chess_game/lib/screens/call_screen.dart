@@ -53,9 +53,12 @@ class _CallScreenState extends State<CallScreen> {
         MqttService().cancelCallNotification();
       });
     }
-    _initRenderers();
-    _connect();
-    _listenForDecline();
+    _initRenderers().then((_) {
+      if (mounted) {
+        _connect();
+        _listenForDecline();
+      }
+    });
 
     // Start 30s timeout if I am the caller
     if (widget.isCaller) {
@@ -268,203 +271,238 @@ class _CallScreenState extends State<CallScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Call with ${widget.otherUserName}'),
-      ),
-      body: Column(
+      backgroundColor: Colors.black,
+      body: Stack(
         children: [
-          Expanded(
+          // 1. Background (Video or Avatar)
+          Positioned.fill(
             child: _inCall
-                ? Stack(
-                    children: [
-                      if (_isVideoOn || _isRemoteVideoOn) ...[
-                        // At least one side has video on
-                        if (_isRemoteVideoOn)
-                          RTCVideoView(
-                            _remoteRenderer,
-                            objectFit: RTCVideoViewObjectFit
-                                .RTCVideoViewObjectFitCover,
-                          )
-                        else
-                          // Remote video off placeholder
-                          Container(
-                            color: Colors.black,
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  CircleAvatar(
-                                    radius: 50,
-                                    backgroundColor: Colors.blue[100],
-                                    child: Icon(Icons.person,
-                                        size: 50, color: Colors.blue[900]),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    "${widget.otherUserName}'s camera is off",
-                                    style: const TextStyle(
-                                        color: Colors.white70, fontSize: 14),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                        if (_isVideoOn)
-                          Positioned(
-                            right: 20,
-                            top: 20,
-                            width: 120,
-                            height: 180,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                border:
-                                    Border.all(color: Colors.white, width: 2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: RTCVideoView(
-                                  _localRenderer,
-                                  mirror: true,
-                                  objectFit: RTCVideoViewObjectFit
-                                      .RTCVideoViewObjectFitCover,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ] else ...[
-                        // BOTH sides have video off
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircleAvatar(
-                                radius: 60,
-                                backgroundColor: Colors.blue[100],
-                                child: Icon(Icons.person,
-                                    size: 60, color: Colors.blue[900]),
-                              ),
-                              const SizedBox(height: 24),
-                              Text(
-                                widget.otherUserName,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                "Voice Connected",
-                                style: TextStyle(
-                                    color: Colors.white70, fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      Positioned(
-                        bottom: 20,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: Text(
-                            "In call with ${widget.otherUserName}",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 10.0,
-                                  color: Colors.black,
-                                  offset: Offset(2.0, 2.0),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 50,
-                          child: Text(
-                            widget.otherUserName.isNotEmpty
-                                ? widget.otherUserName[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(fontSize: 40),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          _status,
-                          style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
+                ? _buildVideoStack()
+                : _buildPlaceholderView(),
           ),
-          if (!_isExiting)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 50.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FloatingActionButton(
-                    backgroundColor: _isMuted ? Colors.blueGrey : Colors.blue,
-                    onPressed: () {
-                      setState(() {
-                        _isMuted = !_isMuted;
-                        _signalingService.muteAudio(_isMuted);
-                      });
-                    },
-                    heroTag: 'mute_btn',
-                    child: Icon(_isMuted ? Icons.mic_off : Icons.mic),
-                  ),
-                  const SizedBox(width: 16),
-                  FloatingActionButton(
-                    backgroundColor: _isVideoOn ? Colors.blue : Colors.blueGrey,
-                    onPressed: () {
-                      setState(() {
-                        _isVideoOn = !_isVideoOn;
-                        _signalingService.setVideoEnabled(_isVideoOn);
-                      });
-                    },
-                    heroTag: 'video_btn',
-                    child: Icon(_isVideoOn ? Icons.videocam : Icons.videocam_off),
-                  ),
-                  const SizedBox(width: 16),
-                  FloatingActionButton(
-                    backgroundColor: Colors.red,
-                    onPressed: () {
-                      if (widget.isCaller && !_inCall) {
-                        print("📞 Caller hanging up early. Signaling cancellation...");
-                        GameService.cancelCall(
-                          receiverUsername: widget.otherUserName,
-                          roomId: widget.roomId,
-                        );
-                      }
-                      
-                      _signalingService.sendEndCall();
-                      _signalingService.hangUp();
-                      
-                      // Use context.go to return to users list
-                      context.go('/users');
-                    },
-                    heroTag: 'hangup_btn',
-                    child: const Icon(Icons.call_end),
-                  ),
-                ],
+
+          // 2. Status Label (Top Center)
+          if (!_inCall)
+            Positioned(
+              top: 100,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  _status,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
+                ),
               ),
             ),
+
+          // 3. Back Button
+          Positioned(
+            top: 40,
+            left: 20,
+            child: CircleAvatar(
+              backgroundColor: Colors.black45,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  if (widget.isCaller && !_inCall) {
+                    GameService.cancelCall(
+                      receiverUsername: widget.otherUserName,
+                      roomId: widget.roomId,
+                    );
+                  }
+                  _signalingService.sendEndCall();
+                  context.go('/users');
+                },
+              ),
+            ),
+          ),
+
+          // 4. Control Bar (Bottom Overlay)
+          if (_inCall && !_isExiting)
+            Positioned(
+              bottom: 40,
+              left: 0,
+              right: 0,
+              child: _buildCallControls(),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVideoStack() {
+    return Stack(
+      children: [
+        if (_isVideoOn || _isRemoteVideoOn) ...[
+          // Remote Video (Background)
+          if (_isRemoteVideoOn)
+            RTCVideoView(
+              _remoteRenderer,
+              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+            )
+          else
+            _buildRemoteAvatarView(),
+
+          // Local Video (Overlay)
+          if (_isVideoOn)
+            Positioned(
+              right: 20,
+              top: 100,
+              width: 100, // Shrunk from 120
+              height: 150, // Shrunk from 180
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: Offset(0, 5))
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: RTCVideoView(
+                    _localRenderer,
+                    mirror: true,
+                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  ),
+                ),
+              ),
+            ),
+        ] else ...[
+          // Audio Call View
+          _buildRemoteAvatarView(isAudioOnly: true),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPlaceholderView() {
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 60,
+              backgroundColor: Colors.blue[900],
+              child: Text(
+                widget.otherUserName.isNotEmpty ? widget.otherUserName[0].toUpperCase() : '?',
+                style: const TextStyle(fontSize: 40, color: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 30),
+            Text(
+              "Call with ${widget.otherUserName}",
+              style: const TextStyle(color: Colors.white70, fontSize: 18),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRemoteAvatarView({bool isAudioOnly = false}) {
+    return Container(
+      color: Colors.black87,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 60,
+              backgroundColor: Colors.blue[100],
+              child: Icon(Icons.person, size: 60, color: Colors.blue[900]),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              widget.otherUserName,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isAudioOnly ? "Voice Connected" : "${widget.otherUserName}'s camera is off",
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCallControls() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildControlCircle(
+          icon: _isMuted ? Icons.mic_off : Icons.mic,
+          color: _isMuted ? Colors.red : Colors.white24,
+          onPressed: () {
+            setState(() {
+              _isMuted = !_isMuted;
+              _signalingService.muteAudio(_isMuted);
+            });
+          },
+        ),
+        const SizedBox(width: 20),
+        _buildControlCircle(
+          icon: _isVideoOn ? Icons.videocam : Icons.videocam_off,
+          color: _isVideoOn ? Colors.blue : Colors.white24,
+          onPressed: () {
+            setState(() {
+              _isVideoOn = !_isVideoOn;
+              _signalingService.setVideoEnabled(_isVideoOn);
+            });
+          },
+        ),
+        const SizedBox(width: 20),
+        _buildControlCircle(
+          icon: Icons.call_end,
+          color: Colors.red,
+          onPressed: () {
+            if (widget.isCaller && !_inCall) {
+              GameService.cancelCall(
+                receiverUsername: widget.otherUserName,
+                roomId: widget.roomId,
+              );
+            }
+            _signalingService.sendEndCall();
+            context.go('/users');
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildControlCircle({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(30),
+        child: Container(
+          width: 50, // Shriveled slightly more
+          height: 50,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white12, width: 1),
+          ),
+          child: Icon(icon, color: Colors.white, size: 24),
+        ),
       ),
     );
   }

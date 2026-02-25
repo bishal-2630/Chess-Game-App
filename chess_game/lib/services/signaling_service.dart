@@ -289,7 +289,7 @@ class SignalingService {
     print("📞 _openUserMedia() initiated (video: $videoEnabled)");
     final Map<String, dynamic> mediaConstraints = {
       'audio': true,
-      'video': videoEnabled,
+      'video': true, // ALWAYS request video so we can toggle it later
     };
 
     try {
@@ -308,6 +308,12 @@ class SignalingService {
       print("📞 Requesting getUserMedia...");
       var stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
       _localStream = stream;
+
+      // Disable video track initially if call started as audio-only
+      if (!videoEnabled && stream.getVideoTracks().isNotEmpty) {
+        stream.getVideoTracks()[0].enabled = false;
+        print("📞 Video track disabled initially (Audio Call)");
+      }
 
       await Helper.setSpeakerphoneOn(true);
 
