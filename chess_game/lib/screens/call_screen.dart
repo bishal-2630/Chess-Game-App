@@ -36,6 +36,7 @@ class _CallScreenState extends State<CallScreen> {
   String _status = "Connecting...";
   bool _isMuted = false;
   late bool _isVideoOn;
+  bool _isRemoteVideoOn = false;
   bool _isExiting = false;
   Timer? _callTimeoutTimer; // Add timer variable
 
@@ -177,6 +178,14 @@ class _CallScreenState extends State<CallScreen> {
         _handleCallEnd("Call Ended");
       }
     };
+
+    _signalingService.onRemoteVideoToggle = (enabled) {
+      if (mounted) {
+        setState(() {
+          _isRemoteVideoOn = enabled;
+        });
+      }
+    };
   }
 
   void _connect() async {
@@ -198,6 +207,7 @@ class _CallScreenState extends State<CallScreen> {
       final result = await GameService.sendCallSignal(
         receiverUsername: widget.otherUserName,
         roomId: widget.roomId,
+        initialVideo: widget.initialVideo,
       );
 
       if (!result['success']) {
@@ -267,30 +277,92 @@ class _CallScreenState extends State<CallScreen> {
             child: _inCall
                 ? Stack(
                     children: [
-                      RTCVideoView(
-                        _remoteRenderer,
-                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                      ),
-                      Positioned(
-                        right: 20,
-                        top: 20,
-                        width: 120,
-                        height: 180,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.white, width: 2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: RTCVideoView(
-                              _localRenderer,
-                              mirror: true,
-                              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      if (_isVideoOn || _isRemoteVideoOn) ...[
+                        // At least one side has video on
+                        if (_isRemoteVideoOn)
+                          RTCVideoView(
+                            _remoteRenderer,
+                            objectFit: RTCVideoViewObjectFit
+                                .RTCVideoViewObjectFitCover,
+                          )
+                        else
+                          // Remote video off placeholder
+                          Container(
+                            color: Colors.black,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 50,
+                                    backgroundColor: Colors.blue[100],
+                                    child: Icon(Icons.person,
+                                        size: 50, color: Colors.blue[900]),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "${widget.otherUserName}'s camera is off",
+                                    style: const TextStyle(
+                                        color: Colors.white70, fontSize: 14),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
+
+                        if (_isVideoOn)
+                          Positioned(
+                            right: 20,
+                            top: 20,
+                            width: 120,
+                            height: 180,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border:
+                                    Border.all(color: Colors.white, width: 2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: RTCVideoView(
+                                  _localRenderer,
+                                  mirror: true,
+                                  objectFit: RTCVideoViewObjectFit
+                                      .RTCVideoViewObjectFitCover,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ] else ...[
+                        // BOTH sides have video off
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircleAvatar(
+                                radius: 60,
+                                backgroundColor: Colors.blue[100],
+                                child: Icon(Icons.person,
+                                    size: 60, color: Colors.blue[900]),
+                              ),
+                              const SizedBox(height: 24),
+                              Text(
+                                widget.otherUserName,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                "Voice Connected",
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 16),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                       Positioned(
                         bottom: 20,
                         left: 0,
