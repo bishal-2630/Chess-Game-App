@@ -267,6 +267,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
     _signalingService.onEndCall = () async {
       await MqttService().stopAudio(broadcast: true); // Stop any ringing
+      await MqttService().cancelOngoingCallNotification(); // CLEAR PERSISTENT NOTIFICATION
       _stopCallTimer();
       if (_isAudioOn || _callStatus == "Calling..." || _isCalling) {
         await _signalingService.stopAudio();
@@ -554,6 +555,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
       _signalingService.sendEndCall();
       await _signalingService.stopAudio();
       await MqttService().cancelCallNotification(broadcast: true); // Stop ringtone AND clear system banners
+      await MqttService().cancelOngoingCallNotification(); // CLEAR PERSISTENT NOTIFICATION
       _stopCallTimer();
       setState(() {
         _isAudioOn = false;
@@ -760,6 +762,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
     // Reset board for a fresh local start
     _initializeBoard();
+    MqttService().cancelOngoingCallNotification(); // CLEAR PERSISTENT NOTIFICATION
   }
 
   // Convert row/col to algebraic notation

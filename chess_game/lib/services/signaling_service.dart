@@ -297,16 +297,29 @@ class SignalingService {
       if (!kIsWeb) {
         print("📞 Checking Permissions...");
         final micStatus = await Permission.microphone.request();
+        if (micStatus.isDenied) {
+          throw Exception("Microphone permission denied");
+        }
+        
+        // Request camera permission but don't strictly require it if call starts as audio-only
         final cameraStatus = await Permission.camera.request();
-
-        print("📞 Permission Status - Mic: $micStatus, Camera: $cameraStatus");
-        if (micStatus.isDenied || cameraStatus.isDenied) {
-          throw Exception("Microphone or Camera permission denied");
+        if (videoEnabled && cameraStatus.isDenied) {
+          throw Exception("Camera permission denied (required for Video Call)");
         }
       }
 
       print("📞 Requesting getUserMedia...");
-      var stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      MediaStream stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      } catch (e) {
+        print("⚠️ getUserMedia failed with video, trying audio-only fallback: $e");
+        if (videoEnabled) rethrow; // If they wanted video and it failed, stop.
+        
+        // Fallback for audio-only calls
+        stream = await navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
+      }
+      
       _localStream = stream;
 
       // Disable video track initially if call started as audio-only

@@ -655,6 +655,7 @@ class MqttService {
     try {
       await flutterLocalNotificationsPlugin.cancel(888).catchError((_) {});
       await flutterLocalNotificationsPlugin.cancel(999).catchError((_) {});
+      await flutterLocalNotificationsPlugin.cancel(777).catchError((_) {}); // CLEAR ONGOING NOTIFICATION
     } catch (e) {
       print('Notification cancellation error: $e');
     }
@@ -666,6 +667,7 @@ class MqttService {
         if (sendPort != null) {
           sendPort.send({'action': 'cancel_notification', 'id': 999});
           sendPort.send({'action': 'cancel_notification', 'id': 888});
+          sendPort.send({'action': 'cancel_notification', 'id': 777}); // BROADCAST 777 CLEAR
           sendPort.send({'action': 'dismiss_call'});
         }
       }
