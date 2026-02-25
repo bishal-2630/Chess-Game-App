@@ -2185,10 +2185,16 @@ class _ChessGameScreenState extends State<ChessScreen> {
               // Chess Board
               Expanded(
                 child: Center(
-                  child: Builder(
-                    builder: (context) {
-                      // Fix board size to screen width (90%) to prevent compression
-                      final size = MediaQuery.of(context).size.width * 0.9;
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Calculate the best fit square size based on available space
+                      // Leave 5% padding for aesthetics
+                      final availableWidth = constraints.maxWidth * 0.95;
+                      final availableHeight = constraints.maxHeight * 0.95;
+                      final size = availableWidth < availableHeight
+                          ? availableWidth
+                          : availableHeight;
+
                       return Container(
                         width: size,
                         height: size,
@@ -2419,7 +2425,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
   Widget _buildCallInterface() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
       color: Colors.blue[900]?.withOpacity(0.9),
       child: Column(
         children: [
@@ -2525,7 +2531,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
     String? profilePic,
   }) {
     return Container(
-      height: 100, // Reduced from 120
+      height: 90, // Reduced from 100
       decoration: BoxDecoration(
         color: Colors.black45,
         borderRadius: BorderRadius.circular(12),
@@ -2589,13 +2595,13 @@ class _ChessGameScreenState extends State<ChessScreen> {
       onTap: onPressed,
       borderRadius: BorderRadius.circular(30),
       child: Container(
-        width: 50,
-        height: 50,
+        width: 45, // Reduced from 50
+        height: 45, // Reduced from 50
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white),
+        child: Icon(icon, color: Colors.white, size: 20), // Smaller icon
       ),
     );
   }
