@@ -187,8 +187,14 @@ class _ChessGameScreenState extends State<ChessScreen> {
     await _localRenderer.initialize();
     await _remoteRenderer.initialize();
 
+    _signalingService.onLocalStream = ((stream) {
+      _localRenderer.srcObject = stream;
+      if (mounted) setState(() {});
+    });
+
     _signalingService.onAddRemoteStream = ((stream) {
       _remoteRenderer.srcObject = stream;
+      if (mounted) setState(() {});
     });
 
     _signalingService.onGameMove = (data) {
@@ -252,6 +258,14 @@ class _ChessGameScreenState extends State<ChessScreen> {
       // Stop calling ringtone
       MqttService().stopAudio(broadcast: true);
       _startCallTimer();
+
+      // NEW: Show ongoing call notification for persistence
+      if (widget.opponentName != null && widget.roomId != null) {
+        MqttService().showOngoingCallNotification(
+          otherUserName: widget.opponentName!,
+          roomId: widget.roomId!,
+        );
+      }
     };
 
     _signalingService.onCallRejected = () {
