@@ -571,6 +571,20 @@ class MqttService {
         '$caller is calling you...',
         contentTitle: callType,
       ),
+      actions: <AndroidNotificationAction>[
+        const AndroidNotificationAction(
+          'decline_action',
+          'Decline',
+          showsUserInterface: true, // Force foreground for reliability
+          cancelNotification: true, 
+        ),
+        const AndroidNotificationAction(
+          'accept_action',
+          'Accept',
+          showsUserInterface: true,
+          cancelNotification: true, 
+        ),
+      ],
     );
 
     final NotificationDetails notificationDetails =
