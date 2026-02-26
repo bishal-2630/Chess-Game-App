@@ -574,7 +574,7 @@ class MqttService {
         const AndroidNotificationAction(
           'decline_action',
           'Decline',
-          showsUserInterface: true,
+          showsUserInterface: true, // Force foreground for reliability
           cancelNotification: true, 
         ),
         const AndroidNotificationAction(
