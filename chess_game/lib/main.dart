@@ -13,7 +13,7 @@ import 'screens/chess_webview_screen.dart';
 import 'services/django_auth_service.dart';
 import 'services/mqtt_service.dart';
 import 'services/game_service.dart';
-import 'services/background_service.dart';
+// Background service removed per user request
 import 'services/deep_link_handler.dart';
 import 'dart:async';
 import 'dart:isolate';
@@ -42,8 +42,6 @@ void main() async {
   // Isolate listener is mobile-only
   if (!kIsWeb) {
     mqttService.initializeIsolateListener(isBackground: false);
-    // Background service is mobile only
-    BackgroundServiceInstance.initializeService();
   }
 
   runApp(const MyApp());

@@ -114,14 +114,18 @@ class _CallScreenState extends State<CallScreen> {
     await _remoteRenderer.initialize();
 
     _signalingService.onLocalStream = ((stream) {
-      _localRenderer.srcObject = stream;
-      setState(() {});
+      if (mounted) {
+        _localRenderer.srcObject = stream;
+        setState(() {});
+      }
     });
 
     _signalingService.onAddRemoteStream = ((stream) {
       print("📞 Remote stream added to renderer");
-      _remoteRenderer.srcObject = stream;
-      setState(() {});
+      if (mounted) {
+        _remoteRenderer.srcObject = stream;
+        setState(() {});
+      }
     });
 
     _signalingService.onPlayerJoined = () async {
@@ -133,7 +137,9 @@ class _CallScreenState extends State<CallScreen> {
       
       if (widget.isCaller) {
         print("📞 I am the caller, starting handshake...");
-        setState(() => _status = "Peer joined. Calling...");
+        if (mounted) {
+          setState(() => _status = "Peer joined. Calling...");
+        }
         _startCall(); // Auto-start call when peer joins
       }
     };
@@ -142,36 +148,34 @@ class _CallScreenState extends State<CallScreen> {
       print("📞 Incoming call offer received callback");
       if (!widget.isCaller) {
         print("📞 Accepting incoming call (video: $_isVideoOn)...");
-        setState(() => _status = "Accepting call...");
+        if (mounted) {
+          setState(() => _status = "Accepting call...");
+        }
         await _signalingService.acceptCall(_localRenderer, _remoteRenderer, videoEnabled: _isVideoOn);
-        setState(() {
-          _inCall = true;
-          _status = "Connected";
-        });
+        if (mounted) {
+          setState(() {
+            _inCall = true;
+            _status = "Connected";
+          });
+        }
         print("📞 Handshake complete (Callee side)");
         
-        // Show ongoing call notification
-        await MqttService().showOngoingCallNotification(
-          otherUserName: widget.otherUserName,
-          roomId: widget.roomId,
-        );
+        // Ongoing notification removed per user request
       }
     };
 
     _signalingService.onCallAccepted = () async {
       print("📞 Call accepted by remote callback");
       await MqttService().stopAudio(broadcast: true);
-      setState(() {
-        _inCall = true;
-        _status = "Connected";
-      });
+      if (mounted) {
+        setState(() {
+          _inCall = true;
+          _status = "Connected";
+        });
+      }
       print("📞 Handshake complete (Caller side)");
       
-      // Show ongoing call notification
-      await MqttService().showOngoingCallNotification(
-        otherUserName: widget.otherUserName,
-        roomId: widget.roomId,
-      );
+      // Ongoing notification removed per user request
     };
 
     _signalingService.onEndCall = () async {
@@ -205,7 +209,9 @@ class _CallScreenState extends State<CallScreen> {
     // 2. If Caller, send notification to invitee and play calling tone
     if (widget.isCaller) {
       final callType = widget.initialVideo ? "Video" : "Audio";
-      setState(() => _status = "$callType Calling ${widget.otherUserName}...");
+      if (mounted) {
+        setState(() => _status = "$callType Calling ${widget.otherUserName}...");
+      }
       // Sound already started in UserListScreen
 
       // Delay slightly to ensure WS is connecting? sending via HTTP is independent.
@@ -239,7 +245,6 @@ class _CallScreenState extends State<CallScreen> {
     // Ensure audio is stopped and in-call state cleared
     MqttService().stopAudio(broadcast: true);
     MqttService().setInCall(false);
-    MqttService().cancelOngoingCallNotification();
     
     if (mounted) {
       setState(() {
@@ -262,7 +267,6 @@ class _CallScreenState extends State<CallScreen> {
     print("📞 CallScreen: dispose called");
     _callTimeoutTimer?.cancel();
     MqttService().setInCall(false);
-    MqttService().cancelOngoingCallNotification();
     _localRenderer.dispose();
     _remoteRenderer.dispose();
     _signalingService.hangUp();

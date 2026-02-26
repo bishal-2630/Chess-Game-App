@@ -198,9 +198,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
     _signalingService.onGameMove = (data) {
       // Handle remote move
-      setState(() {
-        _handleRemoteMove(data);
-      });
+      if (mounted) {
+        setState(() {
+          _handleRemoteMove(data);
+        });
+      }
     };
 
     _signalingService.onPlayerLeft = () {
@@ -221,9 +223,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
     };
 
     _signalingService.onConnectionState = (isConnected) {
-      setState(() {
-        _isConnectedToRoom = isConnected;
-      });
+      if (mounted) {
+        setState(() {
+          _isConnectedToRoom = isConnected;
+        });
+      }
       if (isConnected) {
         _setEphemeralStatus("Connected to Server");
       } else {
@@ -236,42 +240,42 @@ class _ChessGameScreenState extends State<ChessScreen> {
     };
 
     _signalingService.onIncomingCall = () {
-      setState(() {
-        _isIncomingCall = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isIncomingCall = true;
+        });
+      }
       // Banner handles UI
     };
 
     _signalingService.onRemoteVideoToggle = (enabled) {
-      setState(() {
-        _isRemoteVideoOn = enabled;
-      });
+      if (mounted) {
+        setState(() {
+          _isRemoteVideoOn = enabled;
+        });
+      }
     };
 
     _signalingService.onCallAccepted = () {
-      setState(() {
-        _isAudioOn = true;
-        _isCalling = false; // Stop calling banner
-      });
+      if (mounted) {
+        setState(() {
+          _isAudioOn = true;
+          _isCalling = false; // Stop calling banner
+        });
+      }
       // Banner handles "Voice Connected" UI
       // Stop calling ringtone
       MqttService().stopAudio(broadcast: true);
       _startCallTimer();
-
-      // NEW: Show ongoing call notification for persistence
-      if (widget.opponentName != null && widget.roomId != null) {
-        MqttService().showOngoingCallNotification(
-          otherUserName: widget.opponentName!,
-          roomId: widget.roomId!,
-        );
-      }
     };
 
     _signalingService.onCallRejected = () {
-      setState(() {
-        _callStatus = "";
-        _isCalling = false; // Stop calling banner
-      });
+      if (mounted) {
+        setState(() {
+          _callStatus = "";
+          _isCalling = false; // Stop calling banner
+        });
+      }
       _setEphemeralStatus("Call Declined");
       // Stop calling ringtone
       MqttService().stopAudio(broadcast: true);
@@ -280,17 +284,23 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
     _signalingService.onEndCall = () async {
       await MqttService().stopAudio(broadcast: true); // Stop any ringing
-      await MqttService().cancelOngoingCallNotification(); // CLEAR PERSISTENT NOTIFICATION
       _stopCallTimer();
       if (_isAudioOn || _callStatus == "Calling..." || _isCalling) {
         await _signalingService.stopAudio();
-        setState(() {
-          _isAudioOn = false;
-          _isIncomingCall = false;
-          _isCalling = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isAudioOn = false;
+            _isIncomingCall = false;
+            _isCalling = false;
+            _callStatus = ""; // NEW: Clear status on remote end
+          });
+        }
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Call ended."), duration: Duration(seconds: 2)));
+        // Even if not active, ensure status is clear
+        if (mounted) {
+          setState(() => _callStatus = "");
+        }
       }
     };
 
@@ -306,9 +316,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
   void _setEphemeralStatus(String message) {
     _statusTimer?.cancel();
-    setState(() {
-      _callStatus = message;
-    });
+    if (mounted) {
+      setState(() {
+        _callStatus = message;
+      });
+    }
     _statusTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
@@ -501,7 +513,6 @@ class _ChessGameScreenState extends State<ChessScreen> {
       _signalingService.sendEndCall();
       await _signalingService.stopAudio();
       await MqttService().cancelCallNotification(broadcast: true); // Stop ringtone AND clear system banners
-      await MqttService().cancelOngoingCallNotification(); // CLEAR PERSISTENT NOTIFICATION
       _stopCallTimer();
       setState(() {
         _isAudioOn = false;
@@ -510,6 +521,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
         _isMuted = false;
         _isVideoOn = false;
         _isRemoteVideoOn = false;
+        _callStatus = ""; // NEW: Clear status when ending via toggle
       });
     } else {
       // Start or Accept Call
@@ -702,13 +714,12 @@ class _ChessGameScreenState extends State<ChessScreen> {
       _isMuted = false;
       _isVideoOn = false;
       _isRemoteVideoOn = false;
-      _callStatus = "Room Disconnected";
+      _callStatus = ""; // NEW: Clear status on hangup (was "Room Disconnected")
       _playerColor = null; // Back to local mode
     });
 
     // Reset board for a fresh local start
     _initializeBoard();
-    MqttService().cancelOngoingCallNotification(); // CLEAR PERSISTENT NOTIFICATION
   }
 
   // Convert row/col to algebraic notation
@@ -1958,12 +1969,18 @@ class _ChessGameScreenState extends State<ChessScreen> {
         child: Center(
           child: piece.isEmpty
               ? const SizedBox()
-              : Text(
-                  pieceIcons[piece] ?? '',
-                  style: TextStyle(
-                    fontSize: 30,
-                    color: _isWhitePiece(piece) ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.bold,
+              : FittedBox(
+                  fit: BoxFit.contain,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2.0),
+                    child: Text(
+                      pieceIcons[piece] ?? '',
+                      style: TextStyle(
+                        fontSize: 28,
+                        color: _isWhitePiece(piece) ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
         ),
@@ -2044,12 +2061,12 @@ class _ChessGameScreenState extends State<ChessScreen> {
                 GestureDetector(
                   onTap: () => context.go('/profile'),
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8), // Reduced padding
                     color: Colors.blue[50],
                     child: Row(
                       children: [
                         CircleAvatar(
-                          radius: 24,
+                          radius: 16, // Reduced radius
                           backgroundColor: Colors.blue[100],
                           backgroundImage: _authService
                                       .currentUser?['profile_picture'] !=
@@ -2061,12 +2078,12 @@ class _ChessGameScreenState extends State<ChessScreen> {
                                   null
                               ? Icon(
                                   Icons.person,
-                                  size: 24,
+                                  size: 16, // Reduced size
                                   color: Colors.blue[800],
                                 )
                               : null,
                         ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8), // Reduced spacing
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2074,14 +2091,14 @@ class _ChessGameScreenState extends State<ChessScreen> {
                             Text(
                               _authService.displayName,
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 13, // Reduced font size
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
                               _authService.email ?? 'No email',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 10, // Reduced font size
                                 color: Colors.grey[600],
                               ),
                             ),
@@ -2090,6 +2107,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                       ),
                       Icon(
                         Icons.chevron_right,
+                        size: 16, // Smaller icon
                         color: Colors.grey[500],
                       ),
                     ],
@@ -2100,7 +2118,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
               // Game Status with check indicator
               Container(
                 padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    const EdgeInsets.symmetric(vertical: 4, horizontal: 16), // Reduced vertical padding
                 color: isWhiteTurn ? Colors.white : Colors.black,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2141,18 +2159,17 @@ class _ChessGameScreenState extends State<ChessScreen> {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       // Calculate the best fit square size based on available space
-                      // Leave 5% padding for aesthetics
-                      final availableWidth = constraints.maxWidth * 0.95;
-                      final availableHeight = constraints.maxHeight * 0.95;
+                      // Use full available space
+                      final availableWidth = constraints.maxWidth;
+                      final availableHeight = constraints.maxHeight;
                       final size = availableWidth < availableHeight
                           ? availableWidth
                           : availableHeight;
-
                       return Container(
                         width: size,
                         height: size,
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.brown, width: 4),
+                          border: Border.all(color: Colors.brown, width: 1),
                           boxShadow: const [
                             BoxShadow(
                               color: Colors.black26,
@@ -2162,6 +2179,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                           ],
                         ),
                         child: GridView.builder(
+                          padding: EdgeInsets.zero, // Remove internal padding
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
@@ -2214,7 +2232,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
               // Controls
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Reduced vertical padding
                 child: Column(
                   children: [
                     Row(
@@ -2233,7 +2251,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                                       pendingPromotion != null)
                                   ? Colors.grey
                                   : Colors.orange,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 8), // Reduced padding
                             ),
                           ),
                         ),
@@ -2250,13 +2268,13 @@ class _ChessGameScreenState extends State<ChessScreen> {
                             label: const Text('New'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 8), // Reduced padding
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 6), // Reduced height
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -2267,7 +2285,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                             label: const Text('Players'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.purple,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 8), // Reduced padding
                             ),
                           ),
                         ),
@@ -2288,7 +2306,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.teal,
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
+                                        vertical: 8), // Reduced padding
                                   ),
                                 ),
                               ),
@@ -2343,8 +2361,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
       });
 
     return Container(
-      height: 40,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      height: 30, // Reduced height
+      margin: const EdgeInsets.symmetric(vertical: 4), // Reduced margin
       child: sortedPieces.isEmpty
           ? const SizedBox()
           : Wrap(
@@ -2377,120 +2395,113 @@ class _ChessGameScreenState extends State<ChessScreen> {
   }
 
   Widget _buildCallInterface() {
+    Widget? activeControls;
+    
+    if (_showIncomingCallBanner) {
+      activeControls = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.black45,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildCallControlButton(
+              icon: Icons.call,
+              color: Colors.green,
+              onPressed: () async {
+                await MqttService().cancelCallNotification(broadcast: true);
+                setState(() {
+                  _showIncomingCallBanner = false;
+                  _isIncomingCall = true;
+                });
+                if (mounted) await _toggleAudio();
+              },
+            ),
+            const SizedBox(width: 12),
+            _buildCallControlButton(
+              icon: Icons.call_end,
+              color: Colors.red,
+              onPressed: () async {
+                await MqttService().cancelCallNotification(broadcast: true);
+                setState(() => _showIncomingCallBanner = false);
+                await GameService.declineCall(
+                  callerUsername: _incomingCallFrom,
+                  roomId: _incomingCallRoomId,
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    } else if (_isCalling && !_isAudioOn) {
+      activeControls = _buildCallControlButton(
+        icon: Icons.call_end,
+        color: Colors.red,
+        onPressed: _toggleAudio,
+      );
+    } else if (_isAudioOn) {
+      activeControls = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.black45,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildCallControlButton(
+              icon: _isMuted ? Icons.mic_off : Icons.mic,
+              color: _isMuted ? Colors.red : Colors.white24,
+              onPressed: _toggleMute,
+            ),
+            const SizedBox(width: 8),
+            _buildCallControlButton(
+              icon: _isVideoOn ? Icons.videocam : Icons.videocam_off,
+              color: _isVideoOn ? Colors.blue : Colors.white24,
+              onPressed: _toggleVideo,
+            ),
+            const SizedBox(width: 8),
+            _buildCallControlButton(
+              icon: Icons.call_end,
+              color: Colors.red,
+              onPressed: _toggleAudio,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3), // Darker, more subtle background
+        color: Colors.black.withOpacity(0.3),
         border: const Border(bottom: BorderSide(color: Colors.white12, width: 0.5)),
       ),
-      child: Stack(
-        alignment: Alignment.center, // Center the overlay buttons
+      child: Row(
         children: [
-          Row(
-            children: [
-              // Local Player Box
-              Expanded(
-                child: _buildCallProfileBox(
-                  name: "You",
-                  renderer: _localRenderer,
-                  isCameraOn: _isVideoOn,
-                  isMuted: _isMuted,
-                  profilePic: _authService.currentUser?['profile_picture'],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Remote Player Box
-              Expanded(
-                child: _buildCallProfileBox(
-                  name: widget.opponentName ?? "Opponent",
-                  renderer: _remoteRenderer,
-                  isCameraOn: _isRemoteVideoOn,
-                  isMuted: false,
-                  profilePic: null,
-                ),
-              ),
-            ],
+          // Local Player Box
+          Expanded(
+            child: _buildCallProfileBox(
+              name: "You",
+              renderer: _localRenderer,
+              isCameraOn: _isVideoOn,
+              isMuted: _isMuted,
+              profilePic: _authService.currentUser?['profile_picture'],
+              controls: activeControls, // Local user gets the controls
+            ),
           ),
-          
-          // OVERLAY CALL CONTROLS (Floating in the center-bottom of the boxes)
-          Positioned(
-            bottom: 6,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black45,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white10),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_showIncomingCallBanner) ...[
-                    // Incoming Call: Accept / Decline
-                    _buildCallControlButton(
-                      icon: Icons.call,
-                      color: Colors.green,
-                      onPressed: () async {
-                        await MqttService().cancelCallNotification(broadcast: true);
-                        setState(() {
-                          _showIncomingCallBanner = false;
-                          _isIncomingCall = true;
-                        });
-                        if (mounted) await _toggleAudio();
-                      },
-                    ),
-                    const SizedBox(width: 16),
-                    _buildCallControlButton(
-                      icon: Icons.call_end,
-                      color: Colors.red,
-                      onPressed: () async {
-                        await MqttService().cancelCallNotification(broadcast: true);
-                        setState(() => _showIncomingCallBanner = false);
-                        await GameService.declineCall(
-                          callerUsername: _incomingCallFrom,
-                          roomId: _incomingCallRoomId,
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      _isVideoOn ? "Incoming Video Call" : "Incoming Audio Call",
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ] else if (_isCalling && !_isAudioOn) ...[
-                    // Outgoing Call: Cancel
-                    _buildCallControlButton(
-                      icon: Icons.call_end,
-                      color: Colors.red,
-                      onPressed: _toggleAudio,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      _isVideoOn ? "Video Calling..." : "Audio Calling...",
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ] else if (_isAudioOn) ...[
-                    // Active Call: Mute / Video / End
-                    _buildCallControlButton(
-                      icon: _isMuted ? Icons.mic_off : Icons.mic,
-                      color: _isMuted ? Colors.red : Colors.white24,
-                      onPressed: _toggleMute,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildCallControlButton(
-                      icon: _isVideoOn ? Icons.videocam : Icons.videocam_off,
-                      color: _isVideoOn ? Colors.blue : Colors.white24,
-                      onPressed: _toggleVideo,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildCallControlButton(
-                      icon: Icons.call_end,
-                      color: Colors.red,
-                      onPressed: _toggleAudio,
-                    ),
-                  ],
-                ],
-              ),
+          const SizedBox(width: 8),
+          // Remote Player Box
+          Expanded(
+            child: _buildCallProfileBox(
+              name: widget.opponentName ?? "Opponent",
+              renderer: _remoteRenderer,
+              isCameraOn: _isRemoteVideoOn,
+              isMuted: false,
+              profilePic: null,
+              // Opponent doesn't get controls for now, or could show call status
             ),
           ),
         ],
@@ -2504,12 +2515,13 @@ class _ChessGameScreenState extends State<ChessScreen> {
     required bool isCameraOn,
     required bool isMuted,
     String? profilePic,
+    Widget? controls,
   }) {
     return Container(
-      height: 160, // Increased height significantly for "immersive" feel
+      height: 120, // Increased slightly as requested
       decoration: BoxDecoration(
         color: Colors.black45,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.white24),
       ),
       child: ClipRRect(
@@ -2520,10 +2532,10 @@ class _ChessGameScreenState extends State<ChessScreen> {
             Center(
               child: profilePic != null
                   ? CircleAvatar(
-                      radius: 30,
+                      radius: 20,
                       backgroundImage: NetworkImage(profilePic),
                     )
-                  : Icon(Icons.person, size: 50, color: Colors.blue[100]),
+                  : Icon(Icons.person, size: 30, color: Colors.blue[100]),
             ),
             // Video Stream
             if (isCameraOn)
@@ -2555,6 +2567,14 @@ class _ChessGameScreenState extends State<ChessScreen> {
                 right: 8,
                 child: Icon(Icons.mic_off, color: Colors.red, size: 16),
               ),
+            // Controls Overlay
+            if (controls != null)
+              Positioned(
+                bottom: 8,
+                left: 0,
+                right: 0,
+                child: Center(child: controls),
+              ),
           ],
         ),
       ),
@@ -2570,7 +2590,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
       onTap: onPressed,
       borderRadius: BorderRadius.circular(30),
       child: Container(
-        padding: const EdgeInsets.all(8), // Reduced padding for smaller icon
+        padding: const EdgeInsets.all(4), // Further reduced padding
         decoration: BoxDecoration(
           color: color.withOpacity(0.9),
           shape: BoxShape.circle,
@@ -2585,7 +2605,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
         child: Icon(
           icon,
           color: Colors.white,
-          size: 18, // Reduced size
+          size: 12, // Further reduced size
         ),
       ),
     );
