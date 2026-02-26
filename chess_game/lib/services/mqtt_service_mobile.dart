@@ -217,8 +217,7 @@ class MqttService {
           // Trigger signaling end from background action
           SignalingService().sendEndCall();
           SignalingService().stopAudio();
-          // Clear notification
-          cancelOngoingCallNotification(broadcast: false);
+          // Notification cleanup handled by screen or other isolates
         }
       }
     });
@@ -681,7 +680,6 @@ class MqttService {
     try {
       await flutterLocalNotificationsPlugin.cancel(888).catchError((_) {});
       await flutterLocalNotificationsPlugin.cancel(999).catchError((_) {});
-      await flutterLocalNotificationsPlugin.cancel(777).catchError((_) {}); // CLEAR ONGOING NOTIFICATION
       _isInCall = false; // RESET STATE
     } catch (e) {
       print('Notification cancellation error: $e');
@@ -695,7 +693,6 @@ class MqttService {
           // Force cleanup of common notification IDs
           sendPort.send({'action': 'cancel_notification', 'id': 999});
           sendPort.send({'action': 'cancel_notification', 'id': 888});
-          sendPort.send({'action': 'cancel_notification', 'id': 777}); // ADDED 777
           sendPort.send({'action': 'dismiss_call'});
         }
       }
@@ -735,72 +732,7 @@ class MqttService {
       }
   }
 
-  // Ongoing call notification methods
-  Future<void> showOngoingCallNotification({
-    required String otherUserName,
-    required String roomId,
-  }) async {
-    const int ongoingCallId = 777; // Unique ID for ongoing call notification
-    
-    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'chess_ongoing_calls',
-      'Ongoing Calls',
-      channelDescription: 'Persistent notification for active calls',
-      importance: Importance.low,
-      priority: Priority.low,
-      ongoing: true, // Makes notification persistent
-      autoCancel: false,
-      showWhen: true,
-      usesChronometer: true, // Shows elapsed time
-      actions: [
-        const AndroidNotificationAction(
-          'return_to_call',
-          'Return to Call',
-          showsUserInterface: true,
-        ),
-        const AndroidNotificationAction(
-          'end_call',
-          'End Call',
-          showsUserInterface: false,
-        ),
-      ],
-    );
-
-    final NotificationDetails notificationDetails = NotificationDetails(
-      android: androidDetails,
-    );
-
-    await flutterLocalNotificationsPlugin.show(
-      ongoingCallId,
-      'Call in progress',
-      'Talking with $otherUserName',
-      notificationDetails,
-      payload: json.encode({
-        'type': 'ongoing_call',
-        'room_id': roomId,
-        'other_user': otherUserName,
-      }),
-    );
-  }
-
-  Future<void> cancelOngoingCallNotification({bool broadcast = true}) async {
-    const int ongoingCallId = 777;
-    try {
-      await flutterLocalNotificationsPlugin.cancel(ongoingCallId);
-    } catch (e) {
-      print('Error cancelling ongoing call notification: $e');
-    }
-
-    if (broadcast) {
-      for (final portName in ['chess_game_main_port', 'chess_game_bg_port']) {
-        final sendPort = IsolateNameServer.lookupPortByName(portName);
-        if (sendPort != null) {
-          sendPort.send({'action': 'cancel_notification', 'id': ongoingCallId});
-        }
-      }
-    }
-    _isInCall = false; // RESET STATE
-  }
+  // Ongoing call methods removed per user request
 
   void onConnected() {
     isConnected = true;

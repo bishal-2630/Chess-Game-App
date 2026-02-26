@@ -49,12 +49,5 @@ class MqttService {
   
   void setActiveChessRoomId(String? roomId, {bool broadcast = true}) {}
   
-  void setInCall(bool inCall) {}
-  
-  Future<void> showOngoingCallNotification({
-    required String otherUserName,
-    required String roomId,
-  }) async {}
-  
-  Future<void> cancelOngoingCallNotification() async {}
+  // Ongoing call methods removed per user request
 }

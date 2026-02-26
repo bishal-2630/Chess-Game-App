@@ -120,7 +120,7 @@ class BackgroundServiceInstance {
         notificationChannelId: 'my_foreground',
         initialNotificationTitle: 'Chess Service',
         initialNotificationContent: 'Running in background to receive calls',
-        foregroundServiceNotificationId: 777,
+        foregroundServiceNotificationId: 800,
       ),
       iosConfiguration: IosConfiguration(
         autoStart: true,
