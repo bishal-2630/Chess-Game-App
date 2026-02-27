@@ -18,11 +18,13 @@ class LiveKitService:
 
         # Standard LiveKit Claims
         # https://docs.livekit.io/realtime/access-tokens/#the-structure-of-an-access-token
+        now = int(time.time())
+        print(f"🛠️ [LiveKit] Generating token for Room: {room_name}, Participant: {participant_name}")
         payload = {
-            "exp": int(time.time()) + 3600,  # 1 hour expiry
+            "exp": now + 3600,  # 1 hour expiry
             "iss": api_key,
             "sub": participant_name,
-            "jti": f"{participant_name}-{int(time.time())}",
+            "jti": f"{participant_name}-{now}",
             "video": {
                 "roomJoin": True,
                 "room": room_name,

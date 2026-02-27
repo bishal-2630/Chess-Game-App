@@ -100,6 +100,9 @@ class _CallScreenState extends State<CallScreen> {
       final livekitToken = data['token'];
       final livekitUrl = data['url'];
 
+      print("🌐 LiveKit URL: $livekitUrl");
+      print("🔑 LiveKit Token Snippet: ${livekitToken.toString().substring(0, 15)}...");
+
       await _signalingService.connectToLiveKit(livekitUrl, livekitToken);
       
       if (mounted) {
@@ -116,8 +119,8 @@ class _CallScreenState extends State<CallScreen> {
         );
       }
     } catch (e) {
-      print("❌ Connection Error: $e");
-      if (mounted) _handleCallEnd("Connection Failed");
+      print("❌ Connection Error Detail: $e");
+      if (mounted) _handleCallEnd("Connection Failed\n$e");
     }
   }
 
