@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
 import '../services/signaling_service.dart';
 import '../services/config.dart';
 import '../services/django_auth_service.dart';
@@ -64,8 +65,8 @@ class _CallScreenState extends State<CallScreen> {
   void _setupCallbacks() {
     _signalingService.onAddRemoteStream = (publication, participant) {
       // publication is a TrackPublication. 
-      // In 2.x, we check if it's a video track.
-      if (publication.kind == TrackType.video) {
+      // In 2.x, we check if it's a video track (TrackType.VIDEO).
+      if (publication.kind == TrackType.VIDEO) {
         setState(() {
           _remoteVideoTrack = publication.track as VideoTrack?;
           _inCall = true;
@@ -183,10 +184,7 @@ class _CallScreenState extends State<CallScreen> {
     return Stack(
       children: [
         if (_remoteVideoTrack != null)
-          // LiveKit 2.x uses fit like this:
-          VideoTrackRenderer(_remoteVideoTrack!, 
-            fit: VideoViewFit.cover, // VideoFit is usually available, if not we'll see
-          )
+          VideoTrackRenderer(_remoteVideoTrack!, fit: rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)
         else
           _buildRemoteAvatarView(),
       ],

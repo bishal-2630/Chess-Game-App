@@ -10,7 +10,7 @@ class SignalingService {
   SignalingService._internal();
 
   Room? _room;
-  StreamSubscription? _eventSubscription;
+  EventsListener<RoomEvent>? _listener;
 
   // New LiveKit Callbacks
   void Function(TrackPublication publication, Participant participant)? onAddRemoteStream;
@@ -40,8 +40,31 @@ class SignalingService {
 
     _room = Room();
     
-    // In LiveKit 2.x, we listen to the events stream
-    _eventSubscription = _room!.events.listen(_onRoomEvent);
+    // In LiveKit 2.x, use createListener()
+    _listener = _room!.createListener();
+    _listener!
+      ..on<TrackSubscribedEvent>((event) {
+        onAddRemoteStream?.call(event.publication, event.participant);
+      })
+      ..on<TrackUnsubscribedEvent>((event) {
+        onRemoveRemoteStream?.call(event.publication, event.participant);
+      })
+      ..on<ParticipantDisconnectedEvent>((event) {
+         if (_room?.remoteParticipants.isEmpty ?? true) {
+            onEndCall?.call();
+          }
+      })
+      ..on<DataReceivedEvent>((event) {
+        final String data = utf8.decode(event.data);
+        try {
+          final decoded = jsonDecode(data);
+          if (decoded['type'] == 'move') {
+            onGameMove?.call(decoded['payload']);
+          }
+        } catch (e) {
+          print("Error decoding data message: $e");
+        }
+      });
 
     try {
       await _room!.connect(url, token);
@@ -52,28 +75,6 @@ class SignalingService {
       print("❌ Failed to connect to LiveKit: $e");
       onConnectionState?.call(false);
       rethrow;
-    }
-  }
-
-  void _onRoomEvent(RoomEvent event) {
-    if (event is TrackSubscribedEvent) {
-      onAddRemoteStream?.call(event.publication, event.participant);
-    } else if (event is TrackUnsubscribedEvent) {
-      onRemoveRemoteStream?.call(event.publication, event.participant);
-    } else if (event is ParticipantDisconnectedEvent) {
-       if (_room?.remoteParticipants.isEmpty ?? true) {
-          onEndCall?.call();
-        }
-    } else if (event is DataReceivedEvent) {
-      final String data = utf8.decode(event.data);
-      try {
-        final decoded = jsonDecode(data);
-        if (decoded['type'] == 'move') {
-          onGameMove?.call(decoded['payload']);
-        }
-      } catch (e) {
-        print("Error decoding data message: $e");
-      }
     }
   }
 
@@ -94,8 +95,8 @@ class SignalingService {
 
   Future<void> disconnect() async {
     if (_room != null) {
-      await _eventSubscription?.cancel();
-      _eventSubscription = null;
+      await _listener?.dispose();
+      _listener = null;
       await _room!.disconnect();
       _room = null;
     }

@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import '../../services/signaling_service.dart';
 import '../../services/django_auth_service.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
 import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:flutter/foundation.dart';
 import '../../services/config.dart';
@@ -57,8 +57,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
   // Audio Call State
   final SignalingService _signalingService = SignalingService();
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  final rtc.RTCVideoRenderer _localRenderer = rtc.RTCVideoRenderer();
+  final rtc.RTCVideoRenderer _remoteRenderer = rtc.RTCVideoRenderer();
   lk.VideoTrack? _remoteVideoTrack;
 
   bool _isConnectedToRoom = false;
@@ -195,7 +195,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
     });
 
     _signalingService.onAddRemoteStream = (publication, participant) {
-      if (publication.kind == lk.TrackType.video) {
+      if (publication.kind == lk.TrackType.VIDEO) {
         if (mounted) {
           setState(() {
             _remoteVideoTrack = publication.track as lk.VideoTrack?;
@@ -2177,7 +2177,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                         width: size,
                         height: size,
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.brown, width: 1),
+                          border: Border.all(color: Colors.brown, width: 2),
                           boxShadow: const [
                             BoxShadow(
                               color: Colors.black26,
@@ -2185,6 +2185,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                               spreadRadius: 2,
                             ),
                           ],
+                        ),
                         child: GridView.builder(
                           padding: EdgeInsets.zero,
                           physics: const NeverScrollableScrollPhysics(),
@@ -2517,7 +2518,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
   Widget _buildCallProfileBox({
     required String name,
-    required RTCVideoRenderer renderer,
+    required rtc.RTCVideoRenderer renderer,
     required bool isCameraOn,
     required bool isMuted,
     String? profilePic,
@@ -2545,11 +2546,16 @@ class _ChessGameScreenState extends State<ChessScreen> {
             ),
             // Video Stream
             if (isCameraOn)
-              RTCVideoView(
-                renderer,
-                objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                mirror: name == "You",
-              ),
+              name == "Opponent" && _remoteVideoTrack != null
+                  ? lk.VideoTrackRenderer(
+                      _remoteVideoTrack!,
+                      fit: rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                    )
+                  : rtc.RTCVideoView(
+                      renderer,
+                      objectFit: rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      mirror: name == "You",
+                    ),
             // Name Overlay
             Positioned(
               bottom: 8,
