@@ -20,7 +20,7 @@ from .realtime_docs import MQTTDocumentationView, WebSocketDocumentationView
 from .web_session_views import WebSessionView
 from .magic_token_views import GenerateMagicTokenView, verify_magic_token
 from rest_framework_simplejwt.views import TokenRefreshView
-
+from .views import GetCallTokenView, LiveKitWebhookView
 
 
 def direct_health(request):
@@ -74,6 +74,10 @@ urlpatterns = [
     
     # Health Check
     path('health-new/', HealthCheckView.as_view(), name='health_check'),
+    path('health-call/', lambda r: JsonResponse({"status": "routing_ok", "path": "call"}), name='health_call_debug'),
+
+    path('call/token/', GetCallTokenView.as_view(), name='get_call_token'),
+    path('livekit/webhook/', LiveKitWebhookView.as_view(), name='livekit_webhook'),
     
     # Game & User Management
     path('users/online/', OnlineUsersView.as_view(), name='online_users'),
