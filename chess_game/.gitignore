@@ -11,6 +11,19 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+.gradle/
+gradlew
+gradlew.bat
+local.properties
+*.keystore
+*.jks
+*.apk
+*.ap_
+*.dex
+*.class
+*.lock
+bin/
+gen/
 
 # IntelliJ related
 *.iml
