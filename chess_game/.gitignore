@@ -1,0 +1,51 @@
+# https://dart.dev/guides/libraries/private-files
+# Created by https://www.toptal.com/developers/gitignore/api/flutter,dart,android,visualstudiocode
+
+### Android ###
+# Built-in ignore list for Android
+build/
+*.keystore
+*.jks
+local.properties
+.gradle/
+*.apk
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+
+### Flutter ###
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+
+### Dart ###
+doc/api/
+.project
+.pub-cache/
+.pub/
+
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+*.iml
+
+# Miscellaneous
+*.log
+*.svg
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+.DS_Store
+GeneratedPluginRegistrant.java
