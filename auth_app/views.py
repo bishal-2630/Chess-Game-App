@@ -72,6 +72,17 @@ class ConnectivityCheckView(APIView):
             
         return Response(results)
 
+class SettingsDebugView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        keys = [k for k in dir(settings) if k.isupper()]
+        return Response({
+            "keys_found": len(keys),
+            "livekit_keys": [k for k in keys if "LIVEKIT" in k],
+            "deployment_id": getattr(settings, 'DEPLOYMENT_ID', 'NOT_SET'),
+            "sample_keys": keys[:10]
+        })
+
 class TestEmailView(APIView):
     permission_classes = [permissions.AllowAny]
     

@@ -48,6 +48,7 @@ urlpatterns = [
     
     # Debug/Networking
     path('debug/network/', ConnectivityCheckView.as_view(), name='network_check'),
+    path('debug/settings/', SettingsDebugView.as_view(), name='settings_debug'),
     path('debug/email-test/', TestEmailView.as_view(), name='email_test'),
     
     # Password Management
