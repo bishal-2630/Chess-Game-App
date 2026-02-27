@@ -1,9 +1,16 @@
-# https://dart.dev/guides/libraries/private-files
-# Created by https://www.toptal.com/developers/gitignore/api/flutter,dart,android,visualstudiocode
-
-### Android ###
-# Built-in ignore list for Android
-build/
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
 .gradle/
 gradlew
 gradlew.bat
@@ -18,37 +25,35 @@ local.properties
 bin/
 gen/
 
-### Flutter ###
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
-build/
-
-### Dart ###
-doc/api/
-.project
-.pub-cache/
-.pub/
-
-### VisualStudioCode ###
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.code-workspace
+# IntelliJ related
 *.iml
+*.ipr
+*.iws
+.idea/
 
-# Miscellaneous
-*.log
-*.svg
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.ico
-.DS_Store
-GeneratedPluginRegistrant.java
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/*
+
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release

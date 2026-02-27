@@ -372,6 +372,9 @@ class GetCallTokenView(APIView):
         LiveKitService.start_recording(room_id)
         
         token = LiveKitService.generate_token(room_id, request.user.username)
+        if not token:
+            return Response({'error': 'Failed to generate token'}, status=500)
+            
         return Response({
             'token': token,
             'url': settings.LIVEKIT_URL
