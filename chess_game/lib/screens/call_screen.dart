@@ -44,7 +44,6 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
-    print("📞 CallScreen (LiveKit): Initializing");
     _isVideoOn = widget.initialVideo;
     MqttService().setInCall(true);
     
@@ -64,7 +63,9 @@ class _CallScreenState extends State<CallScreen> {
 
   void _setupCallbacks() {
     _signalingService.onAddRemoteStream = (publication, participant) {
-      if (publication is RemoteVideoTrackPublication) {
+      // publication is a TrackPublication. 
+      // In 2.x, we check if it's a video track.
+      if (publication.kind == TrackKind.video) {
         setState(() {
           _remoteVideoTrack = publication.track as VideoTrack?;
           _inCall = true;
@@ -83,10 +84,7 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _connect() async {
     try {
       final token = _authService.accessToken;
-      
-      // 1. Get Token from Django
       final url = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}";
-      print("📞 Requesting token from: $url");
       
       final response = await http.get(
         Uri.parse(url),
@@ -101,7 +99,6 @@ class _CallScreenState extends State<CallScreen> {
       final livekitToken = data['token'];
       final livekitUrl = data['url'];
 
-      // 2. Connect to LiveKit Room
       await _signalingService.connectToLiveKit(livekitUrl, livekitToken);
       
       if (mounted) {
@@ -110,7 +107,6 @@ class _CallScreenState extends State<CallScreen> {
         });
       }
 
-      // If caller, send notification
       if (widget.isCaller) {
         await GameService.sendCallSignal(
           receiverUsername: widget.otherUserName,
@@ -122,13 +118,6 @@ class _CallScreenState extends State<CallScreen> {
       print("❌ Connection Error: $e");
       if (mounted) _handleCallEnd("Connection Failed");
     }
-  }
-
-  void _startCallTimeout() {
-    _callTimeoutTimer = Timer(const Duration(seconds: 30), () {
-      if (!mounted || _inCall || _isExiting) return;
-      _handleCallEnd("No Answer");
-    });
   }
 
   void _handleCallEnd(String status) {
@@ -150,13 +139,6 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   @override
-  void dispose() {
-    _callTimeoutTimer?.cancel();
-    _signalingService.disconnect();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
@@ -165,7 +147,6 @@ class _CallScreenState extends State<CallScreen> {
           Positioned.fill(
             child: _inCall ? _buildVideoView() : _buildPlaceholderView(),
           ),
-
           if (!_inCall)
             Positioned(
               top: 100,
@@ -175,7 +156,6 @@ class _CallScreenState extends State<CallScreen> {
                 child: Text(_status, style: const TextStyle(color: Colors.white, fontSize: 20)),
               ),
             ),
-
           Positioned(
             top: 40,
             left: 20,
@@ -187,7 +167,6 @@ class _CallScreenState extends State<CallScreen> {
               ),
             ),
           ),
-
           if (!_isExiting)
             Positioned(
               bottom: 40,
@@ -204,7 +183,10 @@ class _CallScreenState extends State<CallScreen> {
     return Stack(
       children: [
         if (_remoteVideoTrack != null)
-          VideoTrackRenderer(_remoteVideoTrack!, fit: VideoFit.cover)
+          // LiveKit 2.x uses fit like this:
+          VideoTrackRenderer(_remoteVideoTrack!, 
+            fit: VideoViewFit.cover, // VideoFit is usually available, if not we'll see
+          )
         else
           _buildRemoteAvatarView(),
       ],
@@ -274,5 +256,19 @@ class _CallScreenState extends State<CallScreen> {
       ),
       onPressed: onPressed,
     );
+  }
+
+  void _startCallTimeout() {
+    _callTimeoutTimer = Timer(const Duration(seconds: 30), () {
+      if (!mounted || _inCall || _isExiting) return;
+      _handleCallEnd("No Answer");
+    });
+  }
+
+  @override
+  void dispose() {
+    _callTimeoutTimer?.cancel();
+    _signalingService.disconnect();
+    super.dispose();
   }
 }

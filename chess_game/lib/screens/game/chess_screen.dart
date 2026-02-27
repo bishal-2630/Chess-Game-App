@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../services/signaling_service.dart';
 import '../../services/django_auth_service.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:flutter/foundation.dart';
 import '../../services/config.dart';
 import '../../services/game_service.dart';
@@ -58,6 +59,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
   final SignalingService _signalingService = SignalingService();
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  lk.VideoTrack? _remoteVideoTrack;
 
   bool _isConnectedToRoom = false;
   bool _isAudioOn = false;
@@ -187,14 +189,20 @@ class _ChessGameScreenState extends State<ChessScreen> {
     await _remoteRenderer.initialize();
 
     _signalingService.onLocalStream = ((stream) {
-      _localRenderer.srcObject = stream;
+      // For now, keep as is or stub out.
+      // _localRenderer.srcObject = stream;
       if (mounted) setState(() {});
     });
 
-    _signalingService.onAddRemoteStream = ((stream) {
-      _remoteRenderer.srcObject = stream;
-      if (mounted) setState(() {});
-    });
+    _signalingService.onAddRemoteStream = (publication, participant) {
+      if (publication.kind == lk.TrackKind.video) {
+        if (mounted) {
+          setState(() {
+            _remoteVideoTrack = publication.track as lk.VideoTrack?;
+          });
+        }
+      }
+    };
 
     _signalingService.onGameMove = (data) {
       // Handle remote move
