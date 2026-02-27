@@ -7,7 +7,9 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
+from rest_framework.permissions import isAuthenticated
 import json
+from .livekit_service import LiveKitService
 import requests
 
 from .models import OTP
@@ -357,3 +359,44 @@ def direct_rollback_check(request):
         "version": getattr(settings, 'DEPLOYMENT_ID', 'UNKNOWN'),
         "ts": timezone.now().isoformat()
     })
+
+class GetCallTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        room_id = request.query_params.get('room_id')
+        if not room_id:
+            return Response({'error': 'room_id is required'}, status=400)
+        
+        # Trigger recording start logic
+        LiveKitService.start_recording(room_id)
+        
+        token = LiveKitService.generate_token(room_id, request.user.username)
+        return Response({
+            'token': token,
+            'url': settings.LIVEKIT_URL
+            })
+
+class LiveKitWebhookView(APIView):
+    permission_classes = [permissions.AllowAny] # Webhooks are called externally
+
+    def post(self, request):
+        # 1. Verify the webhook if possible, or just process the data
+        # LiveKit sends events like 'egress_started' and 'egress_ended'
+        data = request.data
+        event_type = data.get('event')
+        
+        print(f"📡 LiveKit Webhook Received: {event_type}")
+        
+        if event_type == 'egress_ended':
+            egress_info = data.get('egress', {})
+            room_name = egress_info.get('roomName')
+            file_url = egress_info.get('file', {}).get('location')
+            
+            print(f"🎬 Call Recording Finished for Room: {room_name}")
+            print(f"📁 Recording File: {file_url}")
+            
+            # Here you would typically save 'file_url' to your database 
+            # associated with the match/room.
+            
+        return Response({'status': 'ok'})
