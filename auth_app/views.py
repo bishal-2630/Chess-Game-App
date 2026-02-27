@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
-from rest_framework.permissions import isAuthenticated
+from rest_framework.permissions import IsAuthenticated
 import json
 from .livekit_service import LiveKitService
 import requests

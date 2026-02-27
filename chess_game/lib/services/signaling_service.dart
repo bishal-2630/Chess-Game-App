@@ -107,8 +107,17 @@ class SignalingService {
   Future<void> stopAudio() async {}
   void sendBye() {}
   void connect(String url, {String? token}) {}
-  Future<void> acceptCall(dynamic local, dynamic remote, {bool videoEnabled = false}) async {}
-  Future<void> startCall(dynamic local, dynamic remote, {bool videoEnabled = false}) async {}
+  Future<void> acceptCall(dynamic local, dynamic remote, {bool videoEnabled = false}) async {
+    // This is called from ChessScreen. 
+    // It already has the roomId in its state, but we need the token.
+    // However, the roomId isn't passed here. 
+    // WE SHOULD FETCH THE TOKEN IN THE SCREEN AND CALL connectToLiveKit directly.
+    // For legacy support, we can't do much without a roomId.
+  }
+  
+  Future<void> startCall(dynamic local, dynamic remote, {bool videoEnabled = false}) async {
+    // Same as acceptCall.
+  }
   void sendNewGame() {}
   Future<void> hangUp() => disconnect();
   void sendEndCall() => disconnect();

@@ -12,6 +12,8 @@ import 'dart:math';
 import 'dart:async';
 import 'package:permission_handler/permission_handler.dart';
 import '../../services/mqtt_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ChessScreen extends StatefulWidget {
   final String? roomId;
@@ -482,18 +484,28 @@ class _ChessGameScreenState extends State<ChessScreen> {
   }
 
   void _connectRoom(String serverUrl, String roomId) async {
-    // Ensure URL ends with slash if needed, logic depends on backend but typically yes
-    String fullUrl = serverUrl;
-    if (!fullUrl.endsWith("/")) fullUrl += "/";
-    fullUrl += "$roomId/";
     setState(() {
       _callStatus = "Connecting...";
     });
 
-    final token = _authService.accessToken;
-    _signalingService.connect(fullUrl, token: token);
-
-    // Note: Success state is set via onConnectionState callback
+    try {
+      final token = _authService.accessToken;
+      final url = "${AppConfig.baseUrl}call/token/?room_id=$roomId";
+      
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {"Authorization": "Bearer $token"}
+      );
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        await _signalingService.connectToLiveKit(data['url'], data['token']);
+      } else {
+        _setEphemeralStatus("Connection failed: ${response.statusCode}");
+      }
+    } catch (e) {
+      _setEphemeralStatus("Connection error: $e");
+    }
   }
 
   Future<void> _toggleAudio() async {
@@ -534,9 +546,23 @@ class _ChessGameScreenState extends State<ChessScreen> {
     } else {
       // Start or Accept Call
       try {
+        final token = _authService.accessToken;
+        final tokenUrl = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}";
+        
+        final response = await http.get(
+          Uri.parse(tokenUrl),
+          headers: {"Authorization": "Bearer $token"}
+        );
+
+        if (response.statusCode != 200) throw Exception("Failed to get call token");
+        
+        final tokenData = jsonDecode(response.body);
+        final livekitToken = tokenData['token'];
+        final livekitUrl = tokenData['url'];
+
         if (_isIncomingCall) {
           // Accept
-          await _signalingService.acceptCall(_localRenderer, _remoteRenderer, videoEnabled: _isVideoOn);
+          await _signalingService.connectToLiveKit(livekitUrl, livekitToken);
           _startCallTimer();
           setState(() {
             _isAudioOn = true;
@@ -569,7 +595,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
             initialVideo: _isVideoOn
           );
 
-          await _signalingService.startCall(_localRenderer, _remoteRenderer, videoEnabled: _isVideoOn);
+          await _signalingService.connectToLiveKit(livekitUrl, livekitToken);
         }
       } catch (e) {
         MqttService().stopAudio(broadcast: true); // Stop ringtone on error
