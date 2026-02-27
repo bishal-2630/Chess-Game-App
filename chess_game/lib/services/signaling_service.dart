@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart';
@@ -9,8 +10,7 @@ class SignalingService {
   SignalingService._internal();
 
   Room? _room;
-  // EventsListener is used to manage events in LiveKit 2.x
-  EventsListener<RoomEvent>? _listener;
+  StreamSubscription? _eventSubscription;
 
   // New LiveKit Callbacks
   void Function(TrackPublication publication, Participant participant)? onAddRemoteStream;
@@ -40,11 +40,8 @@ class SignalingService {
 
     _room = Room();
     
-    // In LiveKit 2.x, we usually use the room directly or add a listener.
-    // However, createEventsListener() should technically exist if imported correctly,
-    // but the error suggests it doesn't. We'll use the newer addListener approach.
-    
-    _room!.addListener(_onRoomEvent);
+    // In LiveKit 2.x, we listen to the events stream
+    _eventSubscription = _room!.events.listen(_onRoomEvent);
 
     try {
       await _room!.connect(url, token);
@@ -97,7 +94,8 @@ class SignalingService {
 
   Future<void> disconnect() async {
     if (_room != null) {
-      _room!.removeListener(_onRoomEvent);
+      await _eventSubscription?.cancel();
+      _eventSubscription = null;
       await _room!.disconnect();
       _room = null;
     }

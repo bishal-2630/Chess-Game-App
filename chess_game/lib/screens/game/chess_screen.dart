@@ -195,7 +195,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
     });
 
     _signalingService.onAddRemoteStream = (publication, participant) {
-      if (publication.kind == lk.TrackKind.video) {
+      if (publication.kind == lk.TrackType.video) {
         if (mounted) {
           setState(() {
             _remoteVideoTrack = publication.track as lk.VideoTrack?;
@@ -2185,12 +2185,10 @@ class _ChessGameScreenState extends State<ChessScreen> {
                               spreadRadius: 2,
                             ),
                           ],
-                        ),
                         child: GridView.builder(
-                          padding: EdgeInsets.zero, // Remove internal padding
+                          padding: EdgeInsets.zero,
                           physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 8,
                           ),
                           itemCount: 64,

@@ -65,7 +65,7 @@ class _CallScreenState extends State<CallScreen> {
     _signalingService.onAddRemoteStream = (publication, participant) {
       // publication is a TrackPublication. 
       // In 2.x, we check if it's a video track.
-      if (publication.kind == TrackKind.video) {
+      if (publication.kind == TrackType.video) {
         setState(() {
           _remoteVideoTrack = publication.track as VideoTrack?;
           _inCall = true;
