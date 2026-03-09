@@ -139,6 +139,8 @@ class _CallScreenState extends State<CallScreen> {
       setState(() {
         _status = status;
         _inCall = false;
+        _remoteRenderer.srcObject = null;
+        _localRenderer.srcObject = null;
       });
       Future.delayed(const Duration(seconds: 2), () {
         if (!mounted) return;
