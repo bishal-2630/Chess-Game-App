@@ -180,8 +180,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Do not call mkdir() at runtime on Vercel (read-only filesystem)
 if not STATIC_ROOT.exists():
-    STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+    try:
+        STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
 
 WHITENOISE_USE_FINDERS = True
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
@@ -192,7 +196,10 @@ try:
         STATICFILES_DIRS = [FLUTTER_WEB_PATH]
     else:
         dummy_path = BASE_DIR / "dummy_static"
-        dummy_path.mkdir(exist_ok=True)
+        try:
+            dummy_path.mkdir(exist_ok=True)
+        except OSError:
+            pass
         STATICFILES_DIRS = [dummy_path]
 except Exception as e:
     STATICFILES_DIRS = []
@@ -270,8 +277,14 @@ else:
     SWAGGER_UI_OAUTH2_REDIRECT_URL = 'https://chessgameauth.share.zrok.io/swagger/oauth2-redirect.html'
 
 
+# LiveKit Configuration
+LIVEKIT_API_KEY = config('LIVEKIT_API_KEY', default='APImrhGecyNFG7p')
+LIVEKIT_API_SECRET = config('LIVEKIT_API_SECRET', default='CEf97PsPDAFW6aVRtmS1NlMid5LQZZ3xWKJyfQPqQ5g')
+LIVEKIT_URL = config('LIVEKIT_URL', default='wss://chess-game-bishal-ptignr4p.livekit.cloud')
+
 # GHOSTBUSTER CONFIG
 CSRF_FAILURE_VIEW = 'auth_app.views.csrf_failure'
 APPEND_SLASH = False
-DEPLOYMENT_ID = "V7_EXORCIST_FINAL"
+DEPLOYMENT_ID = "V8_LIVEKIT_FIX"
 print(f"👻 GHOSTBUSTER ACTIVE - ID: {DEPLOYMENT_ID}")
+print(f"📞 LIVEKIT CONFIG LOADED - KEY: {LIVEKIT_API_KEY[:3]}...")
