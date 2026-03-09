@@ -376,11 +376,17 @@ class GetCallTokenView(APIView):
 
     def get(self, request):
         room_id = request.query_params.get('room_id')
+        should_record = request.query_params.get('record', 'false').lower() == 'true'
+        
         if not room_id:
             return Response({'error': 'room_id is required'}, status=400)
         
-        # Trigger recording start logic
-        LiveKitService.start_recording(room_id)
+        # Trigger recording start logic if requested (archival for future use)
+        if should_record:
+            print(f"📊 [Audit] Archival recording requested by {request.user.username} for room {room_id}")
+            LiveKitService.start_recording(room_id)
+        else:
+            print(f"🔒 [Audit] Private session (no recording) for {request.user.username} in room {room_id}")
         
         token = LiveKitService.generate_token(room_id, request.user.username)
         if not token:

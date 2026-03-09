@@ -46,10 +46,69 @@ class LiveKitService:
             return None
 
     @staticmethod
+    def generate_admin_token():
+        """Generates an admin token for for API access."""
+        api_key = getattr(settings, 'LIVEKIT_API_KEY', 'APImrhGecyNFG7p')
+        api_secret = getattr(settings, 'LIVEKIT_API_SECRET', 'CEf97PsPDAFW6aVRtmS1NlMid5LQZZ3xWKJyfQPqQ5g')
+        
+        now = int(time.time())
+        payload = {
+            "exp": now + 600,
+            "iss": api_key,
+            "jti": f"admin-{now}",
+            "video": {
+                "roomCreate": True,
+                "roomList": True,
+                "roomRecord": True,
+                "roomAdmin": True,
+                "canPublish": True,
+                "canSubscribe": True,
+            }
+        }
+        return jwt.encode(payload, api_secret, algorithm='HS256')
+
+    @staticmethod
     def start_recording(room_name):
         """
-        Placeholder for triggering recording. 
-        Recording requires a separate Egress setup in LiveKit.
+        Triggers archival recording for the room via LiveKit Egress.
+        Records a RoomComposite layout to an MP4 file.
         """
-        print(f"🎬 [LiveKit] Token generated for room: {room_name}. Recording trigger ready if Egress is configured.")
-        pass
+        import requests
+        import json
+        
+        livekit_url = getattr(settings, 'LIVEKIT_URL', '')
+        # Convert wss:// to https://
+        base_url = livekit_url.replace('wss://', 'https://').replace('ws://', 'http://')
+        endpoint = f"{base_url}/twirp/livekit.Egress/StartRoomCompositeEgress"
+        
+        token = LiveKitService.generate_admin_token()
+        
+        timestamp = int(time.time())
+        filename = f"recording_{room_name}_{timestamp}.mp4"
+        
+        payload = {
+            "room_name": room_name,
+            "layout": "grid", # Standard layout for organization records
+            "file_outputs": [{
+                "filepath": filename,
+                # Note: Cloud providers like S3 would be configured here if available
+            }]
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        print(f"🎬 [LiveKit] Archival recording trigger for room: {room_name}")
+        try:
+            response = requests.post(endpoint, headers=headers, json=payload, timeout=10)
+            if response.status_code == 200:
+                print(f"✅ [LiveKit] Recording started: {response.json().get('egress_id')}")
+                return True
+            else:
+                print(f"❌ [LiveKit] Egress failed ({response.status_code}): {response.text}")
+                return False
+        except Exception as e:
+            print(f"❌ [LiveKit] Recording trigger error: {e}")
+            return False
