@@ -1,13 +1,12 @@
 ---
 title: Chess Backend
-emoji: ♟️
+emoji: 
 colorFrom: blue
 colorTo: indigo
 sdk: docker
 app_port: 7860
+pinned: false
 ---
 
 # Chess Backend
-
-Django Channels backend for the Chess Game App.
 Deployed on Hugging Face Spaces using Docker.
