@@ -72,6 +72,17 @@ class ConnectivityCheckView(APIView):
             
         return Response(results)
 
+class SettingsDebugView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        keys = [k for k in dir(settings) if k.isupper()]
+        return Response({
+            "keys_found": len(keys),
+            "livekit_keys": [k for k in keys if "LIVEKIT" in k],
+            "deployment_id": getattr(settings, 'DEPLOYMENT_ID', 'NOT_SET'),
+            "sample_keys": keys[:10]
+        })
+
 class TestEmailView(APIView):
     permission_classes = [permissions.AllowAny]
     
@@ -380,8 +391,11 @@ class GetCallTokenView(APIView):
             'url': settings.LIVEKIT_URL
             })
 
+from rest_framework.parsers import JSONParser
+
 class LiveKitWebhookView(APIView):
     permission_classes = [permissions.AllowAny] # Webhooks are called externally
+    parser_classes = [JSONParser] # LiveKit sends application/webhook+json
 
     def post(self, request):
         # 1. Verify the webhook if possible, or just process the data
