@@ -6,7 +6,6 @@ __pycache__/
 .Python
 env/
 venv/
-.venv/
 
 # Django
 *.log
@@ -24,8 +23,6 @@ media/
 # IDE
 .vscode/
 .idea/
-*.iml
-*.iws
 *.swp
 *.swo
 
