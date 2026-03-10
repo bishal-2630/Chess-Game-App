@@ -371,6 +371,10 @@ def direct_rollback_check(request):
         "ts": timezone.now().isoformat()
     })
 
+# In-memory registry of rooms that should be recorded when they become active.
+# Key: room_id (str), Value: participant count (int)
+_rooms_pending_recording: dict = {}
+
 class GetCallTokenView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -381,10 +385,11 @@ class GetCallTokenView(APIView):
         if not room_id:
             return Response({'error': 'room_id is required'}, status=400)
         
-        # Trigger recording start logic if requested (archival for future use)
         if should_record:
-            print(f"📊 [Audit] Archival recording requested by {request.user.username} for room {room_id}")
-            LiveKitService.start_recording(room_id)
+            # Mark this room for recording. The actual Egress will be triggered
+            # from the webhook once both participants are in the room.
+            print(f"📊 [Audit] Room {room_id} marked for archival recording (requested by {request.user.username})")
+            _rooms_pending_recording[room_id] = 0  # 0 participants so far
         else:
             print(f"🔒 [Audit] Private session (no recording) for {request.user.username} in room {room_id}")
         
@@ -404,22 +409,44 @@ class LiveKitWebhookView(APIView):
     parser_classes = [JSONParser] # LiveKit sends application/webhook+json
 
     def post(self, request):
-        # 1. Verify the webhook if possible, or just process the data
-        # LiveKit sends events like 'egress_started' and 'egress_ended'
         data = request.data
         event_type = data.get('event')
         
         print(f"📡 LiveKit Webhook Received: {event_type}")
         
-        if event_type == 'egress_ended':
+        if event_type == 'participant_joined':
+            # This fires when a real user joins a room (not an Egress bot)
+            room_name = data.get('room', {}).get('name')
+            participant = data.get('participant', {})
+            participant_kind = participant.get('kind', 0)  # 0 = Standard, 1 = Ingress, 2 = SIP, 3 = Agent
+            
+            # Only count real human participants (kind=0)
+            if room_name and participant_kind == 0 and room_name in _rooms_pending_recording:
+                _rooms_pending_recording[room_name] = _rooms_pending_recording.get(room_name, 0) + 1
+                participant_count = _rooms_pending_recording[room_name]
+                
+                print(f"👤 [{room_name}] Participant #{participant_count} joined (recording pending).")
+                
+                # Start recording after 2nd participant joins
+                if participant_count >= 2:
+                    print(f"🎬 [{room_name}] Both participants joined. Starting archival recording...")
+                    del _rooms_pending_recording[room_name]  # Remove from pending
+                    LiveKitService.start_recording(room_name)
+
+        elif event_type == 'egress_ended':
             egress_info = data.get('egress', {})
             room_name = egress_info.get('roomName')
             file_url = egress_info.get('file', {}).get('location')
             
-            print(f"🎬 Call Recording Finished for Room: {room_name}")
+            print(f"✅ Call Recording Finished for Room: {room_name}")
             print(f"📁 Recording File: {file_url}")
-            
-            # Here you would typically save 'file_url' to your database 
-            # associated with the match/room.
+            # TODO: Save file_url to your database for future retrieval.
+
+        elif event_type == 'room_finished':
+            # Clean up if the room ended before recording started
+            room_name = data.get('room', {}).get('name')
+            if room_name and room_name in _rooms_pending_recording:
+                del _rooms_pending_recording[room_name]
+                print(f"🧹 [{room_name}] Room ended before recording started. Cleaned up.")
             
         return Response({'status': 'ok'})
