@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
+from django.http import JsonResponse  # Moved from bottom
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import JSONParser, BaseParser
 import json
@@ -361,7 +362,7 @@ class ResetPasswordView(APIView):
                 "message": f"Password reset failed: {str(e)}"
             }, status=status.HTTP_200_OK)
 
-from django.http import JsonResponse
+
 def csrf_failure(request, reason=""):
     """
     Custom CSRF failure view to prove it's our code.
@@ -383,7 +384,7 @@ def direct_rollback_check(request):
 
 # In-memory registry of rooms that should be recorded when they become active.
 # Key: room_id (str), Value: participant count (int)
-_rooms_pending_recording: dict = {}
+_rooms_pending_recording = {}  # Removed redundant type hint to fix IDE warning
 
 class GetCallTokenView(APIView):
     permission_classes = [IsAuthenticated]
