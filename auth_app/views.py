@@ -8,9 +8,19 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import JSONParser, BaseParser
 import json
 from .livekit_service import LiveKitService
 import requests
+
+# LiveKit sends Content-Type: application/webhook+json
+# DRF's default JSONParser only accepts application/json, causing 415 errors.
+class WebhookJsonParser(BaseParser):
+    """Accepts application/webhook+json — used by LiveKit webhooks."""
+    media_type = 'application/webhook+json'
+
+    def parse(self, stream, media_type=None, parser_context=None):
+        return json.loads(stream.read().decode('utf-8'))
 
 from .models import OTP
 from .serializers import (
@@ -402,11 +412,11 @@ class GetCallTokenView(APIView):
             'url': settings.LIVEKIT_URL
             })
 
-from rest_framework.parsers import JSONParser
 
 class LiveKitWebhookView(APIView):
-    permission_classes = [permissions.AllowAny] # Webhooks are called externally
-    parser_classes = [JSONParser] # LiveKit sends application/webhook+json
+    permission_classes = [permissions.AllowAny]
+    # Accept both standard JSON AND LiveKit's webhook+json content type
+    parser_classes = [WebhookJsonParser, JSONParser]
 
     def post(self, request):
         data = request.data
