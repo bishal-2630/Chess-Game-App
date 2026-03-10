@@ -7,12 +7,13 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
-from django.http import JsonResponse  # Moved from bottom
+from django.http import JsonResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import JSONParser, BaseParser
 import json
-from .livekit_service import LiveKitService
 import requests
+from typing import Dict  # Added for better IDE support
+from .livekit_service import LiveKitService
 
 # LiveKit sends Content-Type: application/webhook+json
 # DRF's default JSONParser only accepts application/json, causing 415 errors.
@@ -384,7 +385,7 @@ def direct_rollback_check(request):
 
 # In-memory registry of rooms that should be recorded when they become active.
 # Key: room_id (str), Value: participant count (int)
-_rooms_pending_recording = {}  # Removed redundant type hint to fix IDE warning
+_rooms_pending_recording: Dict[str, int] = {}
 
 class GetCallTokenView(APIView):
     permission_classes = [IsAuthenticated]
