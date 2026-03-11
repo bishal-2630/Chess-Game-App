@@ -71,8 +71,8 @@ class LiveKitService:
     def start_recording(room_name):
         """
         Triggers archival recording for the room via LiveKit Egress.
-        Records a RoomComposite layout to an MP4 file.
-        Requires S3 storage to be configured for LiveKit Cloud.
+        Records a RoomComposite layout to an MP4 file stored in S3.
+        Requires S3 (or compatible) storage to be configured.
         """
         import requests
         import json
@@ -93,26 +93,38 @@ class LiveKitService:
         s3_key = getattr(settings, 'AWS_ACCESS_KEY_ID', os.environ.get('AWS_ACCESS_KEY_ID', ''))
         s3_secret = getattr(settings, 'AWS_SECRET_ACCESS_KEY', os.environ.get('AWS_SECRET_ACCESS_KEY', ''))
         s3_region = getattr(settings, 'AWS_S3_REGION_NAME', os.environ.get('AWS_S3_REGION_NAME', 'us-east-1'))
+        s3_endpoint = getattr(settings, 'AWS_S3_ENDPOINT_URL', os.environ.get('AWS_S3_ENDPOINT_URL', ''))
+        
+        if not (s3_bucket and s3_key and s3_secret):
+            print("⚠️ [LiveKit] S3 storage NOT configured (S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY required).")
+            print("💡 [LiveKit] Skipping recording — add S3 credentials to your environment to enable recordings.")
+            return False
+
+        print(f"📦 [LiveKit] Using S3 storage: {s3_bucket}")
+        
+        s3_config = {
+            "access_key": s3_key,
+            "secret": s3_secret,
+            "region": s3_region,
+            "bucket": s3_bucket,
+            "key": filename,
+        }
+        if s3_endpoint:
+            # Used for S3-compatible storage like Cloudflare R2, MinIO, Backblaze B2, etc.
+            s3_config["endpoint"] = s3_endpoint
+            s3_config["force_path_style"] = True
         
         payload = {
             "room_name": room_name,
             "layout": "grid",
+            "file_outputs": [
+                {
+                    "file_type": 0,  # MP4 (default)
+                    "filepath": filename,
+                    "s3": s3_config,
+                }
+            ]
         }
-
-        if s3_bucket and s3_key and s3_secret:
-            print(f"📦 [LiveKit] Using S3 storage: {s3_bucket}")
-            payload["s3"] = {
-                "access_key": s3_key,
-                "secret": s3_secret,
-                "region": s3_region,
-                "bucket": s3_bucket,
-                "key": filename
-            }
-        else:
-            print("⚠️ [LiveKit] S3 storage NOT configured. Recording might fail on LiveKit Cloud.")
-            payload["file_outputs"] = [{
-                "filepath": filename,
-            }]
         
         headers = {
             "Authorization": f"Bearer {token}",
@@ -129,13 +141,6 @@ class LiveKitService:
             else:
                 print(f"❌ [LiveKit] Egress failed ({response.status_code})")
                 print(f"📝 Response Body: {response.text}")
-                
-                # Provide helpful tips for common failures
-                if "S3" in response.text or "storage" in response.text:
-                    print("💡 Tip: Ensure S3 credentials are correct and bucket exists.")
-                elif "Egress" in response.text and response.status_code == 404:
-                    print("💡 Tip: Ensure Egress service is enabled for your LiveKit instance.")
-                
                 return False
         except Exception as e:
             print(f"❌ [LiveKit] Recording trigger error: {e}")
