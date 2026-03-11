@@ -1,0 +1,7 @@
+# Exclude frontend source code and assets from Hugging Face push
+chess_game/
+.venv/
+__pycache__/
+*.db
+*.sqlite3
+staticfiles/
