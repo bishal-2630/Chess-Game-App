@@ -421,7 +421,31 @@ class LiveKitWebhookView(APIView):
     parser_classes = [WebhookJsonParser, JSONParser]
 
     def post(self, request):
-        data = request.data
+        # LiveKit sends the actual event data inside a JWT in the Authorization header
+        auth_header = request.headers.get('Authorization', '')
+        
+        if not auth_header.startswith('Bearer '):
+            print("❌ [LiveKit Webhook] Missing or invalid Authorization header")
+            return Response({'error': 'Unauthorized'}, status=401)
+            
+        token = auth_header.split(' ')[1]
+        api_secret = getattr(settings, 'LIVEKIT_API_SECRET', 'CEf97PsPDAFW6aVRtmS1NlMid5LQZZ3xWKJyfQPqQ5g')
+        
+        try:
+            # Decode the JWT payload. LiveKit uses HS256.
+            # We skip audience/issuer validation here for simplicity, but verify the signature.
+            from jose import jwt
+            decoded_payload = jwt.decode(token, api_secret, algorithms=['HS256'])
+            
+            # The decoded payload has an 'event' object inside it if it's a webhook
+            # Sometimes LiveKit sends regular JSON body along with auth header if configured via SDK, 
+            # but Webhooks are pure JWTs.
+            data = decoded_payload.get('event', {}) if 'event' in decoded_payload else request.data
+            
+        except Exception as e:
+            print(f"❌ [LiveKit Webhook] Token decode error: {e}")
+            return Response({'error': 'Invalid token'}, status=401)
+
         event_type = data.get('event')
         
         print(f"📡 [LiveKit Webhook] Event Received: {event_type}")
