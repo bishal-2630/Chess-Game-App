@@ -281,6 +281,11 @@ else:
 LIVEKIT_API_KEY = config('LIVEKIT_API_KEY', default='APImrhGecyNFG7p')
 LIVEKIT_API_SECRET = config('LIVEKIT_API_SECRET', default='CEf97PsPDAFW6aVRtmS1NlMid5LQZZ3xWKJyfQPqQ5g')
 LIVEKIT_URL = config('LIVEKIT_URL', default='wss://chess-game-bishal-ptignr4p.livekit.cloud')
+S3_BUCKET = config('S3_BUCKET', default='chess-recordings')
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
+AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
+AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL', default='')
 
 # GHOSTBUSTER CONFIG
 CSRF_FAILURE_VIEW = 'auth_app.views.csrf_failure'
