@@ -89,12 +89,12 @@ class LiveKitService:
         filename = f"recording_{room_name}_{timestamp}.mp4"
         
         # S3 Configuration from settings or environment
-        # Fallbacks added because .env is ignored by git
-        s3_bucket = getattr(settings, 'S3_BUCKET', 'chess-recordings')
-        s3_key = getattr(settings, 'AWS_ACCESS_KEY_ID', '00535ce0ea2aa8f0000000001')
-        s3_secret = getattr(settings, 'AWS_SECRET_ACCESS_KEY', 'K005HwNL9ZWk6y8ZoaxuAA6isC614Ss')
-        s3_region = getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-005')
-        s3_endpoint = getattr(settings, 'AWS_S3_ENDPOINT_URL', 'https://s3.us-east-005.backblazeb2.com')
+        # Use 'or' to ensure fallbacks are used if values are empty strings
+        s3_bucket = getattr(settings, 'S3_BUCKET', '') or 'chess-recordings'
+        s3_key = getattr(settings, 'AWS_ACCESS_KEY_ID', '') or '00535ce0ea2aa8f0000000001'
+        s3_secret = getattr(settings, 'AWS_SECRET_ACCESS_KEY', '') or 'K005HwNL9ZWk6y8ZoaxuAA6isC614Ss'
+        s3_region = getattr(settings, 'AWS_S3_REGION_NAME', '') or 'us-east-005'
+        s3_endpoint = getattr(settings, 'AWS_S3_ENDPOINT_URL', '') or 'https://s3.us-east-005.backblazeb2.com'
         
         if not (s3_bucket and s3_key and s3_secret):
             print("⚠️ [LiveKit] S3 storage NOT configured (S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY required).")
