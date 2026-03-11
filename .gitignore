@@ -56,3 +56,8 @@ chess_game/ios/Pods/
 chess_game/linux/flutter/ephemeral/
 chess_game/windows/flutter/ephemeral/
 chess_game/macos/Flutter/ephemeral/
+
+# Android IDE / IntelliJ
+*.iml
+chess_game/android/GeneratedPluginRegistrant.java
+chess_game/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
