@@ -492,8 +492,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
     try {
       final token = _authService.accessToken;
-      // In-game calls are private (no archival recording)
-      final url = "${AppConfig.baseUrl}call/token/?room_id=$roomId&record=false";
+      // Request token with recording enabled for online matches
+      final url = "${AppConfig.baseUrl}call/token/?room_id=$roomId&record=true";
       
       final response = await http.get(
         Uri.parse(url),
@@ -550,8 +550,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
       // Start or Accept Call
       try {
         final token = _authService.accessToken;
-        // In-game calls are private (no archival recording)
-        final tokenUrl = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}&record=false";
+        // Request token with recording enabled for calls
+        final tokenUrl = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}&record=true";
         
         final response = await http.get(
           Uri.parse(tokenUrl),
