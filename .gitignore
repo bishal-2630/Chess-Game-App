@@ -41,3 +41,18 @@ Thumbs.db
 
 .vercel
 .env*.local
+
+# Flutter / Dart
+chess_game/.dart_tool/
+chess_game/build/
+chess_game/.flutter-plugins
+chess_game/.flutter-plugins-dependencies
+chess_game/.packages
+chess_game/pubspec.lock
+chess_game/android/.gradle/
+chess_game/android/local.properties
+chess_game/ios/.symlinks/
+chess_game/ios/Pods/
+chess_game/linux/flutter/ephemeral/
+chess_game/windows/flutter/ephemeral/
+chess_game/macos/Flutter/ephemeral/
