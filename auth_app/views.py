@@ -424,11 +424,18 @@ class LiveKitWebhookView(APIView):
         # LiveKit sends the actual event data inside a JWT in the Authorization header
         auth_header = request.headers.get('Authorization', '')
         
-        if not auth_header.startswith('Bearer '):
-            print("❌ [LiveKit Webhook] Missing or invalid Authorization header")
+        if not auth_header:
+            print("❌ [LiveKit Webhook] Missing Authorization header")
             return Response({'error': 'Unauthorized'}, status=401)
             
-        token = auth_header.split(' ')[1]
+        token = auth_header
+        if auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+        
+        # Log masked token for debugging
+        masked_token = f"{token[:10]}...{token[-10:]}" if len(token) > 20 else "***"
+        print(f"📡 [LiveKit Webhook] Auth Attempt - Token: {masked_token}")
+
         api_secret = getattr(settings, 'LIVEKIT_API_SECRET', 'CEf97PsPDAFW6aVRtmS1NlMid5LQZZ3xWKJyfQPqQ5g')
         
         try:
@@ -444,7 +451,9 @@ class LiveKitWebhookView(APIView):
             
         except Exception as e:
             print(f"❌ [LiveKit Webhook] Token decode error: {e}")
-            return Response({'error': 'Invalid token'}, status=401)
+            import traceback
+            print(f"DEBUG: {traceback.format_exc()}")
+            return Response({'error': f'Invalid token: {str(e)}'}, status=401)
 
         event_type = data.get('event')
         
