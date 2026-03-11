@@ -486,27 +486,36 @@ class LiveKitWebhookView(APIView):
 
         elif event_type == 'egress_started':
             egress = data.get('egress', {})
-            print(f"🎬 [LiveKit] Egress Started: {egress.get('egress_id')} for Room: {egress.get('roomName')}")
+            # Handle both camelCase and snake_case
+            room_name = egress.get('room_name') or egress.get('roomName')
+            egress_id = egress.get('egress_id') or egress.get('egressId')
+            print(f"🎬 [LiveKit] Egress Started: {egress_id} for Room: {room_name}")
 
         elif event_type == 'egress_ended':
-            egress_info = data.get('egress', {})
-            room_name = egress_info.get('roomName')
-            egress_id = egress_info.get('egressId')
-            status = egress_info.get('status')
-            error = egress_info.get('error')
+            egress = data.get('egress', {})
+            room_name = egress.get('room_name') or egress.get('roomName')
+            egress_id = egress.get('egress_id') or egress.get('egressId')
+            status = egress.get('status')
+            error = egress.get('error')
             
             print(f"🛑 [LiveKit] Egress Ended: {egress_id} for Room: {room_name}")
             print(f"📊 Status: {status}")
             if error:
                 print(f"❌ Error: {error}")
             
-            file_info = egress_info.get('file', {}) or egress_info.get('s3', {})
-            file_url = file_info.get('location') or file_info.get('key')
+            # File results are often in an array called file_results
+            file_results = egress.get('file_results', [])
+            file_info = file_results[0] if file_results else (egress.get('file') or egress.get('s3') or {})
+            
+            # Extract location/path
+            file_url = file_info.get('location') or file_info.get('key') or file_info.get('filename')
             
             if file_url:
                 print(f"📁 Recording saved at: {file_url}")
             else:
                 print("⚠️ No recording file location found in webhook data.")
+                # Debug print the egress info structure to logs if file not found
+                print(f"DEBUG Egress Info: {egress}")
 
         elif event_type == 'room_finished':
             room_name = data.get('room', {}).get('name')
