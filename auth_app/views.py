@@ -424,41 +424,61 @@ class LiveKitWebhookView(APIView):
         data = request.data
         event_type = data.get('event')
         
-        print(f"📡 LiveKit Webhook Received: {event_type}")
+        print(f"📡 [LiveKit Webhook] Event Received: {event_type}")
         
         if event_type == 'participant_joined':
-            # This fires when a real user joins a room (not an Egress bot)
             room_name = data.get('room', {}).get('name')
             participant = data.get('participant', {})
-            participant_kind = participant.get('kind', 0)  # 0 = Standard, 1 = Ingress, 2 = SIP, 3 = Agent
+            identity = participant.get('identity')
+            participant_kind = participant.get('kind', 0)
+            
+            print(f"👤 [LiveKit] Participant '{identity}' (kind: {participant_kind}) joined Room: {room_name}")
             
             # Only count real human participants (kind=0)
             if room_name and participant_kind == 0 and room_name in _rooms_pending_recording:
                 _rooms_pending_recording[room_name] = _rooms_pending_recording.get(room_name, 0) + 1
                 participant_count = _rooms_pending_recording[room_name]
                 
-                print(f"👤 [{room_name}] Participant #{participant_count} joined (recording pending).")
+                print(f"📊 [LiveKit] {room_name}: Human Participant Count = {participant_count}")
                 
                 # Start recording after 2nd participant joins
                 if participant_count >= 2:
-                    print(f"🎬 [{room_name}] Both participants joined. Starting archival recording...")
-                    del _rooms_pending_recording[room_name]  # Remove from pending
-                    LiveKitService.start_recording(room_name)
+                    print(f"🎬 [LiveKit] Both participants joined. Triggering recording for {room_name}...")
+                    del _rooms_pending_recording[room_name]
+                    success = LiveKitService.start_recording(room_name)
+                    if success:
+                        print(f"✅ [LiveKit] Recording trigger SUCCESS for {room_name}")
+                    else:
+                        print(f"❌ [LiveKit] Recording trigger FAILED for {room_name}")
+
+        elif event_type == 'egress_started':
+            egress = data.get('egress', {})
+            print(f"🎬 [LiveKit] Egress Started: {egress.get('egress_id')} for Room: {egress.get('roomName')}")
 
         elif event_type == 'egress_ended':
             egress_info = data.get('egress', {})
             room_name = egress_info.get('roomName')
-            file_url = egress_info.get('file', {}).get('location')
+            egress_id = egress_info.get('egressId')
+            status = egress_info.get('status')
+            error = egress_info.get('error')
             
-            print(f"✅ Call Recording Finished for Room: {room_name}")
-            print(f"📁 Recording File: {file_url}")
-            # TODO: Save file_url to your database for future retrieval.
+            print(f"🛑 [LiveKit] Egress Ended: {egress_id} for Room: {room_name}")
+            print(f"📊 Status: {status}")
+            if error:
+                print(f"❌ Error: {error}")
+            
+            file_info = egress_info.get('file', {}) or egress_info.get('s3', {})
+            file_url = file_info.get('location') or file_info.get('key')
+            
+            if file_url:
+                print(f"📁 Recording saved at: {file_url}")
+            else:
+                print("⚠️ No recording file location found in webhook data.")
 
         elif event_type == 'room_finished':
-            # Clean up if the room ended before recording started
             room_name = data.get('room', {}).get('name')
             if room_name and room_name in _rooms_pending_recording:
                 del _rooms_pending_recording[room_name]
-                print(f"🧹 [{room_name}] Room ended before recording started. Cleaned up.")
+                print(f"🧹 [LiveKit] Room {room_name} ended. Cleaned up pending registry.")
             
         return Response({'status': 'ok'})
