@@ -401,7 +401,7 @@ class GetCallTokenView(APIView):
             # Mark this room for recording. The actual Egress will be triggered
             # from the webhook once both participants are in the room.
             print(f"📊 [Audit] Room {room_id} marked for archival recording (requested by {request.user.username})")
-            _rooms_pending_recording[room_id] = 0  # 0 participants so far
+            _rooms_pending_recording.setdefault(room_id, 0)  # Only initialize if not already tracking
         else:
             print(f"🔒 [Audit] Private session (no recording) for {request.user.username} in room {room_id}")
         
