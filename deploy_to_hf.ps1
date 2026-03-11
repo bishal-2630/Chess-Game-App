@@ -16,9 +16,10 @@ if ($currentBranch -ne "recorder") {
 Write-Host "Creating clean deployment branch..." -ForegroundColor Blue
 git checkout -b _hf-temp
 
-# Remove chess_game folder from the branch history
-Write-Host "Removing chess_game assets from deployment history..." -ForegroundColor Blue
-git filter-repo --path chess_game/ --invert-paths --force
+# Remove chess_game folder from this branch
+Write-Host "Removing chess_game folder for deployment..." -ForegroundColor Blue
+git rm -rf chess_game
+git commit -m "chore: remove chess_game for deployment (Hugging Face requirement)"
 
 # Push to Hugging Face
 Write-Host "Pushing to Hugging Face..." -ForegroundColor Blue
