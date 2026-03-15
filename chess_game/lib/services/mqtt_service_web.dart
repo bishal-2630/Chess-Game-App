@@ -51,6 +51,10 @@ class MqttService {
     print('ℹ️ MqttService: Setting inCall to $inCall (Stub)');
   }
 
+  void setActiveChessRoomId(String? roomId, {bool broadcast = true}) {
+    print('ℹ️ MqttService: Setting active room to $roomId (Stub)');
+  }
+
   Future<void> speakRecordingAnnouncement() async {
     print('ℹ️ MqttService: Web announcement (Stub)');
   }
