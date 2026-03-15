@@ -47,7 +47,11 @@ class MqttService {
   
   Future<void> dismissCallNotification() async {}
   
-  void setActiveChessRoomId(String? roomId, {bool broadcast = true}) {}
-  
-  // Ongoing call methods removed per user request
+  void setInCall(bool inCall) {
+    print('ℹ️ MqttService: Setting inCall to $inCall (Stub)');
+  }
+
+  Future<void> speakRecordingAnnouncement() async {
+    print('ℹ️ MqttService: Web announcement (Stub)');
+  }
 }
