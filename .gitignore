@@ -41,3 +41,37 @@ Thumbs.db
 
 .vercel
 .env*.local
+
+# Flutter/Dart
+**/.dart_tool/
+**/build/
+**/.flutter-plugins*
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/web_plugin_registrant.dart
+**/dart_plugin_registrant.dart
+**/GeneratedPluginRegistrant.java
+
+# Android
+**/.gradle/
+**/local.properties
+**/ant-properties.xml
+**/ant-gen/
+**/proguard-project.txt
+**/package-list
+**/out/
+**/gen/
+**/bin/
+**/res/raw/
+
+# IDE files
+**/*.iml
+**/.idea/
+**/.vscode/
+
+# Gradle
+**/gradlew
+**/gradlew.bat
+**/.gradle/
+**/gradle/
