@@ -13,7 +13,7 @@ SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
 import time
 
 # Use Railway's environment variables
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = True
 ROOT_URLCONF = 'chess_backend.urls'
 print(f"🚀 SERVER STARTING - TS: {time.time()} - DEBUG: {DEBUG} - URLCONF: {ROOT_URLCONF}")
 
