@@ -37,10 +37,7 @@ class _CallScreenState extends State<CallScreen> {
   
   bool _inCall = false;
   String _status = "Connecting...";
-<<<<<<< HEAD
   bool _announcementSpoken = false; // New flag
-=======
->>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
   bool _isMuted = false;
   late bool _isVideoOn;
   bool _isExiting = false;
@@ -72,7 +69,6 @@ class _CallScreenState extends State<CallScreen> {
     _signalingService.onAddRemoteStream = (publication, participant) {
       // publication is a TrackPublication. 
       // In 2.x, we check if it's a video track (TrackType.VIDEO).
-<<<<<<< HEAD
       // Mark as connected on first track (audio or video)
       if (mounted) {
         setState(() {
@@ -91,19 +87,6 @@ class _CallScreenState extends State<CallScreen> {
       }
       _callTimeoutTimer?.cancel();
       MqttService().stopAudio();
-=======
-      if (publication.kind == TrackType.VIDEO) {
-        if (mounted) {
-          setState(() {
-            _remoteVideoTrack = publication.track as VideoTrack?;
-            _inCall = true;
-            _status = "Connected";
-          });
-        }
-        _callTimeoutTimer?.cancel();
-        MqttService().stopAudio();
-      }
->>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
     };
 
     _signalingService.onEndCall = () {
@@ -114,12 +97,8 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _connect() async {
     try {
       final token = _authService.accessToken;
-<<<<<<< HEAD
       // Request recording for standalone calls (archival for future use)
       final url = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}&record=true";
-=======
-      final url = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}";
->>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
       
       final response = await http.get(
         Uri.parse(url),
@@ -137,11 +116,7 @@ class _CallScreenState extends State<CallScreen> {
       print("🌐 LiveKit URL: $livekitUrl");
       print("🔑 LiveKit Token Snippet: ${livekitToken.toString().substring(0, 15)}...");
 
-<<<<<<< HEAD
       await _signalingService.connectToLiveKit(livekitUrl, livekitToken, videoEnabled: widget.initialVideo);
-=======
-      await _signalingService.connectToLiveKit(livekitUrl, livekitToken);
->>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
       
       if (mounted) {
         setState(() {
@@ -173,11 +148,6 @@ class _CallScreenState extends State<CallScreen> {
       setState(() {
         _status = status;
         _inCall = false;
-<<<<<<< HEAD
-=======
-        _remoteRenderer.srcObject = null;
-        _localRenderer.srcObject = null;
->>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
       });
       Future.delayed(const Duration(seconds: 2), () {
         if (!mounted) return;

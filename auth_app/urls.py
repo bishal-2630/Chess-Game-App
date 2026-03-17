@@ -8,7 +8,7 @@ from .swagger_views import (
     TokenVerifyView,
     GuestRegisterView, HealthCheckView
 )
-from .views import ConnectivityCheckView, TestEmailView
+from .views import ConnectivityCheckView, TestEmailView, SettingsDebugView
 from .google_auth_views import GoogleLoginView
 from .game_views import (
     OnlineUsersView, AllUsersView, UpdateOnlineStatusView,

@@ -29,13 +29,8 @@ class SignalingService {
   set onNewGame(Function()? callback) {}
   set onPlayerJoined(Function()? callback) {}
 
-<<<<<<< HEAD
   Future<void> connectToLiveKit(String url, String token, {bool videoEnabled = false}) async {
     print("📞 Connecting to LiveKit: $url (video: $videoEnabled)");
-=======
-  Future<void> connectToLiveKit(String url, String token) async {
-    print("📞 Connecting to LiveKit: $url");
->>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
     
     if (!kIsWeb) {
       await [Permission.microphone, Permission.camera].request();
@@ -73,15 +68,11 @@ class SignalingService {
 
     try {
       await _room!.connect(url, token);
-<<<<<<< HEAD
       // Only enable camera if explicitly requested (video call)
       // Voice calls start with camera OFF until user taps the video button
       if (videoEnabled) {
         await _room!.localParticipant?.setCameraEnabled(true);
       }
-=======
-      await _room!.localParticipant?.setCameraEnabled(true);
->>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
       await _room!.localParticipant?.setMicrophoneEnabled(true);
       onConnectionState?.call(true);
     } catch (e) {
