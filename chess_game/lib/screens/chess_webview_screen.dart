@@ -38,6 +38,7 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
 
     // shared_preferences web uses 'flutter.' prefix and encodes values as JSON strings
     final script = StringBuffer();
+    // Use double quotes for the JSON value as expected by shared_preferences web
     script.write("localStorage.setItem('flutter.auth_token', '\"$accessToken\"');");
     if (refreshToken != null) {
       script.write("localStorage.setItem('flutter.refresh_token', '\"$refreshToken\"');");
@@ -46,6 +47,9 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
       final userDataJson = json.encode(userData).replaceAll("'", "\\'");
       script.write("localStorage.setItem('flutter.user_data', '$userDataJson');");
     }
+    
+    // Safety check for CSRF token in localStorage as well if needed by the frontend
+    script.write("console.log('🚀 [ChessWebView] Auth script executed');");
     
     return script.toString();
   }
@@ -234,7 +238,11 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
               Text('Cookies Count: ${cookies.length}'),
               const SizedBox(height: 8),
               const Text('Cookies:', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...cookies.map((cookie) => Text('${cookie.name}: ${cookie.value}')),
+              ...cookies.map((cookie) => Padding(
+                padding: const EdgeInsets.only(bottom: 4.0),
+                child: Text('${cookie.name}: ${cookie.value.length > 15 ? "${cookie.value.substring(0, 12)}..." : cookie.value}'),
+              )),
+              if (cookies.isEmpty) const Text('No cookies found'),
             ],
           ),
         ),

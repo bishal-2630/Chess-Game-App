@@ -7,6 +7,7 @@ from rest_framework.authentication import SessionAuthentication
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import login
+from django.middleware.csrf import get_token
 
 class WebSessionView(APIView):
     """
@@ -23,6 +24,10 @@ class WebSessionView(APIView):
             print(f"🍪 [WebSessionView] POST called by {request.user.username}")
             user = request.user
             login(request, user)
+            
+            # CRITICAL: Ensure CSRF token is generated for the session
+            csrf_token = get_token(request)
+            print(f"🛡️ [WebSessionView] CSRF Token generated: {csrf_token[:8] if csrf_token else 'NONE'}")
             
             expires_delta = timedelta(days=7)
             request.session.set_expiry(60 * 60 * 24 * 7)
