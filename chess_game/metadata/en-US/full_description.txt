@@ -1,0 +1,9 @@
+A beautiful chess game with Django authentication.
+
+Features:
+- Play against other players (Django backend).
+- Real-time communication (WebRTC/MQTT).
+- Email/Password and Guest login supported.
+- Clean, responsive UI.
+- Completely Open Source (MIT License).
+- No proprietary trackers or SDKs.

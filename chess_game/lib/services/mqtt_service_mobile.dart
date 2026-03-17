@@ -7,7 +7,10 @@ import 'isolate_handler.dart'; // Added isolate handler
 import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:audioplayers/audioplayers.dart';
+<<<<<<< HEAD
 import 'package:flutter_tts/flutter_tts.dart';
+=======
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
 import 'dart:ui';
 import 'dart:isolate';
 import 'game_service.dart';
@@ -49,9 +52,15 @@ class MqttService {
     _notificationController.add(data);
   }
 
+<<<<<<< HEAD
   final AudioPlayer _audioPlayer = AudioPlayer();
   final FlutterTts _flutterTts = FlutterTts();
   bool _isAudioLoading = false;
+=======
+  static AudioPlayer? __audioPlayer;
+  static AudioPlayer get _audioPlayer => __audioPlayer ??= AudioPlayer();
+  static bool _isAudioLoading = false;
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
   static bool _isPlaying = false;
   static bool _isMutedWindow = false; // Prevents re-ring within a short window
   bool _isInCall = false; 
@@ -736,6 +745,7 @@ class MqttService {
 
   // Ongoing call methods removed per user request
 
+<<<<<<< HEAD
   Future<void> speakRecordingAnnouncement() async {
     try {
       await _flutterTts.setLanguage("en-US");
@@ -747,6 +757,8 @@ class MqttService {
     }
   }
 
+=======
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
   void onConnected() {
     isConnected = true;
     if (_currentUsername != null && _isListening == false) {
@@ -838,8 +850,11 @@ class MqttService {
         _isPlaying = false;
       });
       
+<<<<<<< HEAD
       // TRIGGER ARCHIVAL ANNOUNCEMENT - REMOVED: Now handled by CallScreen on connection
       
+=======
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
       // Explicit resume just in case play() only sets the source
       await _audioPlayer.resume().catchError((_) {});
       

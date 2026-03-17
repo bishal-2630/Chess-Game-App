@@ -305,6 +305,12 @@ class _ChessGameScreenState extends State<ChessScreen> {
             _isIncomingCall = false;
             _isCalling = false;
             _callStatus = ""; // NEW: Clear status on remote end
+<<<<<<< HEAD
+=======
+            _remoteRenderer.srcObject = null;
+            _localRenderer.srcObject = null;
+            _isRemoteVideoOn = false;
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
           });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text("Call ended."), duration: Duration(seconds: 2)));
@@ -492,8 +498,12 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
     try {
       final token = _authService.accessToken;
+<<<<<<< HEAD
       // Request token with recording enabled for online matches
       final url = "${AppConfig.baseUrl}call/token/?room_id=$roomId&record=true";
+=======
+      final url = "${AppConfig.baseUrl}call/token/?room_id=$roomId";
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
       
       final response = await http.get(
         Uri.parse(url),
@@ -502,7 +512,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+<<<<<<< HEAD
         await _signalingService.connectToLiveKit(data['url'], data['token'], videoEnabled: false);
+=======
+        await _signalingService.connectToLiveKit(data['url'], data['token']);
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
       } else {
         _setEphemeralStatus("Connection failed: ${response.statusCode}");
       }
@@ -550,8 +564,12 @@ class _ChessGameScreenState extends State<ChessScreen> {
       // Start or Accept Call
       try {
         final token = _authService.accessToken;
+<<<<<<< HEAD
         // Request token with recording enabled for calls
         final tokenUrl = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}&record=true";
+=======
+        final tokenUrl = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}";
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
         
         final response = await http.get(
           Uri.parse(tokenUrl),
@@ -566,7 +584,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
         if (_isIncomingCall) {
           // Accept
+<<<<<<< HEAD
           await _signalingService.connectToLiveKit(livekitUrl, livekitToken, videoEnabled: false);
+=======
+          await _signalingService.connectToLiveKit(livekitUrl, livekitToken);
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
           _startCallTimer();
           setState(() {
             _isAudioOn = true;
@@ -599,7 +621,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
             initialVideo: _isVideoOn
           );
 
+<<<<<<< HEAD
           await _signalingService.connectToLiveKit(livekitUrl, livekitToken, videoEnabled: _isVideoOn);
+=======
+          await _signalingService.connectToLiveKit(livekitUrl, livekitToken);
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
         }
       } catch (e) {
         MqttService().stopAudio(broadcast: true); // Stop ringtone on error
@@ -754,6 +780,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
       _isRemoteVideoOn = false;
       _callStatus = ""; // NEW: Clear status on hangup (was "Room Disconnected")
       _playerColor = null; // Back to local mode
+<<<<<<< HEAD
+=======
+      _remoteRenderer.srcObject = null;
+      _localRenderer.srcObject = null;
+>>>>>>> 4a571096459dce595587a0248b4b8498b376faa8
     });
 
     // Reset board for a fresh local start

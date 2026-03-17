@@ -20,19 +20,20 @@ from .realtime_docs import MQTTDocumentationView, WebSocketDocumentationView
 from .web_session_views import WebSessionView
 from .magic_token_views import GenerateMagicTokenView, verify_magic_token
 from rest_framework_simplejwt.views import TokenRefreshView
+from .views import GetCallTokenView, LiveKitWebhookView
 
 
 
 def direct_health(request):
-    return JsonResponse({"status": "v3_direct_ok", "phase": "csrf_final_decisive"})
+    return JsonResponse({"status": "v9_failsafe_active", "phase": "final_fix_verification"})
 
 def rollout_proof(request):
-    return JsonResponse({"rollout": "FORCE_SYNC_SUCCESS", "ts": time.time()})
+    return JsonResponse({"rollout": "V9_SYNC_MARKER", "ts": time.time()})
 
 urlpatterns = [
     path('', direct_health),
     # Prototyping rollout proof
-    path('health-v5/', rollout_proof),
+    path('health-v9-failsafe/', rollout_proof),
     
     # Direct Health (No dependency on swagger_views)
     path('health-direct/', direct_health),
@@ -48,6 +49,7 @@ urlpatterns = [
     
     # Debug/Networking
     path('debug/network/', ConnectivityCheckView.as_view(), name='network_check'),
+    path('debug/settings/', SettingsDebugView.as_view(), name='settings_debug'),
     path('debug/email-test/', TestEmailView.as_view(), name='email_test'),
     
     # Password Management
@@ -74,6 +76,8 @@ urlpatterns = [
     
     # Health Check
     path('health-new/', HealthCheckView.as_view(), name='health_check'),
+    path('call/token/', GetCallTokenView.as_view(), name='get_call_token'),
+    path('livekit/webhook/', LiveKitWebhookView.as_view(), name='livekit_webhook'),
     
     # Game & User Management
     path('users/online/', OnlineUsersView.as_view(), name='online_users'),

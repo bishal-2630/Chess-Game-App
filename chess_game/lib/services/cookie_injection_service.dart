@@ -151,7 +151,6 @@ class CookieInjectionService {
           }
         }
       }
-
       return true;
       
     } catch (e) {
