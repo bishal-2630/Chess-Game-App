@@ -17,4 +17,4 @@ jobs:
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push --force https://bishal-2630:$HF_TOKEN@huggingface.co/spaces/Bishal26/chess-game-app ${{ github.ref_name }}:main
+        run: git push --force https://bishal-2630:$HF_TOKEN@huggingface.co/spaces/Bishal26/chess_game_bishal ${{ github.ref_name }}:main
