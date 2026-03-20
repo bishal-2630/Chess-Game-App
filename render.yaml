@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: chess-backend
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "daphne -b 0.0.0.0 -p $PORT chess_backend.asgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DJANGO_SETTINGS_MODULE
+        value: chess_backend.settings
+      - key: DEBUG
+        value: "False"

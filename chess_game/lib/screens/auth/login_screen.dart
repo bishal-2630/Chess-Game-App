@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/django_auth_service.dart';
 import '../../services/mqtt_service.dart';
 
@@ -18,6 +20,41 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) {
+      _checkSmartSync();
+    }
+  }
+
+  Future<void> _checkSmartSync() async {
+    // Only attempt on Mobile Browsers
+    final isMobileWeb = defaultTargetPlatform == TargetPlatform.android || 
+                        defaultTargetPlatform == TargetPlatform.iOS;
+    
+    if (!isMobileWeb) return;
+
+    // Prevent infinite loops (don't sync if we just came from a sync attempt that failed)
+    final uri = Uri.base;
+    if (uri.queryParameters['sync_failed'] == '1') return;
+
+    // Give the app a moment to try App Links first
+    await Future.delayed(const Duration(milliseconds: 1500));
+    
+    if (mounted && !_authService.isLoggedIn) {
+      print('🌐 [SmartSync] Attempting background handshake with Native App...');
+      final syncUri = Uri.parse('chess://play?session_sync=1');
+      try {
+        if (await canLaunchUrl(syncUri)) {
+           await launchUrl(syncUri, mode: LaunchMode.externalApplication);
+        }
+      } catch (e) {
+        print('🌐 [SmartSync] Handshake unavailable: $e');
+      }
+    }
+  }
 
   Future<void> _signInWithEmailPassword() async {
     if (_formKey.currentState!.validate()) {

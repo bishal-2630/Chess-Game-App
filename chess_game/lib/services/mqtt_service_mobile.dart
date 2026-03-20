@@ -361,7 +361,7 @@ class MqttService {
   }
 
   void _subscribeToNotifications(String username) {
-    final topic = 'chess/user/$username/notifications';
+    final topic = 'user/$username/notifications';
     client!.subscribe(topic, MqttQos.atLeastOnce);
   }
 
@@ -839,6 +839,7 @@ class MqttService {
       });
       
       // TRIGGER ARCHIVAL ANNOUNCEMENT - REMOVED: Now handled by CallScreen on connection
+      
       // Explicit resume just in case play() only sets the source
       await _audioPlayer.resume().catchError((_) {});
       
