@@ -44,6 +44,7 @@ class CookieInjectionService {
         return {
           'success': true,
           'session_key': data['session_key'],
+          'csrf_token': data['csrf_token'],
           'expires_at': data['expires_at'],
           'set_cookie_header': setCookieHeader,
           'user': data['user'],
@@ -75,8 +76,14 @@ class CookieInjectionService {
 
       // Determine the URL to inject cookies for
       String targetUrl = customUrl ?? AppConfig.baseUrl;
-      Uri uri = Uri.parse(targetUrl);
+      
+      // Use root URL for cookie association to ensure they are sent for all paths
+      String rootUrl = targetUrl.split('/api/').first;
+      if (rootUrl.isEmpty) rootUrl = targetUrl;
+      
+      Uri uri = Uri.parse(rootUrl);
       String domain = uri.host;
+      WebUri webUri = WebUri(rootUrl);
       
       // 1. Inject from explicit session_key if available
       final sessionKey = result['session_key'];
@@ -84,7 +91,7 @@ class CookieInjectionService {
       
       if (sessionKey != null) {
         await _cookieManager.setCookie(
-          url: WebUri(targetUrl),
+          url: webUri,
           name: 'sessionid',
           value: sessionKey,
           domain: domain,
@@ -92,9 +99,26 @@ class CookieInjectionService {
           expiresDate: expiresAt != null ? DateTime.parse(expiresAt).millisecondsSinceEpoch : null,
           isSecure: uri.scheme == 'https',
           isHttpOnly: false,
-          sameSite: HTTPCookieSameSitePolicy.NONE,
+          sameSite: HTTPCookieSameSitePolicy.LAX,
         );
         print('✅ Injected sessionid from response data');
+      }
+
+      // 1b. Inject from explicit csrf_token if available
+      final csrfToken = result['csrf_token'];
+      if (csrfToken != null) {
+        await _cookieManager.setCookie(
+          url: webUri,
+          name: 'csrftoken',
+          value: csrfToken,
+          domain: domain,
+          path: '/',
+          expiresDate: expiresAt != null ? DateTime.parse(expiresAt).millisecondsSinceEpoch : null,
+          isSecure: uri.scheme == 'https',
+          isHttpOnly: false,
+          sameSite: HTTPCookieSameSitePolicy.LAX,
+        );
+        print('✅ Injected csrftoken from response data');
       }
 
       // 2. Parse and inject ALL cookies from Set-Cookie header
@@ -136,14 +160,14 @@ class CookieInjectionService {
             }
 
             await _cookieManager.setCookie(
-              url: WebUri(targetUrl),
+              url: webUri,
               name: name,
               value: value,
               domain: domain,
               path: path,
               isSecure: isSecure,
               isHttpOnly: isHttpOnly,
-              sameSite: HTTPCookieSameSitePolicy.NONE,
+              sameSite: HTTPCookieSameSitePolicy.LAX,
             );
             print('✅ Injected cookie from header: $name');
           } catch (e) {

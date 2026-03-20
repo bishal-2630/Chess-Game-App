@@ -41,6 +41,7 @@ class WebSessionView(APIView):
             response_data = {
                 'success': True,
                 'session_key': actual_session_key,
+                'csrf_token': csrf_token,
                 'expires_at': expiration.isoformat(),
                 'user': {
                     'id': user.id,
@@ -50,9 +51,22 @@ class WebSessionView(APIView):
             }
             
             response = Response(response_data, status=status.HTTP_200_OK)
+            # Set sessionid cookie
             response.set_cookie(
                 key='sessionid',
                 value=actual_session_key,
+                max_age=60 * 60 * 24 * 7,
+                expires=expiration,
+                path='/',
+                domain=None,
+                secure=True,
+                httponly=False,
+                samesite='Lax',
+            )
+            # Set csrftoken cookie
+            response.set_cookie(
+                key='csrftoken',
+                value=csrf_token,
                 max_age=60 * 60 * 24 * 7,
                 expires=expiration,
                 path='/',

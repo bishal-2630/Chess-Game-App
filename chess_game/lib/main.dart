@@ -120,29 +120,10 @@ final GoRouter _globalRouter = GoRouter(
         ),
         GoRoute(
           path: '/play',
-          redirect: (context, state) {
-            if (!kIsWeb && authService.isLoggedIn) {
-              AppLogger.i('🚦 [Router] /play Intercepted -> Session Transfer Triggered');
-              DeepLinkHandler().performSessionTransfer(state.uri);
-              return '/chess';
-            }
-            if (kIsWeb) return '/users';
-            return null;
-          },
           builder: (context, state) => const ChessWebViewScreen(),
         ),
         GoRoute(
           path: '/game/:gameId',
-          redirect: (context, state) {
-            final gameId = state.pathParameters['gameId'];
-            if (!kIsWeb && authService.isLoggedIn) {
-              AppLogger.i('🚦 [Router] /game Intercepted -> Session Transfer Triggered');
-              DeepLinkHandler().performSessionTransfer(state.uri);
-              return '/chess';
-            }
-            if (kIsWeb) return '/chess?roomId=$gameId';
-            return null;
-          },
           builder: (context, state) {
             final gameId = state.pathParameters['gameId'];
             return ChessWebViewScreen(gameId: gameId);
