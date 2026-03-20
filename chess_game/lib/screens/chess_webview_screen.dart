@@ -26,6 +26,7 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
   InAppWebViewController? _webViewController;
   bool _isLoading = true;
   bool _cookiesInjected = false;
+  String? _magicUrl;
   String? _errorMessage;
   double _progress = 0;
 
@@ -57,30 +58,42 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
   @override
   void initState() {
     super.initState();
-    _injectCookiesBeforeLoad();
+    _prepareMagicLink();
   }
 
-  Future<void> _injectCookiesBeforeLoad() async {
+  Future<void> _prepareMagicLink() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    // Inject cookies before loading the page
-    final success = await _cookieService.injectAuthCookies(
-      customUrl: _webUrl,
-    );
+    final result = await _cookieService.generateMagicToken();
 
-    if (success) {
+    if (result['success'] == true) {
+      final token = result['handshake_token'];
+      final nextPath = _webUrlPath;
+      final magicUrl = '${AppConfig.baseUrl}magic-token/verify/?token=$token&next=$nextPath';
+      
       setState(() {
+        _magicUrl = magicUrl;
         _cookiesInjected = true;
       });
     } else {
       setState(() {
-        _errorMessage = 'Failed to authenticate. Please try logging in again.';
+        _errorMessage = 'Failed to generate secure access token. Please try logging in again.';
         _isLoading = false;
       });
     }
+  }
+
+  String get _webUrlPath {
+    if (widget.customUrl != null) {
+      return widget.customUrl!;
+    }
+    if (widget.gameId != null) {
+      return '/game/${widget.gameId}';
+    }
+    return '/play';
   }
 
   String get _webUrl {
@@ -133,7 +146,7 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _injectCookiesBeforeLoad,
+            onPressed: _prepareMagicLink,
               child: const Text('Retry'),
             ),
           ],
@@ -158,7 +171,7 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
       children: [
         InAppWebView(
           initialUrlRequest: URLRequest(
-            url: WebUri(_webUrl),
+            url: WebUri(_magicUrl ?? _webUrl),
           ),
           initialUserScripts: UnmodifiableListView<UserScript>([
             UserScript(

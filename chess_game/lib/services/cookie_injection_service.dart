@@ -205,4 +205,37 @@ class CookieInjectionService {
       return [];
     }
   }
+
+  /// Generate a magic token for session bridging
+  Future<Map<String, dynamic>> generateMagicToken() async {
+    try {
+      final token = _authService.accessToken;
+      if (token == null) {
+        return {'success': false, 'error': 'No authentication token available'};
+      }
+
+      final url = '${AppConfig.baseUrl}magic-token/generate/';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          ...json.decode(response.body),
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'Failed to generate magic token: ${response.statusCode}'
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
 }
