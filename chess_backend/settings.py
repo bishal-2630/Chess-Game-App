@@ -13,7 +13,7 @@ SECRET_KEY = config('SECRET_KEY', default='chess-game-bishal-2024-termux-key')
 import time
 
 # Use Railway's environment variables
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = True
 ROOT_URLCONF = 'chess_backend.urls'
 print(f"🚀 SERVER STARTING - TS: {time.time()} - DEBUG: {DEBUG} - URLCONF: {ROOT_URLCONF}")
 
@@ -277,8 +277,14 @@ else:
     SWAGGER_UI_OAUTH2_REDIRECT_URL = 'https://chessgameauth.share.zrok.io/swagger/oauth2-redirect.html'
 
 
+# LiveKit Configuration
+LIVEKIT_API_KEY = config('LIVEKIT_API_KEY', default='APImrhGecyNFG7p')
+LIVEKIT_API_SECRET = config('LIVEKIT_API_SECRET', default='CEf97PsPDAFW6aVRtmS1NlMid5LQZZ3xWKJyfQPqQ5g')
+LIVEKIT_URL = config('LIVEKIT_URL', default='wss://chess-game-bishal-ptignr4p.livekit.cloud')
+
 # GHOSTBUSTER CONFIG
 CSRF_FAILURE_VIEW = 'auth_app.views.csrf_failure'
 APPEND_SLASH = False
-DEPLOYMENT_ID = "V7_EXORCIST_FINAL"
+DEPLOYMENT_ID = "V9_FINAL_STABLE"
 print(f"👻 GHOSTBUSTER ACTIVE - ID: {DEPLOYMENT_ID}")
+print(f"📞 LIVEKIT CONFIG LOADED - KEY: {LIVEKIT_API_KEY[:3]}...")

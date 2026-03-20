@@ -7,17 +7,8 @@ class AuthAppConfig(AppConfig):
     name = 'auth_app'
 
     def ready(self):
-        # Auto-run migrations on startup, but avoid recursion if already migrating
-        if 'migrate' in sys.argv or 'makemigrations' in sys.argv or 'collectstatic' in sys.argv:
-            return
-
-        print("--- AuthApp: Attempting Auto-Migration ---")
-        try:
-            from django.core.management import call_command
-            # Ensure tables are created
-            call_command('migrate', interactive=False)
-            print("--- AuthApp: Auto-Migration Successful ---")
-        except Exception as e:
-            print(f"--- AuthApp: Auto-Migration Failed: {e} ---")
-            import traceback
-            print(traceback.format_exc())
+        # Auto-migration disabled for Vercel stability
+        pass
+        # if 'migrate' in sys.argv or 'makemigrations' in sys.argv or 'collectstatic' in sys.argv:
+        #     return
+        # ...

@@ -43,19 +43,25 @@ Thumbs.db
 .env*.local
 
 # Flutter/Dart
+# Flutter/Dart
 **/.dart_tool/
 **/build/
 **/.flutter-plugins*
+**/.flutter-plugins-dependencies
 **/.packages
 **/.pub-cache/
 **/.pub/
-**/web_plugin_registrant.dart
-**/dart_plugin_registrant.dart
-**/GeneratedPluginRegistrant.java
+**/pubspec.lock
+**/.metadata
+**/*.iml
+**/.idea/
+**/.vscode/
+**/plugin_screenshots/
+**/doc/api/
 
 # Android
+**/android/local.properties
 **/.gradle/
-**/local.properties
 **/ant-properties.xml
 **/ant-gen/
 **/proguard-project.txt
@@ -64,14 +70,28 @@ Thumbs.db
 **/gen/
 **/bin/
 **/res/raw/
+**/GeneratedPluginRegistrant.java
 
-# IDE files
-**/*.iml
-**/.idea/
-**/.vscode/
+# iOS
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/App.framework
+**/ios/Flutter/App.podspec
+**/ios/Flutter/App.framework.dSYM
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/appicon_config.json
+**/ios/Runner/GeneratedPluginRegistrant.h
+**/ios/Runner/GeneratedPluginRegistrant.m
+
+# Desktop (Linux/macOS/Windows)
+**/linux/flutter/generated_plugin_registrant.cc
+**/linux/flutter/generated_plugin_registrant.h
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/windows/flutter/generated_plugin_registrant.cc
+**/windows/flutter/generated_plugin_registrant.h
 
 # Gradle
 **/gradlew
 **/gradlew.bat
-**/.gradle/
 **/gradle/

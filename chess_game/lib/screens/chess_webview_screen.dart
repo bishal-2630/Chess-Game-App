@@ -26,6 +26,7 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
   InAppWebViewController? _webViewController;
   bool _isLoading = true;
   bool _cookiesInjected = false;
+  String? _magicUrl;
   String? _errorMessage;
   double _progress = 0;
 
@@ -38,6 +39,7 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
 
     // shared_preferences web uses 'flutter.' prefix and encodes values as JSON strings
     final script = StringBuffer();
+    // Use double quotes for the JSON value as expected by shared_preferences web
     script.write("localStorage.setItem('flutter.auth_token', '\"$accessToken\"');");
     if (refreshToken != null) {
       script.write("localStorage.setItem('flutter.refresh_token', '\"$refreshToken\"');");
@@ -47,38 +49,51 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
       script.write("localStorage.setItem('flutter.user_data', '$userDataJson');");
     }
     
+    // Safety check for CSRF token in localStorage as well if needed by the frontend
+    script.write("console.log('🚀 [ChessWebView] Auth script executed');");
     return script.toString();
   }
 
   @override
   void initState() {
     super.initState();
-    _injectCookiesBeforeLoad();
+    _prepareMagicLink();
   }
 
-  Future<void> _injectCookiesBeforeLoad() async {
+  Future<void> _prepareMagicLink() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    // Inject cookies before loading the page
-    final success = await _cookieService.injectAuthCookies(
-      customUrl: _webUrl,
-    );
+    final result = await _cookieService.generateMagicToken();
 
-    if (success) {
+    if (result['success'] == true) {
+      final token = result['handshake_token'];
+      final nextPath = _webUrlPath;
+      final magicUrl = '${AppConfig.baseUrl}magic-token/verify/?token=$token&next=$nextPath';
+      
       setState(() {
+        _magicUrl = magicUrl;
         _cookiesInjected = true;
       });
     } else {
       setState(() {
-        _errorMessage = 'Failed to authenticate. Please try logging in again.';
+        _errorMessage = 'Failed to generate secure access token. Please try logging in again.';
         _isLoading = false;
       });
     }
   }
 
+  String get _webUrlPath {
+    if (widget.customUrl != null) {
+      return widget.customUrl!;
+    }
+    if (widget.gameId != null) {
+      return '/game/${widget.gameId}';
+    }
+    return '/play';
+  }
   String get _webUrl {
     if (widget.customUrl != null) {
       return widget.customUrl!;
@@ -129,7 +144,7 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _injectCookiesBeforeLoad,
+            onPressed: _prepareMagicLink,
               child: const Text('Retry'),
             ),
           ],
@@ -154,7 +169,7 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
       children: [
         InAppWebView(
           initialUrlRequest: URLRequest(
-            url: WebUri(_webUrl),
+            url: WebUri(_magicUrl ?? _webUrl),
           ),
           initialUserScripts: UnmodifiableListView<UserScript>([
             UserScript(
@@ -234,7 +249,11 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
               Text('Cookies Count: ${cookies.length}'),
               const SizedBox(height: 8),
               const Text('Cookies:', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...cookies.map((cookie) => Text('${cookie.name}: ${cookie.value}')),
+              ...cookies.map((cookie) => Padding(
+                padding: const EdgeInsets.only(bottom: 4.0),
+                child: Text('${cookie.name}: ${cookie.value.length > 15 ? "${cookie.value.substring(0, 12)}..." : cookie.value}'),
+              )),
+              if (cookies.isEmpty) const Text('No cookies found'),
             ],
           ),
         ),

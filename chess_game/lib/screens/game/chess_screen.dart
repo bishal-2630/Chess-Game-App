@@ -305,6 +305,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
             _isIncomingCall = false;
             _isCalling = false;
             _callStatus = ""; // NEW: Clear status on remote end
+            _callStatus = ""; // NEW: Clear status on remote end
           });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text("Call ended."), duration: Duration(seconds: 2)));
@@ -752,6 +753,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
       _isMuted = false;
       _isVideoOn = false;
       _isRemoteVideoOn = false;
+      _callStatus = ""; // NEW: Clear status on hangup (was "Room Disconnected")
+      _playerColor = null; // Back to local mode
       _callStatus = ""; // NEW: Clear status on hangup (was "Room Disconnected")
       _playerColor = null; // Back to local mode
     });
