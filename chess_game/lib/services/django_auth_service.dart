@@ -42,6 +42,8 @@ class DjangoAuthService extends ChangeNotifier {
   String? _refreshToken;
   static String? _nextRoute;
   bool _isInitialized = false;
+  bool _isInitializing = false;
+  Completer<void>? _initCompleter;
 
   // Getters
   Map<String, dynamic>? get currentUser => _currentUser;
@@ -54,6 +56,15 @@ class DjangoAuthService extends ChangeNotifier {
   static String? get nextRoute => _nextRoute;
 
   Future<void> initialize({bool autoConnectMqtt = true}) async {
+    if (_isInitializing) {
+      AppLogger.d('⏳ [Auth] Already initializing, waiting...');
+      return _initCompleter?.future;
+    }
+    
+    if (_isInitialized) return;
+
+    _isInitializing = true;
+    _initCompleter = Completer<void>();
     AppLogger.i('🚀 [Auth] Initializing...');
     _isInitialized = false;
     notifyListeners();
@@ -88,6 +99,9 @@ class DjangoAuthService extends ChangeNotifier {
 
     print('✅ [Auth] Initialization complete. isLoggedIn=${isLoggedIn}');
     _isInitialized = true;
+    _isInitializing = false;
+    _initCompleter?.complete();
+    _initCompleter = null;
     notifyListeners();
   }
 
@@ -140,13 +154,8 @@ class DjangoAuthService extends ChangeNotifier {
   /// Bootstrap authentication on Web using session cookies OR captured JWT
   Future<void> _bootstrapWebSession() async {
     try {
-      AppLogger.i('🌐 [Bootstrap] Attempting web session bootstrap...');
-      
-      if (kIsWeb) {
-        scaffoldMessengerKey.currentState?.showSnackBar(
-          const SnackBar(content: Text('Finalizing secure session...'), duration: Duration(seconds: 2)),
-        );
-      }
+      // UI notifications moved to specialized screens or log only during init
+      AppLogger.d('🌐 [Bootstrap] Attempting web session bootstrap...');
 
       final url = '${_baseUrl}web-session/';
       print('🌐 [Bootstrap] Final URL: $url');
@@ -174,8 +183,7 @@ class DjangoAuthService extends ChangeNotifier {
       }
 
       print('🌐 [Bootstrap] Response Code: ${response.statusCode}');
-      print('🌐 [Bootstrap] Response Body: ${response.body}');
-
+      
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
@@ -184,33 +192,11 @@ class DjangoAuthService extends ChangeNotifier {
           _currentUser = data['user'];
           await _saveAuthData();
           AppLogger.i('✅ [Bootstrap] SUCCESS for ${_currentUser?['username']}');
-          
-          if (kIsWeb) {
-            final method = (_accessToken != null) ? 'Secure Link' : 'Session Sync';
-            scaffoldMessengerKey.currentState?.showSnackBar(
-              SnackBar(
-                content: Text('Welcome back, ${_currentUser?['username']}! ($method) 👋'),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 4),
-              ),
-            );
-          }
         } else {
           AppLogger.w('ℹ️ [Bootstrap] 200 OK but success=false: ${response.body}');
         }
       } else {
         AppLogger.e('❌ [Bootstrap] API Error: ${response.statusCode} - ${response.body}');
-        if (kIsWeb && (_accessToken != null || response.statusCode == 401)) {
-          // Only show error snackbar if we actually TRIED to bridge or it was an unexpected failure
-          scaffoldMessengerKey.currentState?.showSnackBar(
-            SnackBar(
-              content: Text('Bridge sync failed (${response.statusCode}). Please log in manually.'),
-              backgroundColor: Colors.redAccent,
-              duration: const Duration(seconds: 5),
-              action: SnackBarAction(label: 'Dismiss', onPressed: () {}, textColor: Colors.white),
-            ),
-          );
-        }
       }
     } catch (e) {
       AppLogger.e('❌ [Bootstrap] Network/Exception: $e');

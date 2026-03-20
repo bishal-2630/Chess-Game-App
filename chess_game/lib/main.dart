@@ -33,9 +33,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MqttService.isMainIsolate = true;
 
-  // Initialize Auth Service (Non-blocking so UI starts immediately)
+  // Initialize Auth Service (Wait for it so router and initial screens have correct state)
   final authService = DjangoAuthService();
-  authService.initialize();
+  await authService.initialize();
 
   // Initialize MQTT Service (sets up local notifications)
   final mqttService = MqttService();
@@ -411,37 +411,116 @@ class _IncomingCallWrapperState extends State<IncomingCallWrapper> {
   }
 }
 
-class BootstrappingScreen extends StatelessWidget {
+class BootstrappingScreen extends StatefulWidget {
   final String? nextRoute;
   const BootstrappingScreen({super.key, this.nextRoute});
+
+  @override
+  State<BootstrappingScreen> createState() => _BootstrappingScreenState();
+}
+
+class _BootstrappingScreenState extends State<BootstrappingScreen> {
+  String _status = 'Configuring Secure Session';
+  String _subStatus = 'Finalizing bridge transfer...';
+  bool _hasError = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _performBootstrap();
+  }
+
+  Future<void> _performBootstrap() async {
+    try {
+      final auth = DjangoAuthService();
+      
+      // If we are already initialized and have a user, just move on
+      if (auth.isInitialized && auth.isLoggedIn) {
+        _navigateToNext();
+        return;
+      }
+
+      // Explicitly trigger initialization to capture URL tokens and bootstrap session
+      await auth.initialize();
+
+      if (auth.isLoggedIn) {
+        setState(() {
+          _status = 'Success!';
+          _subStatus = 'Session established. Redirecting...';
+        });
+        _navigateToNext();
+      } else {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'Could not verify secure session. Please try logging in manually.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+        _errorMessage = 'Bootstrap error: $e';
+      });
+    }
+  }
+
+  void _navigateToNext() {
+    if (!mounted) return;
+    
+    // Use the nextRoute from URL if available, otherwise fallback to widget param or /play
+    final next = DjangoAuthService.nextRoute ?? widget.nextRoute ?? '/play';
+    AppLogger.i('🚀 [Bridge] Bootstrap complete. Navigating to: $next');
+    
+    // Short delay to let user see "Success"
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) context.go(next);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF1E1E1E),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(color: Colors.blue),
-            const SizedBox(height: 24),
-            const Text(
-              'Configuring Secure Session',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Finalizing bridge transfer...',
-              style: TextStyle(color: Colors.white.withOpacity(0.7)),
-            ),
-            if (kDebugMode) ...[
-              const SizedBox(height: 20),
-              Text(
-                'Next: ${nextRoute ?? "Default"}',
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ]
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (!_hasError) ...[
+                const CircularProgressIndicator(color: Colors.blue),
+                const SizedBox(height: 32),
+                Text(
+                  _status,
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _subStatus,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+                ),
+              ] else ...[
+                const Icon(Icons.error_outline, color: Colors.redAccent, size: 64),
+                const SizedBox(height: 24),
+                const Text(
+                  'Bootstrap Failed',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage ?? 'Unknown error during session bridge.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () => context.go('/login'),
+                  child: const Text('Back to Login'),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
