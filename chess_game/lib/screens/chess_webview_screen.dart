@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter/foundation.dart';
 import '../services/cookie_injection_service.dart';
 import '../services/config.dart';
 import '../services/django_auth_service.dart';
@@ -130,6 +131,20 @@ class _ChessWebViewScreenState extends State<ChessWebViewScreen> {
   }
 
   Widget _buildBody() {
+    // Failsafe: WebView bridging should never run on the Web App本身 
+    if (kIsWeb) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24.0),
+          child: Text(
+            'WebView bridging is not supported on the Web platform.\nPlease navigate to the play section directly.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 18),
+          ),
+        ),
+      );
+    }
+
     if (_errorMessage != null) {
       return Center(
         child: Column(

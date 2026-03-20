@@ -115,17 +115,22 @@ final GoRouter _globalRouter = GoRouter(
           path: '/web-chess',
           builder: (context, state) {
             final gameId = state.uri.queryParameters['gameId'];
+            if (kIsWeb) return ChessScreen(roomId: gameId);
             return ChessWebViewScreen(gameId: gameId);
           },
         ),
         GoRoute(
           path: '/play',
-          builder: (context, state) => const ChessWebViewScreen(),
+          builder: (context, state) {
+            if (kIsWeb) return const ChessScreen();
+            return const ChessWebViewScreen();
+          },
         ),
         GoRoute(
           path: '/game/:gameId',
           builder: (context, state) {
             final gameId = state.pathParameters['gameId'];
+            if (kIsWeb) return ChessScreen(roomId: gameId);
             return ChessWebViewScreen(gameId: gameId);
           },
         ),
