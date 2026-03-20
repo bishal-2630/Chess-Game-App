@@ -18,7 +18,7 @@ class MQTTDocumentationView(APIView):
         **Protocol**: MQTT v3.1.1
 
         ### Topics
-        - `chess/user/{username}/notifications`: Primary topic for user-specific notifications.
+        - `user/{username}/notifications`: Primary topic for user-specific notifications.
 
         ### Message Format (JSON)
         ```json

@@ -9,12 +9,12 @@ logger = logging.getLogger(__name__)
 MQTT_BROKER = "broker.emqx.io"
 MQTT_PORT = 1883
 MQTT_KEEPALIVE = 60
-MQTT_TOPIC_PREFIX = "chess/user/"
+MQTT_TOPIC_PREFIX = "user/"
 
 def publish_mqtt_notification(username, notification_type, payload):
     """
     Publishes a notification message to the user's specific MQTT topic.
-    Topic format: chess/user/{username}/notifications
+    Topic format: user/{username}/notifications
     """
     logger.info(f"🔔 MQTT PUBLISH: Starting publish for user '{username}', type '{notification_type}'")
     

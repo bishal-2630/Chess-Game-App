@@ -209,15 +209,22 @@ class _MyAppState extends State<MyApp> {
     deepLinkHandler.initialize((Uri uri) async {
       AppLogger.i('📎 [DeepLink] Incoming: $uri');
       
-      // If we are on mobile and logged in, transfer session to system browser
+      final linkData = deepLinkHandler.parseDeepLink(uri);
+      AppLogger.d('📎 [DeepLink] Parsed Model: $linkData');
+      
+      // NEW: Explicit Session Sync request from Web
+      if (!kIsWeb && authService.isLoggedIn && linkData.sessionSync) {
+        AppLogger.i('📎 [DeepLink] Automated Sync requested. Triggering Session Transfer...');
+        await deepLinkHandler.performSessionTransfer(uri);
+        return;
+      }
+
+      // Existing Mobile + Auth check for other links
       if (!kIsWeb && authService.isLoggedIn) {
         AppLogger.i('📎 [DeepLink] Mobile + Authenticated. Triggering Session Transfer...');
         await deepLinkHandler.performSessionTransfer(uri);
         return; 
       }
-
-      final linkData = deepLinkHandler.parseDeepLink(uri);
-      AppLogger.d('📎 [DeepLink] Parsed Model: $linkData');
       
       switch (linkData.type) {
         case DeepLinkType.play:

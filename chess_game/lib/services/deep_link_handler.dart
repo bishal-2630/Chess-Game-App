@@ -139,6 +139,7 @@ class DeepLinkHandler {
         type: DeepLinkType.play,
         gameId: queryParams['gameId'],
         roomId: queryParams['roomId'],
+        sessionSync: queryParams['session_sync'] == '1',
       );
     } else if (path.contains('/game/') || host == 'game') {
       // Extract game ID from path like /game/123 or host if it's chess://game/123
@@ -146,6 +147,7 @@ class DeepLinkHandler {
       return DeepLinkData(
         type: DeepLinkType.game,
         gameId: gameId.isEmpty ? host : gameId,
+        sessionSync: queryParams['session_sync'] == '1',
       );
     } else if (path.contains('/profile')) {
       return DeepLinkData(
@@ -153,7 +155,10 @@ class DeepLinkHandler {
         username: queryParams['username'],
       );
     } else {
-      return DeepLinkData(type: DeepLinkType.home);
+      return DeepLinkData(
+        type: DeepLinkType.home,
+        sessionSync: queryParams['session_sync'] == '1',
+      );
     }
   }
 
@@ -177,16 +182,18 @@ class DeepLinkData {
   final String? gameId;
   final String? roomId;
   final String? username;
+  final bool sessionSync;
 
   DeepLinkData({
     required this.type,
     this.gameId,
     this.roomId,
     this.username,
+    this.sessionSync = false,
   });
 
   @override
   String toString() {
-    return 'DeepLinkData(type: $type, gameId: $gameId, roomId: $roomId, username: $username)';
+    return 'DeepLinkData(type: $type, gameId: $gameId, roomId: $roomId, username: $username, sessionSync: $sessionSync)';
   }
 }

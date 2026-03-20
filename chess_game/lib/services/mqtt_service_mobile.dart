@@ -361,7 +361,7 @@ class MqttService {
   }
 
   void _subscribeToNotifications(String username) {
-    final topic = 'chess/user/$username/notifications';
+    final topic = 'user/$username/notifications';
     client!.subscribe(topic, MqttQos.atLeastOnce);
   }
 
