@@ -55,17 +55,18 @@
                 <data android:host="game"/>
             </intent-filter>
             
-            <!-- Deep Link: HTTP/HTTPS URLs (App Links) -->
+            <!-- Deep Link: HTTP/HTTPS URLs (App Links) - Hugging Face Backend -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="http"/>
                 <data android:scheme="https"/>
-                <data android:host="positive-brianne-self2630-c40dbd11.koyeb.app"/>
-                <!-- ONLY intercept specific trigger paths. Do NOT use broad matchers here. -->
+                <data android:host="bishal26-chess-backend.hf.space"/>
+                <!-- Intercept /play and /game paths to bridge the session -->
                 <data android:pathPrefix="/play"/>
                 <data android:pathPrefix="/game"/>
+                <data android:pathPrefix="/chess"/>
             </intent-filter>
         </activity>
         <service
