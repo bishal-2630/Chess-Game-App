@@ -2380,6 +2380,22 @@ class _ChessGameScreenState extends State<ChessScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => context.go('/snake-ladder'),
+                            icon: const Icon(Icons.casino),
+                            label: const Text('Snake & Ladders'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepOrange,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),

@@ -6,6 +6,7 @@ import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password.dart';
 import 'screens/game/chess_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/game/snake_ladder_screen.dart';
 import 'screens/call_screen.dart';
 import 'screens/users/user_list_screen.dart';
 import 'screens/users/invitations_screen.dart';
@@ -135,6 +136,10 @@ final GoRouter _globalRouter = GoRouter(
             final nextParam = state.uri.queryParameters['next'];
             return BootstrappingScreen(nextRoute: nextParam);
           },
+        ),
+        GoRoute(
+          path: '/snake-ladder',
+          builder: (context, state) => const SnakeLadderScreen(),
         ),
       ],
     ),
