@@ -223,10 +223,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 40),
 
                     // Logo or app name
+                    Image.asset('assets/icon/chess_icon_new.png', height: 120),
+                    const SizedBox(height: 10),
                     const Text(
-                      'Chess Game',
+                      'chess-bishal',
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.blue,
                       ),

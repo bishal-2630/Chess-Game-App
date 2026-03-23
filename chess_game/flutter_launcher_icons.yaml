@@ -1,0 +1,4 @@
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "c:/Chess1/chess_game/assets/icon/chess_icon_new.png"

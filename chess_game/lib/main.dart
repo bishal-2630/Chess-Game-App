@@ -423,6 +423,8 @@ class BootstrappingScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Image.asset('assets/icon/chess_icon_new.png', height: 100),
+            const SizedBox(height: 32),
             const CircularProgressIndicator(color: Colors.blue),
             const SizedBox(height: 24),
             const Text(
