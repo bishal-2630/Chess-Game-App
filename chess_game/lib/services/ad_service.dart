@@ -1,0 +1,69 @@
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'dart:io';
+
+class AdService {
+  static final AdService _instance = AdService._internal();
+  factory AdService() => _instance;
+  AdService._internal();
+
+  RewardedAd? _rewardedAd;
+  bool _isAdLoaded = false;
+
+  // Test Ad Unit IDs from Google
+  static String get rewardedAdUnitId {
+    if (Platform.isAndroid) {
+      return 'ca-app-pub-3940256099942544/5224354917';
+    } else if (Platform.isIOS) {
+      return 'ca-app-pub-3940256099942544/1712485313';
+    } else {
+      throw UnsupportedError("Unsupported platform");
+    }
+  }
+
+  Future<void> init() async {
+    await MobileAds.instance.initialize();
+    loadRewardedAd();
+  }
+
+  void loadRewardedAd() {
+    RewardedAd.load(
+      adUnitId: rewardedAdUnitId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _rewardedAd = ad;
+          _isAdLoaded = true;
+          
+          _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _isAdLoaded = false;
+              loadRewardedAd(); // Load next ad
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+              _isAdLoaded = false;
+              loadRewardedAd();
+            },
+          );
+        },
+        onAdFailedToLoad: (error) {
+          _isAdLoaded = false;
+          _rewardedAd = null;
+        },
+      ),
+    );
+  }
+
+  void showRewardedAd({required Function(RewardItem) onUserEarnedReward}) {
+    if (_isAdLoaded && _rewardedAd != null) {
+      _rewardedAd!.show(onUserEarnedReward: (ad, reward) {
+        onUserEarnedReward(reward);
+      });
+    } else {
+      loadRewardedAd();
+    }
+  }
+
+  bool get isAdLoaded => _isAdLoaded;
+}

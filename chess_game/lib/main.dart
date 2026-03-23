@@ -16,6 +16,7 @@ import 'services/mqtt_service.dart';
 import 'services/game_service.dart';
 // Background service removed per user request
 import 'services/deep_link_handler.dart';
+import 'services/ad_service.dart';
 import 'dart:async';
 import 'dart:isolate';
 import 'dart:ui';
@@ -44,6 +45,7 @@ void main() async {
   // Isolate listener is mobile-only
   if (!kIsWeb) {
     mqttService.initializeIsolateListener(isBackground: false);
+    await AdService().init();
   }
 
   runApp(const MyApp());

@@ -8,10 +8,11 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:flutter/foundation.dart';
 import '../../services/config.dart';
 import '../../services/game_service.dart';
+import '../../services/ad_service.dart';
+import '../../services/mqtt_service.dart';
 import 'dart:math';
 import 'dart:async';
 import 'package:permission_handler/permission_handler.dart';
-import '../../services/mqtt_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -2390,6 +2391,39 @@ class _ChessGameScreenState extends State<ChessScreen> {
                             label: const Text('Snake & Ladders'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.deepOrange,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              if (!kIsWeb) {
+                                AdService().showRewardedAd(
+                                  onUserEarnedReward: (reward) {
+                                    setState(() {
+                                      _undoMove();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Reward Earned: Undo granted!'))
+                                      );
+                                    });
+                                  },
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Ads are only available on mobile.'))
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.video_library, color: Colors.white),
+                            label: const Text('Watch Ad for Undo', style: TextStyle(color: Colors.white)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[700],
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),
