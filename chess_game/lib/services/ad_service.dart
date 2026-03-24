@@ -8,6 +8,7 @@ class AdService {
 
   RewardedAd? _rewardedAd;
   bool _isAdLoaded = false;
+  bool _isInitialized = false;
 
   // Test Ad Unit IDs from Google
   static String get rewardedAdUnitId {
@@ -21,8 +22,13 @@ class AdService {
   }
 
   Future<void> init() async {
-    await MobileAds.instance.initialize();
-    loadRewardedAd();
+    try {
+      await MobileAds.instance.initialize();
+      _isInitialized = true;
+      loadRewardedAd();
+    } catch (e) {
+      _isInitialized = false;
+    }
   }
 
   void loadRewardedAd() {
@@ -55,12 +61,23 @@ class AdService {
     );
   }
 
-  void showRewardedAd({required Function(RewardItem) onUserEarnedReward}) {
+  void showRewardedAd({required Function(RewardItem) onUserEarnedReward, Function(String)? onError}) {
+    if (!_isInitialized) {
+      init();
+      if (onError != null) {
+        onError("Ad service is initializing. Please try again in a few seconds.");
+      }
+      return;
+    }
+    
     if (_isAdLoaded && _rewardedAd != null) {
       _rewardedAd!.show(onUserEarnedReward: (ad, reward) {
         onUserEarnedReward(reward);
       });
     } else {
+      if (onError != null) {
+        onError("Ad is not ready yet. Please try again soon.");
+      }
       loadRewardedAd();
     }
   }
