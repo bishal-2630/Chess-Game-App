@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/django_auth_service.dart';
 
 class SnakeLadderScreen extends StatefulWidget {
   const SnakeLadderScreen({super.key});
@@ -19,8 +20,14 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
   bool isPlayer1Turn = true;
   int lastDiceRoll = 0;
   bool isRolling = false;
-  String gameStatus = "Player 1's Turn";
+  String gameStatus = "";
   bool gameOver = false;
+
+  final DjangoAuthService _authService = DjangoAuthService();
+  late String p1Name;
+  late String p2Name;
+  String? p1ImageUrl;
+  String? p2ImageUrl;
 
   late AnimationController _diceController;
   late Animation<double> _diceAnimation;
@@ -60,6 +67,15 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
       parent: _diceController,
       curve: Curves.elasticOut,
     );
+    
+    _initializePlayers();
+  }
+
+  void _initializePlayers() {
+    p1Name = _authService.displayName;
+    p2Name = "Player 2";
+    p1ImageUrl = _authService.currentUser?['profile_picture'];
+    gameStatus = "$p1Name's Turn";
   }
 
   @override
@@ -137,7 +153,7 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
     if (nextPos == totalSquares) {
       setState(() {
         gameOver = true;
-        gameStatus = "Player ${isPlayer1Turn ? 1 : 2} Wins! 🏆";
+        gameStatus = "${isPlayer1Turn ? p1Name : p2Name} Wins! 🏆";
       });
       _showVictoryDialog();
     } else {
@@ -149,7 +165,7 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
     setState(() {
       isRolling = false;
       isPlayer1Turn = !isPlayer1Turn;
-      gameStatus = "Player ${isPlayer1Turn ? 1 : 2}'s Turn";
+      gameStatus = "${isPlayer1Turn ? p1Name : p2Name}'s Turn";
     });
   }
 
@@ -168,7 +184,7 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text("🏆 Victory!"),
-        content: Text("Player ${isPlayer1Turn ? 1 : 2} has won the game!"),
+        content: Text("${isPlayer1Turn ? p1Name : p2Name} has won the game!"),
         actions: [
           TextButton(
             onPressed: () {
@@ -196,7 +212,7 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
       isPlayer1Turn = true;
       lastDiceRoll = 0;
       isRolling = false;
-      gameStatus = "Player 1's Turn";
+      gameStatus = "$p1Name's Turn";
       gameOver = false;
     });
   }
@@ -283,9 +299,9 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildPlayerCard(1, player1Pos, Colors.blue, isPlayer1Turn),
+                    _buildPlayerCard(p1Name, p1ImageUrl, player1Pos, Colors.blue, isPlayer1Turn),
                     _buildDice(),
-                    _buildPlayerCard(2, player2Pos, Colors.orange, !isPlayer1Turn),
+                    _buildPlayerCard(p2Name, p2ImageUrl, player2Pos, Colors.orange, !isPlayer1Turn),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -423,7 +439,7 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
     );
   }
 
-  Widget _buildPlayerCard(int id, int pos, Color color, bool isActive) {
+  Widget _buildPlayerCard(String name, String? imageUrl, int pos, Color color, bool isActive) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -437,11 +453,23 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
       ),
       child: Column(
         children: [
-          Text("P$id",
-              style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16)),
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: color.withAlpha(50),
+            backgroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
+            child: imageUrl == null
+                ? Icon(Icons.person, color: color, size: 20)
+                : null,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            name,
+            style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 14),
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 4),
           Text(
             pos == 0 ? "Start" : "$pos",
