@@ -1,4 +1,5 @@
 flutter_launcher_icons:
-  android: true
+  android: "launcher_icon"
   ios: true
-  image_path: "c:/Chess1/chess_game/assets/icon/chess_icon_new.png"
+  image_path: "icon.png"
+  min_sdk_android: 24

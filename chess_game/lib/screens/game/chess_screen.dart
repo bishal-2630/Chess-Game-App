@@ -2404,16 +2404,27 @@ class _ChessGameScreenState extends State<ChessScreen> {
                           child: ElevatedButton.icon(
                             onPressed: () {
                               if (!kIsWeb) {
-                                AdService().showRewardedAd(
-                                  onUserEarnedReward: (reward) {
-                                    setState(() {
-                                      _undoMove();
+                                try {
+                                  AdService().showRewardedAd(
+                                    onUserEarnedReward: (reward) {
+                                      setState(() {
+                                        _undoMove();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Reward Earned: Undo granted!'))
+                                        );
+                                      });
+                                    },
+                                    onError: (message) {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Reward Earned: Undo granted!'))
+                                        SnackBar(content: Text(message))
                                       );
-                                    });
-                                  },
-                                );
+                                    },
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error showing ad: $e'))
+                                  );
+                                }
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('Ads are only available on mobile.'))
