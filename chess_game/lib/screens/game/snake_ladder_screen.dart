@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../../services/django_auth_service.dart';
 
 class SnakeLadderScreen extends StatefulWidget {
@@ -161,6 +162,29 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
     }
   }
 
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  
+  void _playDiceSound() async {
+    try {
+      // If asset exists, play it. Otherwise fails gracefully.
+      await _audioPlayer.play(AssetSource('sounds/dice_roll.mp3'));
+    } catch (_) {
+      // Silent fail if audio file is missing
+    }
+  }
+
+  void _rollDice() {
+    _playDiceSound();
+    _diceController.forward(from: 0).then((_) {
+      int roll = Random().nextInt(6) + 1;
+      setState(() {
+        lastDiceRoll = roll;
+        isRolling = true;
+      });
+      _movePlayer(roll);
+    });
+  }
+
   void _finishTurn() {
     setState(() {
       isRolling = false;
@@ -240,94 +264,84 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
       ),
       body: Column(
         children: [
-          // Board
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    double cellSize = constraints.maxWidth / boardSize;
-                    return Stack(
-                      children: [
-                        // Draw the board grid
-                        _buildGrid(cellSize),
-                        // Draw snakes and ladders via CustomPaint
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: SnakeLadderPainter(
-                              snakes: snakes,
-                              ladders: ladders,
-                              boardSize: boardSize,
-                              squareToGrid: _squareToGridPosition,
-                              cellSize: cellSize,
-                            ),
-                          ),
-                        ),
-                        // Draw player tokens on top
-                        if (player1Pos > 0) _buildToken(player1Pos, Colors.blue, "P1", cellSize),
-                        if (player2Pos > 0) _buildToken(player2Pos, Colors.orange, "P2", cellSize),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-
-          // Controls
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-            decoration: BoxDecoration(
-              color: const Color(0xFF161B22),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-              border: Border.all(color: Colors.white12),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          // Header: Player Profiles
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  gameStatus,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: isPlayer1Turn ? Colors.blue : Colors.orange,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildPlayerCard(p1Name, p1ImageUrl, player1Pos, Colors.blue, isPlayer1Turn),
-                    _buildDice(),
-                    _buildPlayerCard(p2Name, p2ImageUrl, player2Pos, Colors.orange, !isPlayer1Turn),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: (isRolling || gameOver) ? null : _rollDice,
-                    icon: const Icon(Icons.casino),
-                    label: Text(
-                      isRolling ? "ROLLING..." : "ROLL DICE",
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isPlayer1Turn ? Colors.blue : Colors.orange,
-                      disabledBackgroundColor: Colors.grey.shade800,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 8,
+                _buildPlayerCard(p1Name, p1ImageUrl, Colors.blue, isPlayer1Turn),
+                // Game Status in Center
+                Expanded(
+                  child: Text(
+                    gameStatus,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isPlayer1Turn ? Colors.blue : Colors.orange,
                     ),
                   ),
                 ),
+                _buildPlayerCard(p2Name, p2ImageUrl, Colors.orange, !isPlayer1Turn),
               ],
             ),
           ),
+          
+          // Board Section
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  double boardSizePx = min(constraints.maxWidth, constraints.maxHeight);
+                  double cellSize = boardSizePx / boardSize;
+
+                  return Center(
+                    child: SizedBox(
+                      width: boardSizePx,
+                      height: boardSizePx,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // 1. Grid
+                          _buildGrid(cellSize),
+                          // 2. Snakes and Ladders
+                          _buildSnakesAndLadders(cellSize),
+                          // 3. Players
+                          if (player1Pos > 0) _buildToken(player1Pos, Colors.blue, "P1", cellSize),
+                          if (player2Pos > 0) _buildToken(player2Pos, Colors.orange, "P2", cellSize),
+                          
+                          // 4. Dice Overlay (on the board)
+                          Positioned(
+                            right: -10,
+                            bottom: -20,
+                            child: _buildDice(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 30),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSnakesAndLadders(double cellSize) {
+    return Positioned.fill(
+      child: CustomPaint(
+        painter: SnakeLadderPainter(
+          snakes: snakes,
+          ladders: ladders,
+          boardSize: boardSize,
+          squareToGrid: _squareToGridPosition,
+          cellSize: cellSize,
+        ),
       ),
     );
   }
@@ -439,10 +453,10 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
     );
   }
 
-  Widget _buildPlayerCard(String name, String? imageUrl, int pos, Color color, bool isActive) {
+  Widget _buildPlayerCard(String name, String? imageUrl, Color color, bool isActive) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: isActive ? color.withAlpha(38) : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
@@ -454,27 +468,21 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
       child: Column(
         children: [
           CircleAvatar(
-            radius: 20,
+            radius: 18,
             backgroundColor: color.withAlpha(50),
             backgroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
             child: imageUrl == null
-                ? Icon(Icons.person, color: color, size: 20)
+                ? Icon(Icons.person, color: color, size: 18)
                 : null,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             name,
             style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.bold,
-                fontSize: 14),
+                fontSize: 12),
             overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            pos == 0 ? "Start" : "$pos",
-            style: const TextStyle(
-                color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -482,29 +490,32 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
   }
 
   Widget _buildDice() {
-    return ScaleTransition(
-      scale: _diceAnimation,
-      child: Container(
-        width: 72,
-        height: 72,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withAlpha(77),
-              blurRadius: 16,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: Center(
-          child: lastDiceRoll == 0
-              ? const Icon(Icons.casino, size: 36, color: Colors.grey)
-              : Text(
-                  _diceEmoji(lastDiceRoll),
-                  style: const TextStyle(fontSize: 36),
-                ),
+    return GestureDetector(
+      onTap: (isRolling || gameOver) ? null : _rollDice,
+      child: ScaleTransition(
+        scale: _diceAnimation,
+        child: Container(
+          width: 65,
+          height: 65,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: (isPlayer1Turn ? Colors.blue : Colors.orange).withAlpha(150),
+                blurRadius: 15,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Center(
+            child: lastDiceRoll == 0
+                ? Icon(Icons.casino, size: 40, color: Colors.grey.shade400)
+                : Text(
+                    _diceEmoji(lastDiceRoll),
+                    style: const TextStyle(fontSize: 42),
+                  ),
+          ),
         ),
       ),
     );
