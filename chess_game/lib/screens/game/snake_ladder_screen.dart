@@ -106,6 +106,7 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
       isRolling = true;
       gameStatus = "Rolling...";
     });
+    _playDiceSound();
     await _diceController.forward(from: 0.0);
     final random = Random();
     int roll = random.nextInt(6) + 1;
@@ -173,17 +174,7 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
     }
   }
 
-  void _rollDice() {
-    _playDiceSound();
-    _diceController.forward(from: 0).then((_) {
-      int roll = Random().nextInt(6) + 1;
-      setState(() {
-        lastDiceRoll = roll;
-        isRolling = true;
-      });
-      _movePlayer(roll);
-    });
-  }
+
 
   void _finishTurn() {
     setState(() {
