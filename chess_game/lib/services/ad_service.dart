@@ -14,12 +14,12 @@ class AdService {
   bool _isAdLoaded = false;
   bool _isInitialized = false;
 
-  // Test Ad Unit IDs from Google
+  // Real Ad Unit IDs from Google AdMob
   static String get rewardedAdUnitId {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/5224354917';
+      return 'ca-app-pub-5824509928975992/9268961527';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/1712485313';
+      return 'ca-app-pub-3940256099942544/1712485313'; // Replace with iOS ad unit if needed
     } else {
       throw UnsupportedError("Unsupported platform");
     }
