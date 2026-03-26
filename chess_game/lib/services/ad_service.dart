@@ -1,5 +1,9 @@
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'django_auth_service.dart';
+import 'config.dart';
+import '../utils/logger.dart';
 
 class AdService {
   static final AdService _instance = AdService._internal();
@@ -71,7 +75,8 @@ class AdService {
     }
     
     if (_isAdLoaded && _rewardedAd != null) {
-      _rewardedAd!.show(onUserEarnedReward: (ad, reward) {
+      _rewardedAd!.show(onUserEarnedReward: (ad, reward) async {
+        await _rewardUser(reward.amount.toInt());
         onUserEarnedReward(reward);
       });
     } else {
@@ -79,6 +84,31 @@ class AdService {
         onError("Ad is not ready yet. Please try again soon.");
       }
       loadRewardedAd();
+    }
+  }
+
+  Future<void> _rewardUser(int amount) async {
+    try {
+      final authService = DjangoAuthService();
+      final response = await authService.authenticatedRequest(
+        '${AppConfig.baseUrl}reward-coins/',
+        method: 'POST',
+        body: json.encode({'amount': amount > 0 ? amount : 10}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          // Update local user data with new balance
+          final userData = Map<String, dynamic>.from(authService.currentUser!);
+          userData['coins'] = data['new_balance'];
+          authService.updateCurrentUser(userData);
+          
+          AppLogger.i('💰 User reward successful: ${data['new_balance']} coins');
+        }
+      }
+    } catch (e) {
+      AppLogger.e('❌ Error rewarding user: $e');
     }
   }
 

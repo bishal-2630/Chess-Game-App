@@ -36,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 
             'profile_picture', 'email_verified', 'is_online', 
-            'last_seen', 'current_room', 'wins', 'draws', 'losses'
+            'last_seen', 'current_room', 'wins', 'draws', 'losses', 'coins'
         ]
 
 class TokenSerializer(serializers.Serializer):

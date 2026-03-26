@@ -20,6 +20,7 @@ class User(AbstractUser):
     wins = models.IntegerField(default=0)
     draws = models.IntegerField(default=0)
     losses = models.IntegerField(default=0)
+    coins = models.IntegerField(default=0)
 
     
     

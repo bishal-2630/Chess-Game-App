@@ -2064,6 +2064,48 @@ class _ChessGameScreenState extends State<ChessScreen> {
         backgroundColor: Colors.blue[800],
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          // Coins display
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.monetization_on, color: Colors.amber, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    (_authService.currentUser?['coins'] ?? 0).toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: () {
+                      AdService().showRewardedAd(
+                        onUserEarnedReward: (reward) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("You earned ${reward.amount} coins!"),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    child: const Icon(Icons.add_circle, color: Colors.greenAccent, size: 18),
+                  ),
+                ],
+              ),
+            ),
+          ),
           if (_isConnectedToRoom) ...[
             IconButton(
               icon: Icon(_isAudioOn ? Icons.call_end : Icons.call, 
