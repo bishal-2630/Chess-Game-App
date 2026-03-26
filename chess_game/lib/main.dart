@@ -6,6 +6,7 @@ import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password.dart';
 import 'screens/game/chess_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/game/snake_ladder_screen.dart';
 import 'screens/call_screen.dart';
 import 'screens/users/user_list_screen.dart';
 import 'screens/users/invitations_screen.dart';
@@ -15,6 +16,7 @@ import 'services/mqtt_service.dart';
 import 'services/game_service.dart';
 // Background service removed per user request
 import 'services/deep_link_handler.dart';
+import 'services/ad_service.dart';
 import 'dart:async';
 import 'dart:isolate';
 import 'dart:ui';
@@ -43,6 +45,7 @@ void main() async {
   // Isolate listener is mobile-only
   if (!kIsWeb) {
     mqttService.initializeIsolateListener(isBackground: false);
+    await AdService().init();
   }
 
   runApp(const MyApp());
@@ -135,6 +138,10 @@ final GoRouter _globalRouter = GoRouter(
             final nextParam = state.uri.queryParameters['next'];
             return BootstrappingScreen(nextRoute: nextParam);
           },
+        ),
+        GoRoute(
+          path: '/snake-ladder',
+          builder: (context, state) => const SnakeLadderScreen(),
         ),
       ],
     ),
@@ -423,6 +430,8 @@ class BootstrappingScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Image.asset('assets/icon/chess_icon_new.png', height: 100),
+            const SizedBox(height: 32),
             const CircularProgressIndicator(color: Colors.blue),
             const SizedBox(height: 24),
             const Text(

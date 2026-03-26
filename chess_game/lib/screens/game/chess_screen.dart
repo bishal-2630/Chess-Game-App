@@ -8,10 +8,11 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:flutter/foundation.dart';
 import '../../services/config.dart';
 import '../../services/game_service.dart';
+import '../../services/ad_service.dart';
+import '../../services/mqtt_service.dart';
 import 'dart:math';
 import 'dart:async';
 import 'package:permission_handler/permission_handler.dart';
-import '../../services/mqtt_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -2281,9 +2282,36 @@ class _ChessGameScreenState extends State<ChessScreen> {
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed:
-                                _isConnectedToRoom || pendingPromotion != null
+                                (_isConnectedToRoom || pendingPromotion != null)
                                     ? null
-                                    : _undoMove,
+                                    : () {
+                                        if (!kIsWeb) {
+                                          try {
+                                            AdService().showRewardedAd(
+                                              onUserEarnedReward: (reward) {
+                                                setState(() {
+                                                  _undoMove();
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(content: Text('Reward Earned: Undo granted!'))
+                                                  );
+                                                });
+                                              },
+                                              onError: (message) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text(message))
+                                                );
+                                              },
+                                            );
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error showing ad: $e'))
+                                            );
+                                          }
+                                        } else {
+                                          // Allow undo on web without ads since they aren't supported
+                                          _undoMove();
+                                        }
+                                      },
                             icon: const Icon(Icons.undo),
                             label: const Text('Undo'),
                             style: ElevatedButton.styleFrom(
@@ -2380,6 +2408,23 @@ class _ChessGameScreenState extends State<ChessScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => context.go('/snake-ladder'),
+                            icon: const Icon(Icons.casino),
+                            label: const Text('Snake & Ladders'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepOrange,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                   ],
                 ),
               ),
