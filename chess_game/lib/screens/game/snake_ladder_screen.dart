@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:audioplayers/audioplayers.dart';
 import '../../services/django_auth_service.dart';
 
 class SnakeLadderScreen extends StatefulWidget {
@@ -23,6 +22,11 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
   bool isRolling = false;
   String gameStatus = "";
   bool gameOver = false;
+
+  Offset dicePosition = Offset.zero; 
+  double diceRotation = 0;
+  bool diceInitialized = false;
+  double currentBoardSize = 0;
 
   final DjangoAuthService _authService = DjangoAuthService();
   late String p1Name;
@@ -63,6 +67,7 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
     _diceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
+      value: 1.0,
     );
     _diceAnimation = CurvedAnimation(
       parent: _diceController,
@@ -104,15 +109,35 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
     if (isRolling || gameOver) return;
     setState(() {
       isRolling = true;
-      gameStatus = "Rolling...";
     });
-    _playDiceSound();
-    await _diceController.forward(from: 0.0);
+
     final random = Random();
-    int roll = random.nextInt(6) + 1;
+    
+    // Animate multiple "jumps" for the dice
+    for (int i = 0; i < 6; i++) {
+      await Future.delayed(const Duration(milliseconds: 80));
+      setState(() {
+        // Random small movement and rotation during roll
+        double moveRange = currentBoardSize * 0.2;
+        double newX = dicePosition.dx + (random.nextDouble() - 0.5) * moveRange * 2;
+        double newY = dicePosition.dy + (random.nextDouble() - 0.5) * moveRange * 2;
+        
+        // Keep within bounds (assuming dice is ~65x65)
+        newX = newX.clamp(10.0, max(10.0, currentBoardSize - 75));
+        newY = newY.clamp(10.0, max(10.0, currentBoardSize - 75));
+
+        dicePosition = Offset(newX, newY);
+        diceRotation = random.nextDouble() * pi * 2;
+        lastDiceRoll = random.nextInt(6) + 1;
+      });
+    }
+
+    await _diceController.forward(from: 0.0);
+    int finalRoll = random.nextInt(6) + 1;
+    
     setState(() {
-      lastDiceRoll = roll;
-      _movePlayer(roll);
+      lastDiceRoll = finalRoll;
+      _movePlayer(finalRoll);
     });
   }
 
@@ -163,16 +188,6 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
     }
   }
 
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  
-  void _playDiceSound() async {
-    try {
-      // If asset exists, play it. Otherwise fails gracefully.
-      await _audioPlayer.play(AssetSource('sounds/dice_roll.mp3'));
-    } catch (_) {
-      // Silent fail if audio file is missing
-    }
-  }
 
 
 
@@ -295,6 +310,20 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
+                          // Initialize dice position once we know boardSizePx
+                          if (!diceInitialized) ...[
+                            Builder(builder: (context) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (!mounted) return;
+                                setState(() {
+                                  currentBoardSize = boardSizePx;
+                                  dicePosition = Offset(boardSizePx - 80, boardSizePx - 80);
+                                  diceInitialized = true;
+                                });
+                              });
+                              return const SizedBox.shrink();
+                            }),
+                          ],
                           // 1. Grid
                           _buildGrid(cellSize),
                           // 2. Snakes and Ladders
@@ -305,8 +334,8 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
                           
                           // 4. Dice Overlay (on the board)
                           Positioned(
-                            right: -10,
-                            bottom: -20,
+                            left: dicePosition.dx,
+                            top: dicePosition.dy,
                             child: _buildDice(),
                           ),
                         ],
@@ -483,29 +512,32 @@ class _SnakeLadderScreenState extends State<SnakeLadderScreen>
   Widget _buildDice() {
     return GestureDetector(
       onTap: (isRolling || gameOver) ? null : _rollDice,
-      child: ScaleTransition(
-        scale: _diceAnimation,
-        child: Container(
-          width: 65,
-          height: 65,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: (isPlayer1Turn ? Colors.blue : Colors.orange).withAlpha(150),
-                blurRadius: 15,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Center(
-            child: lastDiceRoll == 0
-                ? Icon(Icons.casino, size: 40, color: Colors.grey.shade400)
-                : Text(
-                    _diceEmoji(lastDiceRoll),
-                    style: const TextStyle(fontSize: 42),
-                  ),
+      child: Transform.rotate(
+        angle: diceRotation,
+        child: ScaleTransition(
+          scale: _diceAnimation,
+          child: Container(
+            width: 65,
+            height: 65,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: (isPlayer1Turn ? Colors.blue : Colors.orange).withAlpha(150),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Center(
+              child: lastDiceRoll == 0
+                  ? Icon(Icons.casino, size: 40, color: Colors.grey.shade400)
+                  : Text(
+                      _diceEmoji(lastDiceRoll),
+                      style: const TextStyle(fontSize: 42, color: Colors.black),
+                    ),
+            ),
           ),
         ),
       ),
