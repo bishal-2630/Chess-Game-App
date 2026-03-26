@@ -2282,9 +2282,36 @@ class _ChessGameScreenState extends State<ChessScreen> {
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed:
-                                _isConnectedToRoom || pendingPromotion != null
+                                (_isConnectedToRoom || pendingPromotion != null)
                                     ? null
-                                    : _undoMove,
+                                    : () {
+                                        if (!kIsWeb) {
+                                          try {
+                                            AdService().showRewardedAd(
+                                              onUserEarnedReward: (reward) {
+                                                setState(() {
+                                                  _undoMove();
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(content: Text('Reward Earned: Undo granted!'))
+                                                  );
+                                                });
+                                              },
+                                              onError: (message) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text(message))
+                                                );
+                                              },
+                                            );
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error showing ad: $e'))
+                                            );
+                                          }
+                                        } else {
+                                          // Allow undo on web without ads since they aren't supported
+                                          _undoMove();
+                                        }
+                                      },
                             icon: const Icon(Icons.undo),
                             label: const Text('Undo'),
                             style: ElevatedButton.styleFrom(
@@ -2398,49 +2425,6 @@ class _ChessGameScreenState extends State<ChessScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              if (!kIsWeb) {
-                                try {
-                                  AdService().showRewardedAd(
-                                    onUserEarnedReward: (reward) {
-                                      setState(() {
-                                        _undoMove();
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Reward Earned: Undo granted!'))
-                                        );
-                                      });
-                                    },
-                                    onError: (message) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(message))
-                                      );
-                                    },
-                                  );
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error showing ad: $e'))
-                                  );
-                                }
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Ads are only available on mobile.'))
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.video_library, color: Colors.white),
-                            label: const Text('Watch Ad for Undo', style: TextStyle(color: Colors.white)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green[700],
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
