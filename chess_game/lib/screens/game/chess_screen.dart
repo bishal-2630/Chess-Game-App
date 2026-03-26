@@ -2098,6 +2098,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
                             ),
                           );
                         },
+                        onError: (errorMsg) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(errorMsg), backgroundColor: Colors.redAccent),
+                          );
+                        },
                       );
                     },
                     child: const Icon(Icons.add_circle, color: Colors.greenAccent, size: 18),

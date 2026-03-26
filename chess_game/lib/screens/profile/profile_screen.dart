@@ -147,11 +147,18 @@ class ProfileScreen extends StatelessWidget {
                         children: [
                           _buildStatItem('Wins', (user?['wins'] ?? 0).toString(), Icons.emoji_events, color: Colors.green),
                           _buildStatItem('Coins', (user?['coins'] ?? 0).toString(), Icons.monetization_on, color: Colors.amber, onAdd: () {
-                            AdService().showRewardedAd(onUserEarnedReward: (reward) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text("You earned ${reward.amount} coins!"), backgroundColor: Colors.green),
-                              );
-                            });
+                            AdService().showRewardedAd(
+                              onUserEarnedReward: (reward) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("You earned ${reward.amount} coins!"), backgroundColor: Colors.green),
+                                );
+                              },
+                              onError: (errorMsg) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(errorMsg), backgroundColor: Colors.redAccent),
+                                );
+                              },
+                            );
                           }),
                           _buildStatItem('Losses', (user?['losses'] ?? 0).toString(), Icons.sentiment_dissatisfied, color: Colors.red),
                         ],
