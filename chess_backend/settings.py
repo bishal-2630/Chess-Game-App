@@ -108,6 +108,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://*.vercel.app",
     "https://positive-brianne-self2630-c40dbd11.koyeb.app",
     "https://bishal26-chess-backend.hf.space",
+    "https://bishal26-chess-game-bishal.hf.space",
 ]
 
 # For Swagger to work with zrok
@@ -158,8 +159,8 @@ CHANNEL_LAYERS = {
 }
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",  
+    'default': dj_database_url.parse(
+        config('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
         conn_max_age=600,
         conn_health_checks=True,
     )
@@ -268,6 +269,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.vercel.app",
     "https://positive-brianne-self2630-c40dbd11.koyeb.app",
     "https://bishal26-chess-backend.hf.space",
+    "https://bishal26-chess-game-bishal.hf.space",
 ]
 
 # Handle Swagger redirect dynamically for Vercel
