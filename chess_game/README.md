@@ -1,4 +1,6 @@
-# chess_game (F-Droid Branch)
+# Chess Game (F-Droid Branch)
+
+![chess_bishal_logo](assets/icon/chess_icon_new.png)
 
 This branch is prepared for F-Droid. Proprietary SDKs like Google Sign-In have been removed to meet FOSS requirements.
 

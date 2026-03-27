@@ -29,6 +29,7 @@ dependencies:
   url_launcher: ^6.2.5
   google_sign_in: ^6.2.1
   logger: ^2.4.0
+  google_mobile_ads: ^5.1.0
 
 
 dev_dependencies:
@@ -37,14 +38,12 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.13.1
 
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/icon/chess_icon.png"
+# flutter_launcher_icons config moved to flutter_launcher_icons.yaml
 
 flutter:
   uses-material-design: true
   assets:
+    - assets/icon/chess_icon_new.png
     - assets/google_logo.png
     - assets/sounds/ringtone.mp3
     - assets/sounds/call_ringtone.mp3

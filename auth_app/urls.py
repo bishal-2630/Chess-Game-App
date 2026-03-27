@@ -8,7 +8,7 @@ from .swagger_views import (
     TokenVerifyView,
     GuestRegisterView, HealthCheckView
 )
-from .views import ConnectivityCheckView, TestEmailView, SettingsDebugView
+from .views import ConnectivityCheckView, TestEmailView, SettingsDebugView, RewardCoinsView
 from .google_auth_views import GoogleLoginView
 from .game_views import (
     OnlineUsersView, AllUsersView, UpdateOnlineStatusView,
@@ -78,6 +78,7 @@ urlpatterns = [
     path('health-new/', HealthCheckView.as_view(), name='health_check'),
     path('call/token/', GetCallTokenView.as_view(), name='get_call_token'),
     path('livekit/webhook/', LiveKitWebhookView.as_view(), name='livekit_webhook'),
+    path('reward-coins/', RewardCoinsView.as_view(), name='reward_coins'),
     
     # Game & User Management
     path('users/online/', OnlineUsersView.as_view(), name='online_users'),

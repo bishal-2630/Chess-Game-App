@@ -174,10 +174,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 20),
 
                 // Logo or app name
+                Image.asset('assets/icon/chess_icon_new.png', height: 100),
+                const SizedBox(height: 10),
                 const Text(
-                  'Create Account',
+                  'chess-bishal',
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.blue,
                   ),

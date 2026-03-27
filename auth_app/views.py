@@ -417,3 +417,23 @@ class LiveKitWebhookView(APIView):
             # associated with the match/room.
             
         return Response({'status': 'ok'})
+
+class RewardCoinsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        amount = request.data.get('amount', 10)
+        try:
+            amount = int(amount)
+        except (ValueError, TypeError):
+            amount = 10
+            
+        user = request.user
+        user.coins += amount
+        user.save()
+        
+        return Response({
+            'success': True,
+            'message': f'Rewarded {amount} coins',
+            'new_balance': user.coins
+        })

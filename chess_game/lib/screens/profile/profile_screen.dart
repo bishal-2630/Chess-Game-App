@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/django_auth_service.dart';
+import '../../services/ad_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -145,7 +146,20 @@ class ProfileScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           _buildStatItem('Wins', (user?['wins'] ?? 0).toString(), Icons.emoji_events, color: Colors.green),
-                          _buildStatItem('Draws', (user?['draws'] ?? 0).toString(), Icons.handshake, color: Colors.orange),
+                          _buildStatItem('Coins', (user?['coins'] ?? 0).toString(), Icons.monetization_on, color: Colors.amber, onAdd: () {
+                            AdService().showRewardedAd(
+                              onUserEarnedReward: (reward) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("You earned ${reward.amount} coins!"), backgroundColor: Colors.green),
+                                );
+                              },
+                              onError: (errorMsg) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(errorMsg), backgroundColor: Colors.redAccent),
+                                );
+                              },
+                            );
+                          }),
                           _buildStatItem('Losses', (user?['losses'] ?? 0).toString(), Icons.sentiment_dissatisfied, color: Colors.red),
                         ],
                       ),
@@ -217,10 +231,26 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, {Color? color}) {
+  Widget _buildStatItem(String label, String value, IconData icon, {Color? color, VoidCallback? onAdd}) {
     return Column(
       children: [
-        Icon(icon, color: color ?? Colors.blue[700], size: 30),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(icon, color: color ?? Colors.blue[700], size: 30),
+            if (onAdd != null)
+              Positioned(
+                right: -10,
+                top: -10,
+                child: IconButton(
+                  icon: const Icon(Icons.add_circle, color: Colors.green, size: 20),
+                  onPressed: onAdd,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ),
+          ],
+        ),
         const SizedBox(height: 5),
         Text(
           value,
