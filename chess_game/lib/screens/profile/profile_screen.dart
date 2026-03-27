@@ -233,7 +233,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ElevatedButton.icon(
                       onPressed: () async {
                         try {
-                          await authService.signOut();
+                          await _authService.signOut();
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
