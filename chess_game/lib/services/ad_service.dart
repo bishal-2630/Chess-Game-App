@@ -18,21 +18,15 @@ class AdService {
   bool _isLoading = false;
   int _loadAttempts = 0;
 
-  // Real Ad Unit IDs from Google AdMob
+  // TODO: When ready to go live on Play Store, swap the test IDs below with
+  // the real IDs that are commented out next to them.
   static String get rewardedAdUnitId {
-    if (kDebugMode) {
-      // Official Google Test IDs for Rewarded Ads
-      if (Platform.isAndroid) {
-        return 'ca-app-pub-3940256099942544/5224354917';
-      } else if (Platform.isIOS) {
-        return 'ca-app-pub-3940256099942544/1712485313';
-      }
-    }
-
     if (Platform.isAndroid) {
-      return 'ca-app-pub-5824509928975992/9268961527';
+      return 'ca-app-pub-3940256099942544/5224354917'; // Test ID (works debug + release)
+      // return 'ca-app-pub-5824509928975992/9268961527'; // Real ID — uncomment after Play Store publish
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/1712485313'; // Replace with iOS ad unit if needed
+      return 'ca-app-pub-3940256099942544/1712485313'; // Test ID
+      // return 'YOUR_REAL_IOS_AD_UNIT_ID'; // Real ID — replace when going live
     } else {
       throw UnsupportedError("Unsupported platform");
     }
@@ -66,14 +60,14 @@ class AdService {
           _rewardedAd = ad;
           _isAdLoaded = true;
           _isLoading = false;
-          _loadAttempts = 0; // Reset attempts on success
+          _loadAttempts = 0;
           
           _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               AppLogger.i('🎬 Ad dismissed');
               ad.dispose();
               _isAdLoaded = false;
-              loadRewardedAd(); // Load next ad
+              loadRewardedAd();
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
               AppLogger.e('❌ Failed to show ad: $error');
@@ -141,7 +135,6 @@ class AdService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
-          // Update local user data with new balance
           if (authService.currentUser != null) {
             final userData = Map<String, dynamic>.from(authService.currentUser!);
             userData['coins'] = data['new_balance'];
