@@ -398,12 +398,22 @@ class GetCallTokenView(APIView):
             return Response({'error': 'room_id is required'}, status=400)
         
         if should_record:
-            # Mark this room for recording. The actual Egress will be triggered
-            # from the webhook once both participants are in the room.
-            print(f"📊 [Audit] Room {room_id} marked for archival recording (requested by {request.user.username})")
-            _rooms_pending_recording.setdefault(room_id, 0)  # Only initialize if not already tracking
+            # Mark this room for recording.
+            _rooms_pending_recording.setdefault(room_id, 0)
+            print(f"📊 [GetCallToken] Room {room_id} marked for recording by {request.user.username}")
+            
+            # FALLBACK TRIGGER:
+            # If there's already 1 participant, and we are getting a token for the 2nd one,
+            # we can attempt to start recording now as a fallback for missing webhooks.
+            # We add a small delay or just try it; if it fails, the webhook might still catch it.
+            current_count = LiveKitService.get_participant_count(room_id)
+            if current_count >= 1:
+                print(f"🎬 [GetCallToken] Fallback trigger: Room {room_id} has {current_count} participants. Starting recorder...")
+                LiveKitService.start_recording(room_id)
+                if room_id in _rooms_pending_recording:
+                    del _rooms_pending_recording[room_id]
         else:
-            print(f"🔒 [Audit] Private session (no recording) for {request.user.username} in room {room_id}")
+            print(f"🔒 [GetCallToken] Private session for {request.user.username} in room {room_id}")
         
         token = LiveKitService.generate_token(room_id, request.user.username)
         if not token:
@@ -421,11 +431,15 @@ class LiveKitWebhookView(APIView):
     parser_classes = [WebhookJsonParser, JSONParser]
 
     def post(self, request):
+        # RAW LOGGING: Crucial for debugging if webhooks are even reaching the server
+        print(f"📡 [LiveKit Webhook] RAW REQUEST: {request.method} {request.path}")
+        print(f"📡 [LiveKit Webhook] Headers: {dict(request.headers)}")
+        
         # LiveKit sends the actual event data inside a JWT in the Authorization header
         auth_header = request.headers.get('Authorization', '')
         
         if not auth_header:
-            print("❌ [LiveKit Webhook] Missing Authorization header")
+            print("❌ [LiveKit Webhook] REJECTED: Missing Authorization header")
             return Response({'error': 'Unauthorized'}, status=401)
             
         token = auth_header

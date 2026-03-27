@@ -68,11 +68,40 @@ class LiveKitService:
         return jwt.encode(payload, api_secret, algorithm='HS256')
 
     @staticmethod
+    def get_participant_count(room_name):
+        """
+        Queries LiveKit API to get the number of participants currently in the room.
+        Used as a fallback trigger for recording when webhooks are unreliable.
+        """
+        import requests
+        livekit_url = getattr(settings, 'LIVEKIT_URL', '')
+        base_url = livekit_url.replace('wss://', 'https://').replace('ws://', 'http://')
+        endpoint = f"{base_url}/twirp/livekit.RoomService/ListParticipants"
+        
+        token = LiveKitService.generate_admin_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            payload = {"room": room_name}
+            response = requests.post(endpoint, headers=headers, json=payload, timeout=5)
+            if response.status_code == 200:
+                participants = response.json().get('participants', [])
+                count = len(participants)
+                print(f"📊 [LiveKit] Room {room_name} has {count} active participants.")
+                return count
+            return 0
+        except Exception as e:
+            print(f"⚠️ [LiveKit] Error checking participant count: {e}")
+            return 0
+
+    @staticmethod
     def start_recording(room_name):
         """
         Triggers archival recording for the room via LiveKit Egress.
-        Records a RoomComposite layout to an MP4 file stored in S3.
-        Requires S3 (or compatible) storage to be configured.
+        Records a RoomComposite layout to an MP4 file stored in Backblaze B2 (S3 compatible).
         """
         import requests
         import json
@@ -89,7 +118,6 @@ class LiveKitService:
         filename = f"recording_{room_name}_{timestamp}.mp4"
         
         # S3 Configuration from settings or environment
-        # Use 'or' to ensure fallbacks are used if values are empty strings
         s3_bucket = getattr(settings, 'S3_BUCKET', '') or 'chess-recordings'
         s3_key = getattr(settings, 'AWS_ACCESS_KEY_ID', '') or '00535ce0ea2aa8f0000000001'
         s3_secret = getattr(settings, 'AWS_SECRET_ACCESS_KEY', '') or 'K005HwNL9ZWk6y8ZoaxuAA6isC614Ss'
@@ -97,11 +125,10 @@ class LiveKitService:
         s3_endpoint = getattr(settings, 'AWS_S3_ENDPOINT_URL', '') or 'https://s3.us-east-005.backblazeb2.com'
         
         if not (s3_bucket and s3_key and s3_secret):
-            print("⚠️ [LiveKit] S3 storage NOT configured (S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY required).")
-            print("💡 [LiveKit] Skipping recording — add S3 credentials to your environment to enable recordings.")
+            print("⚠️ [LiveKit] S3/Backblaze storage NOT configured correctly.")
             return False
 
-        print(f"📦 [LiveKit] Using S3 storage: {s3_bucket}")
+        print(f"📦 [LiveKit] Targeted Storage: {s3_bucket} at {s3_endpoint}")
         
         s3_config = {
             "access_key": s3_key,
@@ -111,7 +138,6 @@ class LiveKitService:
             "key": filename,
         }
         if s3_endpoint:
-            # Used for S3-compatible storage like Cloudflare R2, MinIO, Backblaze B2, etc.
             s3_config["endpoint"] = s3_endpoint
             s3_config["force_path_style"] = True
         
@@ -120,7 +146,7 @@ class LiveKitService:
             "layout": "grid",
             "file_outputs": [
                 {
-                    "file_type": 0,  # MP4 (default)
+                    "file_type": 0,  # MP4
                     "filepath": filename,
                     "s3": s3_config,
                 }
@@ -132,17 +158,16 @@ class LiveKitService:
             "Content-Type": "application/json"
         }
         
-        print(f"🎬 [LiveKit] Archival recording trigger for room: {room_name}")
+        print(f"🎬 [LiveKit] Attempting to start recorder for: {room_name}")
         try:
             response = requests.post(endpoint, headers=headers, json=payload, timeout=15)
             if response.status_code == 200:
                 egress_id = response.json().get('egress_id')
-                print(f"✅ [LiveKit] Recording started: {egress_id}")
+                print(f"✅ [LiveKit] Recording STARTED: {egress_id}")
                 return True
             else:
-                print(f"❌ [LiveKit] Egress failed ({response.status_code})")
-                print(f"📝 Response Body: {response.text}")
+                print(f"❌ [LiveKit] Egress Failed ({response.status_code}): {response.text}")
                 return False
         except Exception as e:
-            print(f"❌ [LiveKit] Recording trigger error: {e}")
+            print(f"❌ [LiveKit] Recording Trigger EXCEPTION: {e}")
             return False
