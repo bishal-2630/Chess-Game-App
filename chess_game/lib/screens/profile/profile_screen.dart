@@ -3,15 +3,37 @@ import 'package:go_router/go_router.dart';
 import '../../services/django_auth_service.dart';
 import '../../services/ad_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final DjangoAuthService _authService = DjangoAuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    _authService.addListener(_onAuthChanged);
+  }
+
+  @override
+  void dispose() {
+    _authService.removeListener(_onAuthChanged);
+    super.dispose();
+  }
+
+  void _onAuthChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final authService = DjangoAuthService();
-    final Map<String, dynamic>? user = authService.currentUser;
-    final bool isGuest = authService.isGuest;
-    final String displayName = authService.displayName;
+    final Map<String, dynamic>? user = _authService.currentUser;
+    final bool isGuest = _authService.isGuest;
+    final String displayName = _authService.displayName;
     final String displayEmail = isGuest ? "Guest Account" : (user?['email'] ?? 'No email provided');
 
     return Scaffold(

@@ -2358,46 +2358,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                                 (_isConnectedToRoom || pendingPromotion != null)
                                     ? null
                                     : () {
-                                        if (!kIsWeb) {
-                                          final adService = AdService();
-                                          if (adService.isLoading) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text("Loading ad for Undo... Please wait."),
-                                                backgroundColor: Colors.blueAccent,
-                                                duration: Duration(seconds: 2),
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          adService.showRewardedAd(
-                                            onUserEarnedReward: (reward) {
-                                              setState(() {
-                                                _undoMove();
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(content: Text('Reward Earned: Undo granted!'), backgroundColor: Colors.green)
-                                                );
-                                              });
-                                            },
-                                            onError: (message) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(message),
-                                                  backgroundColor: Colors.orange[800],
-                                                  action: SnackBarAction(
-                                                    label: 'Retry',
-                                                    textColor: Colors.white,
-                                                    onPressed: () => AdService().loadRewardedAd(),
-                                                  ),
-                                                )
-                                              );
-                                            },
-                                          );
-                                        } else {
-                                          // Allow undo on web without ads since they aren't supported
-                                          _undoMove();
-                                        }
+                                        _undoMove();
                                       },
                             icon: const Icon(Icons.undo),
                             label: const Text('Undo'),
