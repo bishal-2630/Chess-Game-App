@@ -11,7 +11,7 @@ class AppConfig {
 
   // Production backend URL (Hugging Face Spaces)
   static const String _productionHost =
-      'bishal26-chess-backend.hf.space';
+      'bishal26-chess-game-bishal.hf.space';
 
   // Local development configuration
   static const String _physicalDeviceHost = '192.168.1.76:8000';

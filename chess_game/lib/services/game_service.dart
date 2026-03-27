@@ -31,9 +31,13 @@ class GameService {
     http.Response response;
     try {
       if (method == 'POST') {
-        response = await http.post(Uri.parse(url), headers: headers, body: body);
+        response = await http
+            .post(Uri.parse(url), headers: headers, body: body)
+            .timeout(const Duration(seconds: 30));
       } else {
-        response = await http.get(Uri.parse(url), headers: headers);
+        response = await http
+            .get(Uri.parse(url), headers: headers)
+            .timeout(const Duration(seconds: 30));
       }
 
       // Check for token expiration (401)
