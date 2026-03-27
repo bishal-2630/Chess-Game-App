@@ -95,11 +95,13 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _connect() async {
+    print("📞 CallScreen: Starting connection process...");
     try {
       final token = _authService.accessToken;
       // Request recording for standalone calls (archival for future use)
       final url = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}&record=true";
       
+      print("📞 CallScreen: Fetching LiveKit token...");
       final response = await http.get(
         Uri.parse(url),
         headers: {"Authorization": "Bearer $token"}
@@ -116,20 +118,25 @@ class _CallScreenState extends State<CallScreen> {
       print("🌐 LiveKit URL: $livekitUrl");
       print("🔑 LiveKit Token Snippet: ${livekitToken.toString().substring(0, 15)}...");
 
+      // REAL-TIME SIGNALING: Send call signal BEFORE connecting to LiveKit
+      if (widget.isCaller) {
+        print("📞 CallScreen: Sending call signal to receiver...");
+        // Do not await this if we want to be even faster, but awaiting is safer to ensure it's sent.
+        // Given it's an async call, we'll await it for reliability.
+        await GameService.sendCallSignal(
+          receiverUsername: widget.otherUserName,
+          roomId: widget.roomId,
+          initialVideo: widget.initialVideo,
+        );
+      }
+
+      print("📞 CallScreen: Connecting to LiveKit media server...");
       await _signalingService.connectToLiveKit(livekitUrl, livekitToken, videoEnabled: widget.initialVideo);
       
       if (mounted) {
         setState(() {
           _status = widget.isCaller ? "Calling ${widget.otherUserName}..." : "Connected";
         });
-      }
-
-      if (widget.isCaller) {
-        await GameService.sendCallSignal(
-          receiverUsername: widget.otherUserName,
-          roomId: widget.roomId,
-          initialVideo: widget.initialVideo,
-        );
       }
     } catch (e) {
       print("❌ Connection Error Detail: $e");
@@ -139,9 +146,24 @@ class _CallScreenState extends State<CallScreen> {
 
   void _handleCallEnd(String status) {
     if (_isExiting) return;
+    print("📞 CallScreen: Handling call end. Status: $status, WasConnected: $_inCall");
+    
+    // MISSED CALL LOGIC: If caller hangs up before receiver answers, notify receiver
+    if (widget.isCaller && !_inCall && status != "Connection Failed") {
+      print("📞 CallScreen: Triggering missed call notification (cancelCall)...");
+      GameService.cancelCall(
+        receiverUsername: widget.otherUserName,
+        roomId: widget.roomId,
+        initialVideo: widget.initialVideo,
+      );
+    }
+
     _isExiting = true;
     _callTimeoutTimer?.cancel();
     _signalingService.disconnect();
+    
+    // Robust Ringtone Management: Stop all audio immediately
+    MqttService().stopAudio(broadcast: true);
     MqttService().setInCall(false);
     
     if (mounted) {

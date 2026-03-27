@@ -253,6 +253,7 @@ class GameService {
     required String roomId,
     bool initialVideo = false,
   }) async {
+    print("📡 GameService: Sending call signal to $receiverUsername (Room: $roomId, Video: $initialVideo)");
     try {
       final response = await _authenticatedRequest(
         'POST',
@@ -264,12 +265,15 @@ class GameService {
         }),
       );
 
+      print("📡 GameService: Call signal response status: ${response.statusCode}");
       if (response.statusCode == 200) {
         return {'success': true};
       } else {
+        print("📡 GameService: Call signal failed: ${response.body}");
         return {'success': false, 'error': 'Failed to send call signal'};
       }
     } catch (e) {
+      print("📡 GameService: Call signal error: $e");
       return {'success': false, 'error': 'Network error: ${e.toString()}'};
     }
   }
@@ -279,6 +283,7 @@ class GameService {
     required String callerUsername,
     required String roomId,
   }) async {
+    print("📡 GameService: Declining call from $callerUsername (Room: $roomId)");
     try {
       final response = await _authenticatedRequest(
         'POST',
@@ -289,12 +294,15 @@ class GameService {
         }),
       );
 
+      print("📡 GameService: Decline call response status: ${response.statusCode}");
       if (response.statusCode == 200) {
         return {'success': true};
       } else {
+        print("📡 GameService: Decline call failed: ${response.body}");
         return {'success': false, 'error': 'Failed to decline call'};
       }
     } catch (e) {
+      print("📡 GameService: Decline call error: $e");
       return {'success': false, 'error': 'Network error: ${e.toString()}'};
     }
   }
@@ -305,6 +313,7 @@ class GameService {
     required String roomId,
     bool initialVideo = false,
   }) async {
+    print("📡 GameService: Cancelling call to $receiverUsername (Room: $roomId)");
     try {
       final response = await _authenticatedRequest(
         'POST',
@@ -316,12 +325,15 @@ class GameService {
         }),
       );
 
+      print("📡 GameService: Cancel call response status: ${response.statusCode}");
       if (response.statusCode == 200) {
         return {'success': true};
       } else {
+        print("📡 GameService: Cancel call failed: ${response.body}");
         return {'success': false, 'error': 'Failed to cancel call signal'};
       }
     } catch (e) {
+      print("📡 GameService: Cancel call error: $e");
       return {'success': false, 'error': 'Network error: ${e.toString()}'};
     }
   }

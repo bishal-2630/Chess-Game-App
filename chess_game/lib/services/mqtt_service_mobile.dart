@@ -361,7 +361,7 @@ class MqttService {
   }
 
   void _subscribeToNotifications(String username) {
-    final topic = 'chess/user/$username/notifications';
+    final topic = 'user/$username/notifications';
     client!.subscribe(topic, MqttQos.atLeastOnce);
   }
 
@@ -380,6 +380,7 @@ class MqttService {
 
       try {
         final data = json.decode(pt);
+        AppLogger.i('📡 MQTT Received [Topic: $topic]: ${data['type']}');
         _handleNotification(data);
       } catch (e) {
         AppLogger.e('MQTT: Error parsing message: $e');
@@ -834,11 +835,9 @@ class MqttService {
 
       // Play the asset
       await _audioPlayer.play(AssetSource(cleanFileName)).catchError((e) {
-        print('MQTT [$isolateName]: CRITICAL Play error: $e');
+        AppLogger.e('MQTT [$isolateName]: CRITICAL Play error: $e');
         _isPlaying = false;
       });
-      
-      // TRIGGER ARCHIVAL ANNOUNCEMENT - REMOVED: Now handled by CallScreen on connection
       
       // Explicit resume just in case play() only sets the source
       await _audioPlayer.resume().catchError((_) {});
@@ -847,18 +846,21 @@ class MqttService {
 
       // Final Check in case stop was called while loading
       if (!_isPlaying) {
+        AppLogger.i('MQTT [$isolateName]: Play stopped immediately after load');
         await _audioPlayer.stop().catchError((_) {});
         await _audioPlayer.setVolume(0).catchError((_) {});
         await _audioPlayer.release().catchError((_) {});
       }
     } catch (e) {
-      print('MQTT [$isolateName]: EXCEPTION in playSound: $e');
+      AppLogger.e('MQTT [$isolateName]: EXCEPTION in playSound: $e');
       _isPlaying = false;
       _isAudioLoading = false;
     }
   }
 
   Future<void> stopAudio({bool broadcast = false, String? roomId}) async {
+    final isolateName = Isolate.current.debugName ?? 'unknown';
+    AppLogger.i('🔇 MQTT [$isolateName]: stopAudio called (broadcast: $broadcast, roomId: $roomId)');
     _isPlaying = false; 
     _isMutedWindow = true; // Start mute window
 
