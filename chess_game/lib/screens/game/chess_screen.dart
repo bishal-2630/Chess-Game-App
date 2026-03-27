@@ -2089,18 +2089,44 @@ class _ChessGameScreenState extends State<ChessScreen> {
                   const SizedBox(width: 4),
                   InkWell(
                     onTap: () {
-                      AdService().showRewardedAd(
+                      final adService = AdService();
+                      if (adService.isLoading) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Row(
+                              children: [
+                                SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                                SizedBox(width: 15),
+                                Text("Loading ad... Please wait."),
+                              ],
+                            ),
+                            backgroundColor: Colors.blueAccent,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        return;
+                      }
+
+                      adService.showRewardedAd(
                         onUserEarnedReward: (reward) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text("You earned ${reward.amount} coins!"),
+                              content: Text("You earned ${reward.amount > 0 ? reward.amount : 10} coins!"),
                               backgroundColor: Colors.green,
                             ),
                           );
                         },
                         onError: (errorMsg) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(errorMsg), backgroundColor: Colors.redAccent),
+                            SnackBar(
+                              content: Text(errorMsg), 
+                              backgroundColor: Colors.orange[800],
+                              action: SnackBarAction(
+                                label: 'Retry',
+                                textColor: Colors.white,
+                                onPressed: () => AdService().loadRewardedAd(),
+                              ),
+                            ),
                           );
                         },
                       );
@@ -2333,27 +2359,41 @@ class _ChessGameScreenState extends State<ChessScreen> {
                                     ? null
                                     : () {
                                         if (!kIsWeb) {
-                                          try {
-                                            AdService().showRewardedAd(
-                                              onUserEarnedReward: (reward) {
-                                                setState(() {
-                                                  _undoMove();
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(content: Text('Reward Earned: Undo granted!'))
-                                                  );
-                                                });
-                                              },
-                                              onError: (message) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(content: Text(message))
-                                                );
-                                              },
-                                            );
-                                          } catch (e) {
+                                          final adService = AdService();
+                                          if (adService.isLoading) {
                                             ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('Error showing ad: $e'))
+                                              const SnackBar(
+                                                content: Text("Loading ad for Undo... Please wait."),
+                                                backgroundColor: Colors.blueAccent,
+                                                duration: Duration(seconds: 2),
+                                              ),
                                             );
+                                            return;
                                           }
+
+                                          adService.showRewardedAd(
+                                            onUserEarnedReward: (reward) {
+                                              setState(() {
+                                                _undoMove();
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text('Reward Earned: Undo granted!'), backgroundColor: Colors.green)
+                                                );
+                                              });
+                                            },
+                                            onError: (message) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(message),
+                                                  backgroundColor: Colors.orange[800],
+                                                  action: SnackBarAction(
+                                                    label: 'Retry',
+                                                    textColor: Colors.white,
+                                                    onPressed: () => AdService().loadRewardedAd(),
+                                                  ),
+                                                )
+                                              );
+                                            },
+                                          );
                                         } else {
                                           // Allow undo on web without ads since they aren't supported
                                           _undoMove();

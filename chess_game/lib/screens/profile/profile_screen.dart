@@ -147,15 +147,41 @@ class ProfileScreen extends StatelessWidget {
                         children: [
                           _buildStatItem('Wins', (user?['wins'] ?? 0).toString(), Icons.emoji_events, color: Colors.green),
                           _buildStatItem('Coins', (user?['coins'] ?? 0).toString(), Icons.monetization_on, color: Colors.amber, onAdd: () {
-                            AdService().showRewardedAd(
+                            final adService = AdService();
+                            if (adService.isLoading) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Row(
+                                    children: [
+                                      SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                                      SizedBox(width: 15),
+                                      Text("Loading ad... Please wait."),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.blueAccent,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                              return;
+                            }
+
+                            adService.showRewardedAd(
                               onUserEarnedReward: (reward) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text("You earned ${reward.amount} coins!"), backgroundColor: Colors.green),
+                                  SnackBar(content: Text("You earned ${reward.amount > 0 ? reward.amount : 10} coins!"), backgroundColor: Colors.green),
                                 );
                               },
                               onError: (errorMsg) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(errorMsg), backgroundColor: Colors.redAccent),
+                                  SnackBar(
+                                    content: Text(errorMsg), 
+                                    backgroundColor: Colors.orange[800],
+                                    action: SnackBarAction(
+                                      label: 'Retry',
+                                      textColor: Colors.white,
+                                      onPressed: () => AdService().loadRewardedAd(),
+                                    ),
+                                  ),
                                 );
                               },
                             );
