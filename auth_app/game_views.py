@@ -45,7 +45,7 @@ class AllUsersView(APIView):
     def get(self, request):
 
         # Get all users except current user
-        users = User.objects.exclude(id=request.user.id).order_by('-is_online', 'username')
+        users = User.objects.all().order_by('-is_online', 'username')
         serializer = UserSerializer(users, many=True)
         return Response({
             'users': serializer.data,
