@@ -70,3 +70,8 @@ Thumbs.db
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 **/windows/flutter/generated_plugin_registrant.cc
 **/windows/flutter/generated_plugin_registrant.h
+
+# Android build artifacts
+**/android/.gradle/
+**/android/app/src/main/kotlin/**/GeneratedPluginRegistrant.java
+**/android/GeneratedPluginRegistrant.java
