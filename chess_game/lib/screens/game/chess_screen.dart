@@ -105,6 +105,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
   void initState() {
     super.initState();
     _initializeBoard();
+    // Listen to auth changes so coin balance updates live
+    _authService.addListener(_onAuthChanged);
     // NEW: Notify MqttService that we are in a game room to suppress duplicate system notifications
     if (widget.roomId != null) {
       final mqtt = MqttService();
@@ -452,8 +454,13 @@ class _ChessGameScreenState extends State<ChessScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
+  void _onAuthChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    _authService.removeListener(_onAuthChanged);
     // NEW: Clear active room ID so notifications are restored for future sessions
     MqttService().setActiveChessRoomId(null);
     _statusTimer?.cancel();
