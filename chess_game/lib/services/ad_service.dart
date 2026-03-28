@@ -107,8 +107,14 @@ class AdService {
     if (_isAdLoaded && _rewardedAd != null) {
       _rewardedAd!.show(onUserEarnedReward: (ad, reward) async {
         AppLogger.i('💎 User earned reward: ${reward.amount} ${reward.type}');
-        await _rewardUser(reward.amount.toInt());
-        onUserEarnedReward(reward);
+        final newBalance = await _rewardUser(reward.amount.toInt());
+        if (newBalance != null) {
+          // Pass reward to caller — UI shows the snackbar
+          onUserEarnedReward(reward);
+        } else {
+          // API call failed
+          onError?.call("Could not credit coins. Please check your connection and try again.");
+        }
       });
     } else {
       if (_isLoading) {
@@ -120,32 +126,44 @@ class AdService {
     }
   }
 
-  Future<void> _rewardUser(int amount) async {
+  /// Returns the new coin balance on success, or null on failure.
+  Future<int?> _rewardUser(int amount) async {
     try {
       final authService = DjangoAuthService();
-      // Ensure we reward at least 10 coins if the ad value is low/zero (like test ads)
       final rewardAmount = amount > 0 ? amount : 10;
-      
+
+      AppLogger.i('💰 Calling reward-coins API with amount=$rewardAmount ...');
+
       final response = await authService.authenticatedRequest(
         '${AppConfig.baseUrl}reward-coins/',
         method: 'POST',
         body: json.encode({'amount': rewardAmount}),
       );
 
+      AppLogger.i('💰 reward-coins response: ${response.statusCode} — ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
+          final int newBalance = data['new_balance'];
           if (authService.currentUser != null) {
             final userData = Map<String, dynamic>.from(authService.currentUser!);
-            userData['coins'] = data['new_balance'];
+            userData['coins'] = newBalance;
             authService.updateCurrentUser(userData);
           }
-          
-          AppLogger.i('💰 User reward successful: ${data['new_balance']} coins');
+          AppLogger.i('✅ Coins updated to $newBalance');
+          return newBalance;
+        } else {
+          AppLogger.w('⚠️ reward-coins returned success=false: ${response.body}');
+          return null;
         }
+      } else {
+        AppLogger.e('❌ reward-coins failed: ${response.statusCode} — ${response.body}');
+        return null;
       }
     } catch (e) {
-      AppLogger.e('❌ Error rewarding user: $e');
+      AppLogger.e('❌ Error calling reward-coins: $e');
+      return null;
     }
   }
 
