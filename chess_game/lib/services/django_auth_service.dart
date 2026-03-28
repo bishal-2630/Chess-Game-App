@@ -219,7 +219,8 @@ class DjangoAuthService extends ChangeNotifier {
 
   void updateCurrentUser(Map<String, dynamic> userData) {
     _currentUser = userData;
-    _saveAuthData();
+    notifyListeners(); // Immediately notify UI (don't wait for disk write)
+    _saveAuthData();   // Save to disk in background
   }
 
   Future<void> _saveAuthData() async {
