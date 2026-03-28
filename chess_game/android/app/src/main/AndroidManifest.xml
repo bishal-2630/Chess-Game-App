@@ -55,18 +55,6 @@
                 <data android:host="game"/>
             </intent-filter>
             
-            <!-- Deep Link: HTTP/HTTPS URLs (App Links) -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="http"/>
-                <data android:scheme="https"/>
-                <data android:host="positive-brianne-self2630-c40dbd11.koyeb.app"/>
-                <!-- ONLY intercept specific trigger paths. Do NOT use broad matchers here. -->
-                <data android:pathPrefix="/play"/>
-                <data android:pathPrefix="/game"/>
-            </intent-filter>
         </activity>
         <service
             android:name="id.flutter.flutter_background_service.BackgroundService"
