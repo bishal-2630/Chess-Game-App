@@ -8,7 +8,7 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:flutter/foundation.dart';
 import '../../services/config.dart';
 import '../../services/game_service.dart';
-import '../../services/ad_service.dart';
+import '../../services/unity_ad_service.dart';
 import '../../services/mqtt_service.dart';
 import 'dart:math';
 import 'dart:async';
@@ -2096,7 +2096,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                   const SizedBox(width: 4),
                   InkWell(
                     onTap: () {
-                      final adService = AdService();
+                      final adService = UnityAdService();
                       if (adService.isLoading) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -2131,7 +2131,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                               action: SnackBarAction(
                                 label: 'Retry',
                                 textColor: Colors.white,
-                                onPressed: () => AdService().loadRewardedAd(),
+                                onPressed: () => UnityAdService().loadRewardedAd(),
                               ),
                             ),
                           );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/django_auth_service.dart';
-import '../../services/ad_service.dart';
+import '../../services/unity_ad_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -169,7 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           _buildStatItem('Wins', (user?['wins'] ?? 0).toString(), Icons.emoji_events, color: Colors.green),
                           _buildStatItem('Coins', (user?['coins'] ?? 0).toString(), Icons.monetization_on, color: Colors.amber, onAdd: () {
-                            final adService = AdService();
+                            final adService = UnityAdService();
                             if (adService.isLoading) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -201,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     action: SnackBarAction(
                                       label: 'Retry',
                                       textColor: Colors.white,
-                                      onPressed: () => AdService().loadRewardedAd(),
+                                      onPressed: () => UnityAdService().loadRewardedAd(),
                                     ),
                                   ),
                                 );

@@ -29,7 +29,7 @@ dependencies:
   url_launcher: ^6.2.5
   google_sign_in: ^6.2.1
   logger: ^2.4.0
-  google_mobile_ads: ^5.1.0
+  unity_ads_plugin: ^0.3.30
 
 
 dev_dependencies:
