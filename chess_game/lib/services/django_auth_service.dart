@@ -31,7 +31,7 @@ class DjangoAuthService extends ChangeNotifier {
   GoogleSignIn? __googleSignIn;
   GoogleSignIn get _googleSignIn => __googleSignIn ??= GoogleSignIn(
     serverClientId:
-        '1059251569808-kps5i78pn2tikdtbp6qk4vf3tolig578.apps.googleusercontent.com',
+        '764791811000-uhnrqvpfe4euoaff3kmiekrc7p7c4obk.apps.googleusercontent.com',
   );
 
   // User data storage

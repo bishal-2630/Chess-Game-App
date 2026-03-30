@@ -1,41 +1,94 @@
 {
   "project_info": {
-    "project_number": "1059251569808",
-    "project_id": "chessbishal-64578",
-    "storage_bucket": "chessbishal-64578.firebasestorage.app"
+    "project_number": "764791811000",
+    "project_id": "chess-game-30",
+    "storage_bucket": "chess-game-30.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1059251569808:android:d2059a4692e77444948415",
+        "mobilesdk_app_id": "1:764791811000:android:c2cec98e932818076d3d4d",
         "android_client_info": {
           "package_name": "com.bishalkhadka.chess"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1059251569808-d956nr8sqttckkeq84lkok3vsao47bs2.apps.googleusercontent.com",
+          "client_id": "764791811000-5entbi9mvgck2af2nuo80r38nef5al9d.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.bishalkhadka.chess",
-            "certificate_hash": "055bfd91adf1f77154103c1d21a80312491dc3b0"
+            "certificate_hash": "13f1a2f4b73925d94811155aba5b47030e016273"
           }
-        },
-        {
-          "client_id": "1059251569808-kps5i78pn2tikdtbp6qk4vf3tolig578.apps.googleusercontent.com",
-          "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCFowQVewtvFuqrtm7tG7XTdsPgRJNJAqU"
+          "current_key": "AIzaSyBc3RTUIXJKuaXTj9RCWqgyHqOf_hYI3l0"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "1059251569808-kps5i78pn2tikdtbp6qk4vf3tolig578.apps.googleusercontent.com",
+              "client_id": "764791811000-uhnrqvpfe4euoaff3kmiekrc7p7c4obk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:764791811000:android:ffcb39e26fa069746d3d4d",
+        "android_client_info": {
+          "package_name": "com.example.chess"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "764791811000-teuk8qauavvsi2a16dkr9il735t9ljr6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.chess",
+            "certificate_hash": "055bfd91adf1f77154103c1d21a80312491dc3b0"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBc3RTUIXJKuaXTj9RCWqgyHqOf_hYI3l0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "764791811000-uhnrqvpfe4euoaff3kmiekrc7p7c4obk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:764791811000:android:605b47e08f55d2306d3d4d",
+        "android_client_info": {
+          "package_name": "com.example.chess_bishal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBc3RTUIXJKuaXTj9RCWqgyHqOf_hYI3l0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "764791811000-uhnrqvpfe4euoaff3kmiekrc7p7c4obk.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
