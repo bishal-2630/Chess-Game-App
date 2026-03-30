@@ -1,15 +1,12 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:livekit_client/livekit_client.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:go_router/go_router.dart';
 import '../services/signaling_service.dart';
-import '../services/config.dart';
-import '../services/django_auth_service.dart';
 import '../services/game_service.dart';
 import '../services/mqtt_service.dart';
-import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
 
 class CallScreen extends StatefulWidget {
   final String roomId;
@@ -30,14 +27,13 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
-  final DjangoAuthService _authService = DjangoAuthService();
   final SignalingService _signalingService = SignalingService();
   
-  VideoTrack? _remoteVideoTrack;
+  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
   
   bool _inCall = false;
-  String _status = "Connecting...";
-  bool _announcementSpoken = false; // New flag
+  String _status = "Initializing...";
   bool _isMuted = false;
   late bool _isVideoOn;
   bool _isExiting = false;
@@ -49,91 +45,78 @@ class _CallScreenState extends State<CallScreen> {
     _isVideoOn = widget.initialVideo;
     MqttService().setInCall(true);
     
-    if (!widget.isCaller) {
-      MqttService().stopAudio().then((_) {
-        MqttService().cancelCallNotification();
-      });
-    }
-
-    _signalingService.onConnectionState = null;
-    _signalingService.onGameMove = null;
-    _setupCallbacks();
-    _connect();
+    _initRenderers();
+    _startFlow();
 
     if (widget.isCaller) {
       _startCallTimeout();
     }
   }
 
-  void _setupCallbacks() {
-    _signalingService.onAddRemoteStream = (publication, participant) {
-      // publication is a TrackPublication. 
-      // In 2.x, we check if it's a video track (TrackType.VIDEO).
-      // Mark as connected on first track (audio or video)
-      if (mounted) {
-        setState(() {
-          if (publication.kind == TrackType.VIDEO) {
-             _remoteVideoTrack = publication.track as VideoTrack?;
-          }
-          _inCall = true;
-          _status = "Connected";
-        });
-        
-        // Trigger announcement once after connection
-        if (!_announcementSpoken) {
-          _announcementSpoken = true;
-          MqttService().speakRecordingAnnouncement();
-        }
-      }
-      _callTimeoutTimer?.cancel();
-      MqttService().stopAudio();
-    };
-
-    _signalingService.onEndCall = () {
-      if (mounted) _handleCallEnd("Call Ended");
-    };
+  Future<void> _initRenderers() async {
+    await _localRenderer.initialize();
+    await _remoteRenderer.initialize();
   }
 
-  Future<void> _connect() async {
+  Future<void> _startFlow() async {
     try {
-      final token = _authService.accessToken;
-      // Request recording for standalone calls (archival for future use)
-      final url = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}&record=true";
-      
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {"Authorization": "Bearer $token"}
-      );
-      
-      if (response.statusCode != 200) {
-        throw Exception("Server returned ${response.statusCode}");
-      }
-      
-      final data = jsonDecode(response.body);
-      final livekitToken = data['token'];
-      final livekitUrl = data['url'];
-
-      print("🌐 LiveKit URL: $livekitUrl");
-      print("🔑 LiveKit Token Snippet: ${livekitToken.toString().substring(0, 15)}...");
-
-      await _signalingService.connectToLiveKit(livekitUrl, livekitToken, videoEnabled: widget.initialVideo);
-      
-      if (mounted) {
-        setState(() {
-          _status = widget.isCaller ? "Calling ${widget.otherUserName}..." : "Connected";
-        });
+      // 1. Request Permissions FIRST to avoid crashes
+      setState(() => _status = "Requesting permissions...");
+      final micStatus = await Permission.microphone.request();
+      PermissionStatus camStatus = PermissionStatus.granted;
+      if (widget.initialVideo) {
+        camStatus = await Permission.camera.request();
       }
 
+      if (micStatus.isDenied || camStatus.isDenied) {
+        _handleCallEnd("Permissions Denied\nPlease enable camera/mic in settings.");
+        return;
+      }
+
+      // 2. Start Signaling IMMEDIATELY (Don't wait for media)
       if (widget.isCaller) {
+        setState(() => _status = "Calling ${widget.otherUserName}...");
         await GameService.sendCallSignal(
           receiverUsername: widget.otherUserName,
           roomId: widget.roomId,
           initialVideo: widget.initialVideo,
         );
       }
+
+      // 3. Setup Callbacks
+      _signalingService.onLocalStream = (stream) {
+        setState(() => _localRenderer.srcObject = stream);
+      };
+
+      _signalingService.onAddRemoteStream = (stream) {
+        setState(() {
+          _remoteRenderer.srcObject = stream;
+          _inCall = true;
+          _status = "Connected";
+        });
+        _callTimeoutTimer?.cancel();
+        MqttService().stopAudio();
+      };
+
+      _signalingService.onEndCall = () => _handleCallEnd("Call Ended");
+
+      // 4. Connect to Signaling Server
+      await _signalingService.connectToWebSocket(widget.roomId);
+
+      // 5. Open Media and Start Handshake
+      final mediaSuccess = await _signalingService.openUserMedia(videoEnabled: widget.initialVideo);
+      if (!mediaSuccess) {
+        _handleCallEnd("Failed to access camera/mic");
+        return;
+      }
+
+      if (widget.isCaller) {
+        await _signalingService.startCall();
+      }
+
     } catch (e) {
-      print("❌ Connection Error Detail: $e");
-      if (mounted) _handleCallEnd("Connection Failed\n$e");
+      print("❌ Call Flow Error: $e");
+      _handleCallEnd("Connection Failed\n$e");
     }
   }
 
@@ -149,13 +132,9 @@ class _CallScreenState extends State<CallScreen> {
         _status = status;
         _inCall = false;
       });
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 3), () {
         if (!mounted) return;
-        try {
-          context.go('/users');
-        } catch (e) {
-          print("Error navigating back: $e");
-        }
+        context.go('/users');
       });
     }
   }
@@ -167,7 +146,7 @@ class _CallScreenState extends State<CallScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: _inCall ? _buildVideoView() : _buildPlaceholderView(),
+            child: _inCall ? _buildInCallView() : _buildPlaceholderView(),
           ),
           if (!_inCall)
             Positioned(
@@ -175,7 +154,13 @@ class _CallScreenState extends State<CallScreen> {
               left: 0,
               right: 0,
               child: Center(
-                child: Text(_status, style: const TextStyle(color: Colors.white, fontSize: 20)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(_status, 
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ),
               ),
             ),
           Positioned(
@@ -185,7 +170,12 @@ class _CallScreenState extends State<CallScreen> {
               backgroundColor: Colors.black45,
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => _handleCallEnd("Exiting..."),
+                onPressed: () {
+                  if (widget.isCaller && !_inCall) {
+                    GameService.cancelCall(receiverUsername: widget.otherUserName, roomId: widget.roomId);
+                  }
+                  _handleCallEnd("Exiting...");
+                },
               ),
             ),
           ),
@@ -201,13 +191,33 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
-  Widget _buildVideoView() {
+  Widget _buildInCallView() {
     return Stack(
       children: [
-        if (_remoteVideoTrack != null)
-          VideoTrackRenderer(_remoteVideoTrack!, fit: rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)
-        else
-          _buildRemoteAvatarView(),
+        // Remote Video
+        RTCVideoView(_remoteRenderer, 
+          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+        ),
+        // Local Video (PiP)
+        if (_isVideoOn)
+          Positioned(
+            right: 20,
+            top: 100,
+            width: 120,
+            height: 160,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.white24),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: RTCVideoView(_localRenderer, mirror: true,
+                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -221,18 +231,19 @@ class _CallScreenState extends State<CallScreen> {
           children: [
             CircleAvatar(
               radius: 60,
-              child: Text(widget.otherUserName[0].toUpperCase(), style: const TextStyle(fontSize: 40)),
+              backgroundColor: Colors.blueGrey,
+              child: Text(widget.otherUserName[0].toUpperCase(), 
+                style: const TextStyle(fontSize: 40, color: Colors.white),
+              ),
             ),
             const SizedBox(height: 20),
-            Text("Calling ${widget.otherUserName}", style: const TextStyle(color: Colors.white70)),
+            Text(widget.otherUserName, 
+              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildRemoteAvatarView() {
-    return Center(child: Icon(Icons.person, size: 100, color: Colors.white24));
   }
 
   Widget _buildControls() {
@@ -260,7 +271,12 @@ class _CallScreenState extends State<CallScreen> {
         _buildCircleBtn(
           icon: Icons.call_end,
           color: Colors.red,
-          onPressed: () => _handleCallEnd("Call Ended"),
+          onPressed: () {
+            if (widget.isCaller && !_inCall) {
+               GameService.cancelCall(receiverUsername: widget.otherUserName, roomId: widget.roomId);
+            }
+             _handleCallEnd("Call Ended");
+          },
         ),
       ],
     );
@@ -278,8 +294,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _startCallTimeout() {
-    _callTimeoutTimer = Timer(const Duration(seconds: 30), () {
+    _callTimeoutTimer = Timer(const Duration(seconds: 45), () {
       if (!mounted || _inCall || _isExiting) return;
+      GameService.cancelCall(receiverUsername: widget.otherUserName, roomId: widget.roomId);
       _handleCallEnd("No Answer");
     });
   }
@@ -287,6 +304,8 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void dispose() {
     _callTimeoutTimer?.cancel();
+    _localRenderer.dispose();
+    _remoteRenderer.dispose();
     _signalingService.disconnect();
     super.dispose();
   }

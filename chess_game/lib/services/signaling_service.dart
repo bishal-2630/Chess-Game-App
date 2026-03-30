@@ -1,128 +1,167 @@
 import 'dart:convert';
 import 'dart:async';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart';
+import 'config.dart';
 
 class SignalingService {
   static final SignalingService _instance = SignalingService._internal();
   factory SignalingService() => _instance;
   SignalingService._internal();
 
-  Room? _room;
-  EventsListener<RoomEvent>? _listener;
-
-  // New LiveKit Callbacks
-  void Function(TrackPublication publication, Participant participant)? onAddRemoteStream;
-  void Function(TrackPublication publication, Participant participant)? onRemoveRemoteStream;
-  Function(Map<String, dynamic>)? onGameMove;
+  WebSocketChannel? _channel;
+  RTCPeerConnection? _peerConnection;
+  MediaStream? _localStream;
+  
+  // Callbacks for UI
+  void Function(MediaStream stream)? onLocalStream;
+  void Function(MediaStream stream)? onAddRemoteStream;
+  void Function(MediaStream stream)? onRemoveRemoteStream;
   void Function()? onEndCall;
-  void Function()? onIncomingCall;
-  void Function()? onCallAccepted;
-  void Function(bool videoOn)? onRemoteVideoToggle;
   void Function(bool isConnected)? onConnectionState;
 
-  // LEGACY Callbacks (to maintain compatibility with ChessScreen)
-  set onLocalStream(Function(dynamic)? callback) {}
-  set onPlayerLeft(Function()? callback) {}
-  set onCallRejected(Function()? callback) {}
-  set onNewGame(Function()? callback) {}
-  set onPlayerJoined(Function()? callback) {}
+  // WebRTC Configuration
+  final Map<String, dynamic> _iceServers = {
+    'iceServers': [
+      {'urls': ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302']}
+    ]
+  };
 
-  Future<void> connectToLiveKit(String url, String token, {bool videoEnabled = false}) async {
-    print("📞 Connecting to LiveKit: $url (video: $videoEnabled)");
+  Future<void> connectToWebSocket(String roomId) async {
+    final host = AppConfig.baseUrl.replaceAll('http://', '').replaceAll('https://', '').replaceAll('/', '');
+    final scheme = AppConfig.baseUrl.startsWith('https') ? 'wss' : 'ws';
+    final url = '$scheme://$host/ws/call/$roomId/';
     
-    if (!kIsWeb) {
-      await [Permission.microphone, Permission.camera].request();
-    }
-
-    await disconnect();
-
-    _room = Room();
+    print("📞 Connecting to Signaling Server: $url");
     
-    // In LiveKit 2.x, use createListener()
-    _listener = _room!.createListener();
-    _listener!
-      ..on<TrackSubscribedEvent>((event) {
-        onAddRemoteStream?.call(event.publication, event.participant);
-      })
-      ..on<TrackUnsubscribedEvent>((event) {
-        onRemoveRemoteStream?.call(event.publication, event.participant);
-      })
-      ..on<ParticipantDisconnectedEvent>((event) {
-         if (_room?.remoteParticipants.isEmpty ?? true) {
-            onEndCall?.call();
-          }
-      })
-      ..on<DataReceivedEvent>((event) {
-        final String data = utf8.decode(event.data);
-        try {
-          final decoded = jsonDecode(data);
-          if (decoded['type'] == 'move') {
-            onGameMove?.call(decoded['payload']);
-          }
-        } catch (e) {
-          print("Error decoding data message: $e");
-        }
-      });
-
     try {
-      await _room!.connect(url, token);
-      // Only enable camera if explicitly requested (video call)
-      // Voice calls start with camera OFF until user taps the video button
-      if (videoEnabled) {
-        await _room!.localParticipant?.setCameraEnabled(true);
-      }
-      await _room!.localParticipant?.setMicrophoneEnabled(true);
+      _channel = WebSocketChannel.connect(Uri.parse(url));
+      _channel!.stream.listen(_onMessage, onDone: disconnect, onError: (e) => print("❌ Signaling Error: $e"));
       onConnectionState?.call(true);
     } catch (e) {
-      print("❌ Failed to connect to LiveKit: $e");
+      print("❌ Failed to connect to signaling server: $e");
       onConnectionState?.call(false);
-      rethrow;
     }
   }
 
-  Future<void> setVideoEnabled(bool enabled) async {
-    await _room?.localParticipant?.setCameraEnabled(enabled);
-  }
+  void _onMessage(dynamic message) async {
+    final data = jsonDecode(message);
+    final type = data['type'];
+    final payload = data['payload'] ?? data;
 
-  Future<void> muteAudio(bool mute) async {
-    await _room?.localParticipant?.setMicrophoneEnabled(!mute);
-  }
-
-  void sendMove(Map<String, dynamic> moveData) {
-    if (_room?.localParticipant != null) {
-      final jsonStr = jsonEncode({'type': 'move', 'payload': moveData});
-      _room!.localParticipant!.publishData(utf8.encode(jsonStr));
+    switch (type) {
+      case 'offer':
+        await _handleOffer(payload);
+        break;
+      case 'answer':
+        await _handleAnswer(payload);
+        break;
+      case 'candidate':
+        await _handleCandidate(payload);
+        break;
+      case 'end_call':
+        onEndCall?.call();
+        break;
     }
+  }
+
+  Future<void> _createPeerConnection() async {
+    _peerConnection = await createPeerConnection(_iceServers);
+
+    _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
+      _send('candidate', {
+        'candidate': candidate.candidate,
+        'sdpMid': candidate.sdpMid,
+        'sdpMLineIndex': candidate.sdpMLineIndex,
+      });
+    };
+
+    _peerConnection!.onTrack = (RTCTrackEvent event) {
+      if (event.streams.isNotEmpty) {
+        onAddRemoteStream?.call(event.streams[0]);
+      }
+    };
+
+    if (_localStream != null) {
+      _localStream!.getTracks().forEach((track) {
+        _peerConnection!.addTrack(track, _localStream!);
+      });
+    }
+  }
+
+  Future<bool> openUserMedia({bool videoEnabled = false}) async {
+    final Map<String, dynamic> mediaConstraints = {
+      'audio': true,
+      'video': videoEnabled ? {'facingMode': 'user'} : false,
+    };
+
+    try {
+      _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      onLocalStream?.call(_localStream!);
+      return true;
+    } catch (e) {
+      print("❌ Error accessing media: $e");
+      return false;
+    }
+  }
+
+  Future<void> startCall() async {
+    await _createPeerConnection();
+    final offer = await _peerConnection!.createOffer();
+    await _peerConnection!.setLocalDescription(offer);
+    _send('offer', {'sdp': offer.sdp, 'type': offer.type});
+  }
+
+  Future<void> _handleOffer(Map<String, dynamic> data) async {
+    await _createPeerConnection();
+    await _peerConnection!.setRemoteDescription(RTCSessionDescription(data['sdp'], data['type']));
+    final answer = await _peerConnection!.createAnswer();
+    await _peerConnection!.setLocalDescription(answer);
+    _send('answer', {'sdp': answer.sdp, 'type': answer.type});
+  }
+
+  Future<void> _handleAnswer(Map<String, dynamic> data) async {
+    if (_peerConnection != null) {
+      await _peerConnection!.setRemoteDescription(RTCSessionDescription(data['sdp'], data['type']));
+    }
+  }
+
+  Future<void> _handleCandidate(Map<String, dynamic> data) async {
+    if (_peerConnection != null) {
+      await _peerConnection!.addCandidate(RTCIceCandidate(data['candidate'], data['sdpMid'], data['sdpMLineIndex']));
+    }
+  }
+
+  void _send(String type, Map<String, dynamic> data) {
+    _channel?.sink.add(jsonEncode({'type': type, 'payload': data}));
   }
 
   Future<void> disconnect() async {
-    if (_room != null) {
-      await _listener?.dispose();
-      _listener = null;
-      await _room!.disconnect();
-      _room = null;
-    }
+    _localStream?.getTracks().forEach((t) => t.stop());
+    _localStream?.dispose();
+    _localStream = null;
+    
+    _peerConnection?.close();
+    _peerConnection = null;
+    
+    _channel?.sink.close();
+    _channel = null;
+    
     onConnectionState?.call(false);
   }
 
-  // LEGACY Methods (Stubs to prevent build errors)
-  Future<void> stopAudio() async {}
-  void sendBye() {}
-  void connect(String url, {String? token}) {}
-  Future<void> acceptCall(dynamic local, dynamic remote, {bool videoEnabled = false}) async {
-    // This is called from ChessScreen. 
-    // It already has the roomId in its state, but we need the token.
-    // However, the roomId isn't passed here. 
-    // WE SHOULD FETCH THE TOKEN IN THE SCREEN AND CALL connectToLiveKit directly.
-    // For legacy support, we can't do much without a roomId.
+  // Support methods for CallScreen
+  Future<void> muteAudio(bool mute) async {
+    _localStream?.getAudioTracks().forEach((t) => t.enabled = !mute);
   }
-  
-  Future<void> startCall(dynamic local, dynamic remote, {bool videoEnabled = false}) async {
-    // Same as acceptCall.
+
+  Future<void> setVideoEnabled(bool enabled) async {
+    _localStream?.getVideoTracks().forEach((t) => t.enabled = enabled);
   }
-  void sendNewGame() {}
-  Future<void> hangUp() => disconnect();
-  void sendEndCall() => disconnect();
+
+  // Compatibility stubs
+  Future<void> connectToLiveKit(String url, String token, {bool videoEnabled = false}) async => connectToWebSocket(url);
+  void sendEndCall() => _send('end_call', {});
 }
