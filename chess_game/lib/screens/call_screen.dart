@@ -100,9 +100,9 @@ class _CallScreenState extends State<CallScreen> {
 
       // 2. Open media FIRST so _localStream is ready before any offer arrives
       setState(() => _status = "Opening microphone...");
-      final mediaSuccess = await _signalingService.openUserMedia(videoEnabled: widget.initialVideo);
-      if (!mediaSuccess) {
-        _handleCallEnd("Failed to access camera/mic");
+      final mediaError = await _signalingService.openUserMedia(videoEnabled: widget.initialVideo);
+      if (mediaError != null) {
+        _handleCallEnd(mediaError);
         return;
       }
 

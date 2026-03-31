@@ -128,20 +128,35 @@ class SignalingService {
     }
   }
 
-  Future<bool> openUserMedia({bool videoEnabled = false}) async {
-    final Map<String, dynamic> mediaConstraints = {
-      'audio': true,
-      'video': videoEnabled ? {'facingMode': 'user'} : false,
-    };
-
+  /// Opens user media. Returns null on success, or an error string on failure.
+  Future<String?> openUserMedia({bool videoEnabled = false}) async {
+    // Try with requested constraints first
     try {
+      final Map<String, dynamic> mediaConstraints = {
+        'audio': true,
+        'video': videoEnabled ? {'facingMode': 'user'} : false,
+      };
       _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
       onLocalStream?.call(_localStream!);
-      return true;
+      return null; // success
     } catch (e) {
-      print("❌ Error accessing media: $e");
-      return false;
+      print("⚠️ Media access failed (${videoEnabled ? 'audio+video' : 'audio only'}): $e");
     }
+
+    // Fallback: try audio-only if video was requested but failed
+    if (videoEnabled) {
+      try {
+        print("🔄 Retrying with audio-only...");
+        _localStream = await navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
+        onLocalStream?.call(_localStream!);
+        return null; // audio-only success — caller should disable video UI
+      } catch (e) {
+        print("❌ Audio-only fallback also failed: $e");
+        return 'Could not access microphone: $e';
+      }
+    }
+
+    return 'Could not access microphone. Check app permissions in Settings.';
   }
 
   Future<void> startCall() async {

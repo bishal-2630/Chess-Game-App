@@ -21,28 +21,27 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           # 0. Capture the actual commit message from GitHub
-          GIT_MSG=$(git log -1 --pretty=%B | head -n 1) # Take first line for brevity
+          GIT_MSG=$(git log -1 --pretty=%B | head -n 1)
           
-          # 1. Prepare a clean directory for the fresh push
-          mkdir ../hf_deploy
-          # Copy everything to an external folder to avoid self-copy infinite loop
-          cp -rp . ../hf_deploy
+          # 1. Clone the EXISTING HF Space (shallow) to preserve history
+          git clone --depth=1 https://Bishal26:$HF_TOKEN@huggingface.co/spaces/Bishal26/chess_game_bishal ../hf_deploy || \
+            (mkdir ../hf_deploy && cd ../hf_deploy && git init -b main && git remote add origin https://Bishal26:$HF_TOKEN@huggingface.co/spaces/Bishal26/chess_game_bishal)
+
+          # 2. Copy current repo files over the cloned HF repo (preserve .git)
+          rsync -a --exclude='.git' . ../hf_deploy/
           
           cd ../hf_deploy
-          rm -rf .git
-          
-          # 2. Init a fresh repo and configure LFS correctly
-          git init -b main
+
+          # 3. Configure LFS for binary files
           git lfs install
-          # Explicitly track binaries to satisfy Hugging Face's server-side hooks
           git lfs track "*.png" "*.jpg" "*.mp3" "*.wasm" "*.ttf" "*.otf"
-          
+
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
-          
+
+          # 4. Stage and commit on top of existing history
           git add .
-          git commit -m "Sync: $GIT_MSG (at ${{ github.sha }})"
-          
-          # 3. Add HF remote and force push to main
-          git remote add hf https://Bishal26:$HF_TOKEN@huggingface.co/spaces/Bishal26/chess_game_bishal
-          git push hf main:refs/heads/main --force
+          git diff --cached --quiet || git commit -m "Sync: $GIT_MSG (at ${{ github.sha }})"
+
+          # 5. Push (no --force, preserves history)
+          git push origin main
