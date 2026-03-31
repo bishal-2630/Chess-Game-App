@@ -44,9 +44,14 @@ class _CallScreenState extends State<CallScreen> {
     super.initState();
     _isVideoOn = widget.initialVideo;
     MqttService().setInCall(true);
-    
-    _initRenderers();
-    _startFlow();
+    _init();
+  }
+
+  Future<void> _init() async {
+    // CRITICAL: Init renderers BEFORE starting the call flow
+    // to prevent EglRenderer crashes
+    await _initRenderers();
+    if (mounted) _startFlow();
 
     if (widget.isCaller) {
       _startCallTimeout();
