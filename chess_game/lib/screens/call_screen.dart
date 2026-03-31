@@ -157,7 +157,7 @@ class _CallScreenState extends State<CallScreen> {
 
       // 3. Caller Logic: wait for callee to join before sending offer
       if (widget.isCaller) {
-        setState(() => _status = "Waiting for ${widget.otherUserName}...");
+        setState(() => _status = "Calling...");
         final peerJoined = Completer<void>();
         
         // Use updated signature (Map opponent)
@@ -174,7 +174,10 @@ class _CallScreenState extends State<CallScreen> {
           onTimeout: () => throw TimeoutException('Callee did not join'),
         );
         
-        setState(() => _status = "Starting call...");
+        // Stop calling ringtone immediately after cell is accepted
+        MqttService().stopAudio(broadcast: true);
+        
+        setState(() => _status = "On call");
         await _signalingService.startCall();
       }
 

@@ -257,33 +257,33 @@ class _ChessGameScreenState extends State<ChessScreen> {
     };
 
     _signalingService.onPlayerLeft = () {
-      if (mounted) {
-        setState(() {
-          _opponentJoined = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _opponentJoined = false;
+      });
 
       // If game was active, record as a win for this player
       if (!gameOver && moveHistory.isNotEmpty) {
         GameService.recordGameResult('win');
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Opponent left the game. You win the game"),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 3),
-        ));
-        
-        // Auto-exit after 3 seconds so they can see the result
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) {
-            _hangUp();
-            context.go('/users');
-          }
-        });
-      }
+      // Show brief notification then auto-exit immediately
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Opponent left the room. Returning to chess..."),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ));
+
+      // Clean up and navigate back to solo chess screen (resets the game)
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          _hangUp();
+          _initializeBoard(); // Reset the game board
+          context.go('/chess'); // Navigate to solo chess (no roomId = fresh game)
+        }
+      });
     };
 
     _signalingService.onConnectionState = (isConnected) {
@@ -477,7 +477,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
       }
 
       _hangUp();
-      if (mounted) context.go('/users');
+      if (mounted) context.go('/chess');
     }
   }
 
