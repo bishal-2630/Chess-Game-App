@@ -204,6 +204,16 @@ class SignalingService {
     _channel?.sink.close();
     _channel = null;
     
+    // Clear callbacks to avoid sending events to disposed UI components
+    onLocalStream = null;
+    onAddRemoteStream = null;
+    onRemoveRemoteStream = null;
+    onEndCall = null;
+    onConnectionState = null;
+    onPlayerJoined = null;
+    onCallAccepted = null;
+    onCallRejected = null;
+    
     onConnectionState?.call(false);
   }
 

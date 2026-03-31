@@ -98,30 +98,35 @@ class _CallScreenState extends State<CallScreen> {
         return;
       }
 
-      // 2. Open media FIRST so _localStream is ready before any offer arrives
+      // 2. Setup UI Callbacks BEFORE opening media
+      _signalingService.onLocalStream = (stream) {
+        if (mounted) {
+          _localRenderer.srcObject = stream;
+          setState(() {});
+        }
+      };
+
+      _signalingService.onAddRemoteStream = (stream) {
+        if (mounted) {
+          _remoteRenderer.srcObject = stream;
+          setState(() {
+            _inCall = true;
+            _status = "Connected";
+          });
+        }
+        _callTimeoutTimer?.cancel();
+        MqttService().stopAudio();
+      };
+
+      _signalingService.onEndCall = () => _handleCallEnd("Call Ended");
+
+      // 3. Open media so _localStream is ready before any offer arrives
       setState(() => _status = "Opening microphone...");
       final mediaError = await _signalingService.openUserMedia(videoEnabled: widget.initialVideo);
       if (mediaError != null) {
         _handleCallEnd(mediaError);
         return;
       }
-
-      // 3. Setup UI Callbacks BEFORE connecting
-      _signalingService.onLocalStream = (stream) {
-        if (mounted) setState(() => _localRenderer.srcObject = stream);
-      };
-
-      _signalingService.onAddRemoteStream = (stream) {
-        if (mounted) setState(() {
-          _remoteRenderer.srcObject = stream;
-          _inCall = true;
-          _status = "Connected";
-        });
-        _callTimeoutTimer?.cancel();
-        MqttService().stopAudio();
-      };
-
-      _signalingService.onEndCall = () => _handleCallEnd("Call Ended");
 
       // 4. If caller, also send call notification to the other player
       if (widget.isCaller) {
