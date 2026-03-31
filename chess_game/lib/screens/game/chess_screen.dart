@@ -246,7 +246,10 @@ class _ChessGameScreenState extends State<ChessScreen> {
         });
       }
       if (isConnected && mounted) {
-        setState(() => _callStatus = ""); // Immediately clear Connecting...
+        setState(() {
+          _isConnectedToRoom = true;
+          _callStatus = ""; // Ensure Connecting... bar is cleared
+        });
         _setEphemeralStatus("Connected to Server");
       } else if (mounted) {
         _setEphemeralStatus("Disconnected");
@@ -2091,7 +2094,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
           Column(
             children: [
               // User Profile Header
-              if (_isConnectedToRoom)
+              if (widget.roomId != null)
                 _buildCallInterface()
               else
                 GestureDetector(
@@ -2519,7 +2522,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
       ),
       child: Row(
         children: [
-          // Local Player Box
+          // Local Player Box (You)
           Expanded(
             child: _buildCallProfileBox(
               name: "You",
@@ -2527,7 +2530,31 @@ class _ChessGameScreenState extends State<ChessScreen> {
               isCameraOn: _isVideoOn,
               isMuted: _isMuted,
               profilePic: _authService.currentUser?['profile_picture'],
-              controls: activeControls, // Local user gets the controls
+              // Show call icons also on "You" side as requested
+              controls: (!_isAudioOn && !_isCalling && !_showIncomingCallBanner)
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildCallControlButton(
+                          icon: Icons.call,
+                          color: Colors.green,
+                          onPressed: () {
+                            setState(() => _isVideoOn = false);
+                            _toggleAudio();
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _buildCallControlButton(
+                          icon: Icons.videocam,
+                          color: Colors.blue,
+                          onPressed: () {
+                            setState(() => _isVideoOn = true);
+                            _toggleAudio();
+                          },
+                        ),
+                      ],
+                    )
+                  : activeControls, // Fallback to current active controls (Mute, etc)
             ),
           ),
           const SizedBox(width: 8),
@@ -2592,7 +2619,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              "Waiting for opponent...",
+              !_isConnectedToRoom ? "Connecting to room..." : "Waiting for opponent...",
               style: TextStyle(color: Colors.white54, fontSize: 10, fontStyle: FontStyle.italic),
             ),
           ],
@@ -2634,7 +2661,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
               rtc.RTCVideoView(
                 renderer,
                 objectFit: rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                mirror: name == "You",
+                mirror: true,
               ),
             // Name Overlay
             Positioned(

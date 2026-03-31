@@ -105,6 +105,7 @@ class SignalingService {
   }
 
   Future<void> _createPeerConnection() async {
+    if (_peerConnection != null) return;
     _peerConnection = await createPeerConnection(_iceServers);
 
     _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
@@ -220,6 +221,38 @@ class SignalingService {
   }
 
   Future<void> setVideoEnabled(bool enabled) async {
+    if (enabled && (_localStream == null || _localStream!.getVideoTracks().isEmpty)) {
+      try {
+        print("📸 Acquiring video track mid-call...");
+        final MediaStream videoStream = await navigator.mediaDevices.getUserMedia({
+          'audio': false,
+          'video': {
+            'facingMode': 'user',
+            'width': {'ideal': 640},
+            'height': {'ideal': 480},
+          }
+        });
+
+        if (videoStream.getVideoTracks().isNotEmpty) {
+          final videoTrack = videoStream.getVideoTracks().first;
+          _localStream?.addTrack(videoTrack);
+          
+          if (_peerConnection != null) {
+            _peerConnection!.addTrack(videoTrack, _localStream!);
+            
+            // Trigger re-negotiation
+            final offer = await _peerConnection!.createOffer();
+            await _peerConnection!.setLocalDescription(offer);
+            _send('offer', {'sdp': offer.sdp, 'type': offer.type});
+          }
+          
+          onLocalStream?.call(_localStream!);
+        }
+      } catch (e) {
+        print("❌ Failed to add video track mid-call: $e");
+      }
+    }
+
     _localStream?.getVideoTracks().forEach((t) => t.enabled = enabled);
     _send('remote_video_toggle', {'enabled': enabled});
   }
