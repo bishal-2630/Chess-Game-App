@@ -233,7 +233,7 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
           _opponentJoined = true; // Fallback: if we got a stream, they are definitely here
           _remoteStream = stream;
           _remoteRenderer.srcObject = stream;
-          _isRemoteVideoOn = stream.getVideoTracks().isNotEmpty;
+          _isRemoteVideoOn = stream?.getVideoTracks().isNotEmpty ?? false;
         });
       }
     };

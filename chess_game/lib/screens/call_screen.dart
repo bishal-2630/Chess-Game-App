@@ -98,7 +98,7 @@ class _CallScreenState extends State<CallScreen> {
         if (!mounted) return;
         try {
           _remoteRenderer.srcObject = stream;
-          bool hasVideo = stream.getVideoTracks().isNotEmpty;
+          bool hasVideo = stream?.getVideoTracks().isNotEmpty ?? false;
           setState(() {
             _inCall = true;
             _isRemoteVideoOn = hasVideo;
