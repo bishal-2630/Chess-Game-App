@@ -23,6 +23,7 @@ jobs:
           # 1. Configure Git
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
+          git config lfs.allowincompletepush true 
           
           # 2. Add HF Remote
           # Note: Bishal26 username and HF_TOKEN are used for auth
