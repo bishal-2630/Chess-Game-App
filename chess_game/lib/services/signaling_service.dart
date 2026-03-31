@@ -119,6 +119,7 @@ class SignalingService {
 
     switch (data['type']) {
       case 'connected':
+        onConnectionState?.call(true); // Ensure UI knows we are connected
         if (data['opponent'] != null) {
           onRoomStatus?.call(data['opponent']);
         }

@@ -555,6 +555,16 @@ class _ChessGameScreenState extends State<ChessScreen> {
     try {
       // PURE WebRTC: Connect directly to the signaling server via WebSocket
       await _signalingService.connectToWebSocket(roomId);
+      
+      // Secondary safety check: ensure UI is updated if the automatic callback is delayed
+      if (mounted) {
+        setState(() {
+          _isConnectedToRoom = true;
+          if (_callStatus == "Connecting...") {
+            _callStatus = "";
+          }
+        });
+      }
     } catch (e) {
       _setEphemeralStatus("Connection error: $e");
     }
