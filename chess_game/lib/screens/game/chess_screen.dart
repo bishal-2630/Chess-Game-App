@@ -154,6 +154,27 @@ class _ChessGameScreenState extends State<ChessScreen> {
       }
     });
 
+    // Listen for challenge declines via MQTT
+    MqttService().notifications.listen((data) {
+      if (!mounted) return;
+      
+      if (data['type'] == 'invitation_response') {
+        final payload = data['data'] ?? data['payload'] ?? data;
+        final String? responseRoomId = payload['invitation']?['room_id']?.toString();
+        final String? action = payload['action'];
+        
+        if (responseRoomId == widget.roomId && action == 'decline') {
+          final String receiver = payload['invitation']?['receiver']?['username'] ?? "Opponent";
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("$receiver declined your challenge"),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ));
+          _onLogout(); // Use existing logout/confirm logic or direct exit
+        }
+      }
+    });
+
     // Auto-connect if parameters provided via route
     if (widget.roomId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -198,9 +219,29 @@ class _ChessGameScreenState extends State<ChessScreen> {
     _signalingService.onAddRemoteStream = (stream) {
       if (mounted) {
         setState(() {
+          _opponentJoined = true; // Fallback: if we got a stream, they are definitely here
           _remoteStream = stream;
           _remoteRenderer.srcObject = stream;
           _isRemoteVideoOn = stream.getVideoTracks().isNotEmpty;
+        });
+      }
+    };
+
+    _signalingService.onPlayerJoined = () {
+      if (mounted) {
+        setState(() {
+          _opponentJoined = true;
+          _setEphemeralStatus("Opponent Joined");
+        });
+      }
+    };
+
+    _signalingService.onRoomStatus = (opponent) {
+      if (mounted) {
+        setState(() {
+          _opponentJoined = true;
+          // Optionally update opponent profile picture/name here if we had fields for it
+          _setEphemeralStatus("Connected with ${opponent['username']}");
         });
       }
     };
@@ -2070,29 +2111,10 @@ class _ChessGameScreenState extends State<ChessScreen> {
         backgroundColor: Colors.blue[800],
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          if (_isConnectedToRoom) ...[
-            IconButton(
-              icon: Icon(_isAudioOn ? Icons.call_end : Icons.call, 
-                         color: _isAudioOn ? Colors.red : Colors.white),
-              onPressed: () {
-                if (_isAudioOn) {
-                  _toggleAudio(); // Ends call
-                } else {
-                  // Direct audio call (user requested no dialog)
-                  if (!_isAudioOn) {
-                    setState(() => _isVideoOn = false);
-                    _toggleAudio();
-                  }
-                }
-              },
-              tooltip: _isAudioOn ? "End Call" : "Call Opponent",
-            ),
-          ],
-          
           if (_isConnectedToRoom)
             TextButton.icon(
               onPressed: _onLogout,
-              icon: const Icon(Icons.close, color: Colors.white, size: 20),
+              icon: const Icon(Icons.logout, color: Colors.white, size: 18),
               label: const Text("EXIT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
             ),
         ],
