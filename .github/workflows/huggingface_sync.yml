@@ -20,18 +20,29 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # 1. Configure Git
+          # 0. Capture the actual commit message from GitHub
+          GIT_MSG=$(git log -1 --pretty=%B | head -n 1) # Take first line for brevity
+          
+          # 1. Prepare a clean directory for the fresh push
+          mkdir ../hf_deploy
+          # Copy everything to an external folder to avoid self-copy infinite loop
+          cp -rp . ../hf_deploy
+          
+          cd ../hf_deploy
+          rm -rf .git
+          
+          # 2. Init a fresh repo and configure LFS correctly
+          git init -b main
+          git lfs install
+          # Explicitly track binaries to satisfy Hugging Face's server-side hooks
+          git lfs track "*.png" "*.jpg" "*.mp3" "*.wasm" "*.ttf" "*.otf"
+          
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
-          git config lfs.allowincompletepush true 
           
-          # 2. Add HF Remote
-          # Note: Bishal26 username and HF_TOKEN are used for auth
+          git add .
+          git commit -m "Sync: $GIT_MSG (at ${{ github.sha }})"
+          
+          # 3. Add HF remote and force push to main
           git remote add hf https://Bishal26:$HF_TOKEN@huggingface.co/spaces/Bishal26/chess_game_bishal
-          
-          # 3. Pull LFS objects before pushing to ensure we have the actual blobs
-          git lfs pull
-          
-          # 4. Force push the current branch to HF main to update the app
-          # refs/remotes/origin/${{ github.ref_name }} refers to the branch that triggered the push
-          git push hf HEAD:refs/heads/main --force
+          git push hf main:refs/heads/main --force
