@@ -27,7 +27,7 @@ class SignalingService {
   // Game Signaling Callbacks
   void Function(Map<String, dynamic> data)? onGameMove;
   void Function(Map<String, dynamic> opponent)? onRoomStatus;
-  void Function()? onPlayerJoined;
+  void Function(Map<String, dynamic> opponent)? onPlayerJoined;
   void Function()? onPlayerLeft;
   void Function()? onIncomingCall;
   void Function(bool enabled)? onRemoteVideoToggle;
@@ -158,7 +158,9 @@ class SignalingService {
         onNewGame?.call();
         break;
       case 'player_joined':
-        onPlayerJoined?.call();
+        if (data['opponent'] != null) {
+          onPlayerJoined?.call(data['opponent']);
+        }
         break;
     }
   }
@@ -261,11 +263,20 @@ class SignalingService {
     _channel?.sink.close();
     _channel = null;
     
-    // NOTE: We no longer nullify the UI callbacks here.
-    // They are managed by the UI components (ChessScreen/CallScreen)
-    // to prevent race conditions during rapid state transitions.
-    
+    clearCallbacks();
     onConnectionState?.call(false);
+  }
+
+  void clearCallbacks() {
+    onLocalStream = null;
+    onAddRemoteStream = null;
+    onConnectionState = null;
+    onRoomStatus = null;
+    onEndCall = null;
+    onGameMove = null;
+    onNewGame = null;
+    onPlayerJoined = null;
+    onRemoteVideoToggle = null;
   }
 
   // Support methods for CallScreen

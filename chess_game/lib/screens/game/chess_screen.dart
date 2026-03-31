@@ -227,11 +227,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
       }
     };
 
-    _signalingService.onPlayerJoined = () {
+    _signalingService.onPlayerJoined = (opponent) {
       if (mounted) {
         setState(() {
           _opponentJoined = true;
-          _setEphemeralStatus("Opponent Joined");
+          _setEphemeralStatus("Opponent Joined: ${opponent['username']}");
         });
       }
     };
@@ -377,15 +377,6 @@ class _ChessGameScreenState extends State<ChessScreen> {
     _signalingService.onNewGame = () {
       _initializeBoard();
       _setEphemeralStatus("Opponent started a new game");
-    };
-
-    _signalingService.onPlayerJoined = () {
-      if (mounted) {
-        setState(() {
-          _opponentJoined = true;
-        });
-      }
-      _setEphemeralStatus("Opponent joined the room");
     };
   }
 

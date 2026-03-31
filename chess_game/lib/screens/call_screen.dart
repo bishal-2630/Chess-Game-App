@@ -83,57 +83,28 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _startFlow() async {
     try {
-      // 1. Check & Request Permissions
-      setState(() => _status = "Checking permissions...");
-
-      // Microphone
-      PermissionStatus micStatus = await Permission.microphone.status;
-      if (!micStatus.isGranted) {
-        if (micStatus.isPermanentlyDenied) {
-          _handleCallEnd("Microphone permission permanently denied.\nPlease enable it in app settings.");
-          return;
-        }
-        micStatus = await Permission.microphone.request();
-      }
-
-      if (widget.initialVideo) {
-        PermissionStatus camStatus = await Permission.camera.status;
-        if (!camStatus.isGranted) {
-          if (camStatus.isPermanentlyDenied) {
-            _handleCallEnd("Camera permission permanently denied.\nPlease enable it in app settings.");
-            return;
-          }
-          camStatus = await Permission.camera.request();
-          if (!camStatus.isGranted) {
-            _handleCallEnd("Camera permission denied.");
-            return;
-          }
-        }
-      }
-
-      if (!micStatus.isGranted) {
-        _handleCallEnd("Microphone permission denied.");
-        return;
-      }
-
-      // 2. Setup UI Callbacks BEFORE opening media
+      // 1. Setup UI Callbacks IMMEDIATELY to catch parallel media/signal events
       _signalingService.onLocalStream = (stream) {
-        if (mounted) {
+        if (!mounted) return;
+        try {
           _localRenderer.srcObject = stream;
           setState(() {});
+        } catch (e) {
+          print("⚠️ Error setting local srcObject: $e");
         }
       };
 
       _signalingService.onAddRemoteStream = (stream) {
-        if (mounted) {
+        if (!mounted) return;
+        try {
           _remoteRenderer.srcObject = stream;
-          // Check if remote stream has video tracks
           bool hasVideo = stream.getVideoTracks().isNotEmpty;
-          print("📺 Remote Stream Added: Video=${hasVideo}");
           setState(() {
             _inCall = true;
             _isRemoteVideoOn = hasVideo;
           });
+        } catch (e) {
+          print("⚠️ Error setting remote srcObject: $e");
         }
         _callTimeoutTimer?.cancel();
         MqttService().stopAudio();
@@ -143,53 +114,66 @@ class _CallScreenState extends State<CallScreen> {
         if (mounted) {
           setState(() {
             _isRemoteVideoOn = enabled;
-            print("📺 Remote Video Toggle: $enabled");
           });
         }
       };
 
       _signalingService.onEndCall = () => _handleCallEnd("Call Ended");
 
-      // 3. Open media so _localStream is ready before any offer arrives
-      setState(() => _status = "Opening microphone...");
-      final mediaError = await _signalingService.openUserMedia(videoEnabled: widget.initialVideo);
-      if (mediaError != null) {
-        _handleCallEnd(mediaError);
-        return;
+      // 2. Parallelize Initialization
+      setState(() => _status = "Initializing call...");
+
+      // Define local function for media setup (Permissions + Track Acquisition)
+      Future<void> setupMedia() async {
+        // Permissions
+        if (!mounted || _isExiting) return;
+        PermissionStatus micStatus = await Permission.microphone.request();
+        if (!micStatus.isGranted) throw Exception("Microphone permission denied.");
+
+        if (widget.initialVideo) {
+          PermissionStatus camStatus = await Permission.camera.request();
+          if (!camStatus.isGranted) throw Exception("Camera permission denied.");
+        }
+
+        // Open User Media (This will trigger onLocalStream)
+        final mediaError = await _signalingService.openUserMedia(videoEnabled: widget.initialVideo);
+        if (mediaError != null) throw Exception(mediaError);
       }
 
-      // 4. If caller, also send call notification to the other player
-      if (widget.isCaller) {
-        setState(() => _status = "Calling ${widget.otherUserName}...");
-        await GameService.sendCallSignal(
-          receiverUsername: widget.otherUserName,
-          roomId: widget.roomId,
-          initialVideo: widget.initialVideo,
-        );
-      }
+      // Execute setup tasks in parallel: 
+      // 1. WebSocket Connection 
+      // 2. Media Acquisition 
+      // 3. Signaling Notification (if caller)
+      await Future.wait([
+        _signalingService.connectToWebSocket(widget.roomId),
+        setupMedia(),
+        if (widget.isCaller)
+          GameService.sendCallSignal(
+            receiverUsername: widget.otherUserName,
+            roomId: widget.roomId,
+            initialVideo: widget.initialVideo,
+          ),
+      ]);
 
-      // 5. Connect to signaling server
-      setState(() => _status = "Connecting...");
-      await _signalingService.connectToWebSocket(widget.roomId);
-
-      // 6. Caller: wait for callee to join before sending offer
-      //    Callee: just wait — offer will arrive via _onMessage → _handleOffer
+      // 3. Caller Logic: wait for callee to join before sending offer
       if (widget.isCaller) {
         setState(() => _status = "Waiting for ${widget.otherUserName}...");
-        // Set up a completer that resolves when the callee joins the room
         final peerJoined = Completer<void>();
-        _signalingService.onPlayerJoined = () {
+        
+        // Use updated signature (Map opponent)
+        _signalingService.onPlayerJoined = (opponent) {
           if (!peerJoined.isCompleted) peerJoined.complete();
         };
-        // Also resolve immediately if we get call_accepted (callee already there)
+
         _signalingService.onCallAccepted = () {
           if (!peerJoined.isCompleted) peerJoined.complete();
         };
-        // Timeout after 30s if callee never joins
+
         await peerJoined.future.timeout(
           const Duration(seconds: 30),
           onTimeout: () => throw TimeoutException('Callee did not join'),
         );
+        
         setState(() => _status = "Starting call...");
         await _signalingService.startCall();
       }
@@ -395,6 +379,8 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
+    _isExiting = true; // Mark as exiting immediately
+    _signalingService.clearCallbacks(); // Clear callbacks to stop incoming events
     _mqttSubscription?.cancel();
     _callTimeoutTimer?.cancel();
     _localRenderer.dispose();
