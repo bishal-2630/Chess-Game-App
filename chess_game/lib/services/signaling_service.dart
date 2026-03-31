@@ -116,6 +116,7 @@ class SignalingService {
     };
 
     _peerConnection!.onTrack = (RTCTrackEvent event) {
+      print("🎵 Received Remote Track: ${event.track.kind}");
       if (event.streams.isNotEmpty) {
         onAddRemoteStream?.call(event.streams[0]);
       }
@@ -134,29 +135,23 @@ class SignalingService {
     try {
       final Map<String, dynamic> mediaConstraints = {
         'audio': true,
-        'video': videoEnabled ? {'facingMode': 'user'} : false,
+        'video': videoEnabled ? {
+          'facingMode': 'user',
+          'width': {'ideal': 640},
+          'height': {'ideal': 480},
+        } : false,
       };
-      _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
-      onLocalStream?.call(_localStream!);
-      return null; // success
-    } catch (e) {
-      print("⚠️ Media access failed (${videoEnabled ? 'audio+video' : 'audio only'}): $e");
       
-      // If we only requested audio and it failed, return the exact error.
-      if (!videoEnabled) {
-        return "Mic error: $e";
+      print("🎤 Requesting Media: $mediaConstraints");
+      _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      
+      if (_localStream != null) {
+        print("✅ Media Access Granted: Audio=${_localStream!.getAudioTracks().length}, Video=${_localStream!.getVideoTracks().length}");
+        onLocalStream?.call(_localStream!);
+        return null;
       }
-    }
-
-    // Fallback: try audio-only if video was requested but failed
-    try {
-      print("🔄 Retrying with audio-only...");
-      _localStream = await navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
-      onLocalStream?.call(_localStream!);
-      return null; // audio-only success — caller should disable video UI
-    } catch (e) {
-      print("❌ Audio-only fallback also failed: $e");
-      return "Hardware access failed: $e";
+      return "Failed to get local stream";
+    return "Failed to get media: $e";
     }
   }
 
@@ -231,7 +226,11 @@ class SignalingService {
   void sendMove(Map<String, dynamic> moveData) => _send('move', moveData);
   void sendNewGame() => _send('new_game', {});
   void sendBye() => _send('leave', {});
-  void sendEndCall() => _send('end_call', {});
+  
+  void sendEndCall() {
+    print("📞 Sending end_call signal");
+    _send('end_call', {});
+  }
   
   Future<void> stopAudio() async {
     _localStream?.getAudioTracks().forEach((t) => t.stop());

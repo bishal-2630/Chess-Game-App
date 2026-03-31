@@ -111,11 +111,22 @@ class _CallScreenState extends State<CallScreen> {
           _remoteRenderer.srcObject = stream;
           setState(() {
             _inCall = true;
-            _status = "Connected";
           });
+          // Check if remote stream has video tracks
+          bool hasVideo = stream.getVideoTracks().isNotEmpty;
+          print("📺 Remote Stream Added: Video=${hasVideo}");
         }
         _callTimeoutTimer?.cancel();
         MqttService().stopAudio();
+      };
+
+      _signalingService.onRemoteVideoToggle = (enabled) {
+        if (mounted) {
+          setState(() {
+            // We can show a notification or update UI if needed
+            print("📺 Remote Video Toggle: $enabled");
+          });
+        }
       };
 
       _signalingService.onEndCall = () => _handleCallEnd("Call Ended");
@@ -198,7 +209,7 @@ class _CallScreenState extends State<CallScreen> {
           Positioned.fill(
             child: _inCall ? _buildInCallView() : _buildPlaceholderView(),
           ),
-          if (!_inCall)
+          if (!_inCall && !_isExiting)
             Positioned(
               top: 100,
               left: 0,
@@ -208,7 +219,7 @@ class _CallScreenState extends State<CallScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(_status, 
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w300),
                   ),
                 ),
               ),
@@ -244,9 +255,46 @@ class _CallScreenState extends State<CallScreen> {
   Widget _buildInCallView() {
     return Stack(
       children: [
+        // Placeholder (avatar and name) acts as background for audio-only calls
+        Positioned.fill(
+          child: _buildPlaceholderView(),
+        ),
         // Remote Video
-        RTCVideoView(_remoteRenderer, 
-          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+        Positioned.fill(
+          child: RTCVideoView(_remoteRenderer, 
+            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+          ),
+        ),
+        // Name Overlay
+        Positioned(
+          top: 50,
+          left: 0,
+          right: 0,
+          child: Column(
+            children: [
+              Text(
+                widget.otherUserName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  "Connected",
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ),
+            ],
+          ),
         ),
         // Local Video (PiP)
         if (_isVideoOn)
@@ -321,9 +369,13 @@ class _CallScreenState extends State<CallScreen> {
         _buildCircleBtn(
           icon: Icons.call_end,
           color: Colors.red,
-          onPressed: () {
+          onPressed: () async {
             if (widget.isCaller && !_inCall) {
                GameService.cancelCall(receiverUsername: widget.otherUserName, roomId: widget.roomId);
+            } else if (_inCall) {
+               _signalingService.sendEndCall(); // Notify the other peer
+               // Small delay to ensure the message is sent before we disconnect
+               await Future.delayed(const Duration(milliseconds: 200));
             }
              _handleCallEnd("Call Ended");
           },

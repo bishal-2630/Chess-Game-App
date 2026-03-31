@@ -63,6 +63,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
   rtc.MediaStream? _remoteStream;
 
   bool _isConnectedToRoom = false;
+  bool _opponentJoined = false; // Tracks if opponent is in the room
   bool _isAudioOn = false;
   bool _isMuted = false;
   bool _isVideoOn = false;
@@ -208,12 +209,18 @@ class _ChessGameScreenState extends State<ChessScreen> {
       // Handle remote move
       if (mounted) {
         setState(() {
+          _opponentJoined = true; // Fallback detection
           _handleRemoteMove(data);
         });
       }
     };
 
     _signalingService.onPlayerLeft = () {
+      if (mounted) {
+        setState(() {
+          _opponentJoined = false;
+        });
+      }
 
       // If game was active, record as a win for this player
       if (!gameOver && moveHistory.isNotEmpty) {
@@ -239,6 +246,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
         });
       }
       if (isConnected && mounted) {
+        setState(() => _callStatus = ""); // Immediately clear Connecting...
         _setEphemeralStatus("Connected to Server");
       } else if (mounted) {
         _setEphemeralStatus("Disconnected");
@@ -271,6 +279,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
         setState(() {
           _isAudioOn = true;
           _isCalling = false; // Stop calling banner
+          _callStatus = ""; // Immediately clear Calling...
         });
       }
       // Banner handles "Voice Connected" UI
@@ -321,6 +330,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
     };
 
     _signalingService.onPlayerJoined = () {
+      if (mounted) {
+        setState(() {
+          _opponentJoined = true;
+        });
+      }
       _setEphemeralStatus("Opponent joined the room");
     };
   }
@@ -421,6 +435,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
       }
 
       _signalingService.sendBye();
+      // Delay before hangup to ensure bye is sent
+      await Future.delayed(const Duration(milliseconds: 200));
       _hangUp();
     }
   }
@@ -461,7 +477,10 @@ class _ChessGameScreenState extends State<ChessScreen> {
     if (_isConnectedToRoom) {
       _signalingService.sendBye();
     }
-    _signalingService.hangUp();
+    // Small delay to ensure bye is sent before closing socket
+    Future.delayed(const Duration(milliseconds: 200), () {
+      _signalingService.hangUp();
+    });
     // Notification service lifecycle is now managed by DjangoAuthService
     super.dispose();
   }
@@ -520,6 +539,9 @@ class _ChessGameScreenState extends State<ChessScreen> {
       }
 
       _signalingService.sendEndCall();
+      // Small delay to ensure the message is sent before we update local state
+      await Future.delayed(const Duration(milliseconds: 200));
+      
       await _signalingService.stopAudio();
       await MqttService().cancelCallNotification(broadcast: true); // Stop ringtone AND clear system banners
       _stopCallTimer();
@@ -2069,7 +2091,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
           Column(
             children: [
               // User Profile Header
-              if (_isAudioOn || _isCalling || _showIncomingCallBanner)
+              if (_isConnectedToRoom)
                 _buildCallInterface()
               else
                 GestureDetector(
@@ -2484,6 +2506,9 @@ class _ChessGameScreenState extends State<ChessScreen> {
           ],
         ),
       );
+    } else {
+      // Idle state - no active call
+      activeControls = null;
     }
 
     return Container(
@@ -2508,16 +2533,70 @@ class _ChessGameScreenState extends State<ChessScreen> {
           const SizedBox(width: 8),
           // Remote Player Box
           Expanded(
-            child: _buildCallProfileBox(
-              name: widget.opponentName ?? "Opponent",
-              renderer: _remoteRenderer,
-              isCameraOn: _isRemoteVideoOn,
-              isMuted: false,
-              profilePic: null,
-              // Opponent doesn't get controls for now, or could show call status
-            ),
+            child: _opponentJoined 
+              ? _buildCallProfileBox(
+                  name: widget.opponentName ?? "Opponent",
+                  renderer: _remoteRenderer,
+                  isCameraOn: _isRemoteVideoOn,
+                  isMuted: false,
+                  profilePic: null,
+                  // Show call icons ONLY if no active call/calling/banner
+                  controls: (!_isAudioOn && !_isCalling && !_showIncomingCallBanner)
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildCallControlButton(
+                              icon: Icons.call,
+                              color: Colors.green,
+                              onPressed: () {
+                                setState(() => _isVideoOn = false);
+                                _toggleAudio();
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _buildCallControlButton(
+                              icon: Icons.videocam,
+                              color: Colors.blue,
+                              onPressed: () {
+                                setState(() => _isVideoOn = true);
+                                _toggleAudio();
+                              },
+                            ),
+                          ],
+                        )
+                      : null,
+                )
+              : _buildWaitingProfileBox(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWaitingProfileBox() {
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        color: Colors.black45,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12, style: BorderStyle.solid),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Waiting for opponent...",
+              style: TextStyle(color: Colors.white54, fontSize: 10, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
       ),
     );
   }

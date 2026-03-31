@@ -48,12 +48,37 @@ class SignalingConsumer(AsyncWebsocketConsumer):
         
         # Update user offline status
         await self.update_user_status(False, None)
+        
+        # Notify others in the room that we've left/ended call
+        print(f"📡 Abrupt disconnect from room: {self.room_id}")
+        # Send end_call for the integrated call UI
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'signaling_message',
+                'message': {'type': 'end_call'},
+                'sender_channel_name': self.channel_name
+            }
+        )
+        # Send player_left for the chess game session
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'signaling_message',
+                'message': {'type': 'player_left'},
+                'sender_channel_name': self.channel_name
+            }
+        )
 
     # Receive message from WebSocket
     async def receive(self, text_data):
         try:
             data = json.loads(text_data)
             
+            # Logging for specific signal types
+            if data.get('type') == 'end_call':
+                print(f"📞 End call signal received from {self.user} in room {self.room_id}")
+
             # Unconditionally forward all signaling messages to room group
             await self.channel_layer.group_send(
                 self.room_group_name,
