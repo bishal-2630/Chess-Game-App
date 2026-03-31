@@ -24,7 +24,7 @@ class ChessScreen extends StatefulWidget {
   State<ChessScreen> createState() => _ChessGameScreenState();
 }
 
-class _ChessGameScreenState extends State<ChessScreen> {
+class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserver {
   final DjangoAuthService _authService = DjangoAuthService();
 
   // Chess board state
@@ -103,6 +103,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeBoard();
     // NEW: Notify MqttService that we are in a game room to suppress duplicate system notifications
     if (widget.roomId != null) {
@@ -154,11 +155,14 @@ class _ChessGameScreenState extends State<ChessScreen> {
       }
     });
 
-    // Listen for challenge declines via MQTT
+    // Listen for challenges and responses via MQTT
     MqttService().notifications.listen((data) {
       if (!mounted) return;
       
-      if (data['type'] == 'invitation_response') {
+      if (data['type'] == 'game_invitation') {
+        _loadInviteCount();
+      } else if (data['type'] == 'invitation_response') {
+        _loadInviteCount(); // Instantly update badge if an invite is resolved
         final payload = data['data'] ?? data['payload'] ?? data;
         final String? responseRoomId = payload['invitation']?['room_id']?.toString();
         final String? action = payload['action'];
@@ -204,6 +208,13 @@ class _ChessGameScreenState extends State<ChessScreen> {
     if (widget.roomId != oldWidget.roomId && widget.roomId != null) {
       _playerColor = widget.color ?? 'w';
       _connectRoom(_defaultServerUrl, widget.roomId!);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadInviteCount();
     }
   }
 
@@ -512,6 +523,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     // NEW: Clear active room ID so notifications are restored for future sessions
     MqttService().setActiveChessRoomId(null);
     _statusTimer?.cancel();
