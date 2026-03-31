@@ -78,7 +78,6 @@ class _CallScreenState extends State<CallScreen> {
         micStatus = await Permission.microphone.request();
       }
 
-      // Camera (only if needed)
       if (widget.initialVideo) {
         PermissionStatus camStatus = await Permission.camera.status;
         if (!camStatus.isGranted) {
@@ -94,32 +93,26 @@ class _CallScreenState extends State<CallScreen> {
         }
       }
 
-      // Final mic check
       if (!micStatus.isGranted) {
         _handleCallEnd("Microphone permission denied.");
         return;
       }
 
-      setState(() => _status = "Connecting...");
-
-
-      // 2. Start Signaling IMMEDIATELY (Don't wait for media)
-      if (widget.isCaller) {
-        setState(() => _status = "Calling ${widget.otherUserName}...");
-        await GameService.sendCallSignal(
-          receiverUsername: widget.otherUserName,
-          roomId: widget.roomId,
-          initialVideo: widget.initialVideo,
-        );
+      // 2. Open media FIRST so _localStream is ready before any offer arrives
+      setState(() => _status = "Opening microphone...");
+      final mediaSuccess = await _signalingService.openUserMedia(videoEnabled: widget.initialVideo);
+      if (!mediaSuccess) {
+        _handleCallEnd("Failed to access camera/mic");
+        return;
       }
 
-      // 3. Setup Callbacks
+      // 3. Setup UI Callbacks BEFORE connecting
       _signalingService.onLocalStream = (stream) {
-        setState(() => _localRenderer.srcObject = stream);
+        if (mounted) setState(() => _localRenderer.srcObject = stream);
       };
 
       _signalingService.onAddRemoteStream = (stream) {
-        setState(() {
+        if (mounted) setState(() {
           _remoteRenderer.srcObject = stream;
           _inCall = true;
           _status = "Connected";
@@ -130,23 +123,45 @@ class _CallScreenState extends State<CallScreen> {
 
       _signalingService.onEndCall = () => _handleCallEnd("Call Ended");
 
-      // 4. Connect to Signaling Server
-      await _signalingService.connectToWebSocket(widget.roomId);
-
-      // 5. Open Media and Start Handshake
-      final mediaSuccess = await _signalingService.openUserMedia(videoEnabled: widget.initialVideo);
-      if (!mediaSuccess) {
-        _handleCallEnd("Failed to access camera/mic");
-        return;
+      // 4. If caller, also send call notification to the other player
+      if (widget.isCaller) {
+        setState(() => _status = "Calling ${widget.otherUserName}...");
+        await GameService.sendCallSignal(
+          receiverUsername: widget.otherUserName,
+          roomId: widget.roomId,
+          initialVideo: widget.initialVideo,
+        );
       }
 
+      // 5. Connect to signaling server
+      setState(() => _status = "Connecting...");
+      await _signalingService.connectToWebSocket(widget.roomId);
+
+      // 6. Caller: wait for callee to join before sending offer
+      //    Callee: just wait — offer will arrive via _onMessage → _handleOffer
       if (widget.isCaller) {
+        setState(() => _status = "Waiting for ${widget.otherUserName}...");
+        // Set up a completer that resolves when the callee joins the room
+        final peerJoined = Completer<void>();
+        _signalingService.onPlayerJoined = () {
+          if (!peerJoined.isCompleted) peerJoined.complete();
+        };
+        // Also resolve immediately if we get call_accepted (callee already there)
+        _signalingService.onCallAccepted = () {
+          if (!peerJoined.isCompleted) peerJoined.complete();
+        };
+        // Timeout after 30s if callee never joins
+        await peerJoined.future.timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => throw TimeoutException('Callee did not join'),
+        );
+        setState(() => _status = "Starting call...");
         await _signalingService.startCall();
       }
 
     } catch (e) {
       print("❌ Call Flow Error: $e");
-      _handleCallEnd("Connection Failed\n$e");
+      _handleCallEnd("Connection Failed: $e");
     }
   }
 

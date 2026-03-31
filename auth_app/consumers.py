@@ -34,7 +34,7 @@ class SignalingConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'signaling_message',
-                'message': {'type': 'join'},
+                'message': {'type': 'player_joined'},
                 'sender_channel_name': self.channel_name
             }
         )
