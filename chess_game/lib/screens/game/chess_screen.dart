@@ -332,7 +332,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
           _callStatus = ""; // Immediately clear Calling...
         });
       }
-      // Banner handles "Voice Connected" UI
+      // Callee has accepted: initiate WebRTC offer from caller side
+      _signalingService.startCall();
       // Stop calling ringtone
       MqttService().stopAudio(broadcast: true);
       _startCallTimer();
@@ -597,7 +598,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
       await Future.delayed(const Duration(milliseconds: 200));
       
       await _signalingService.stopAudio();
-      await MqttService().cancelCallNotification(broadcast: true); // Stop ringtone AND clear system banners
+      await MqttService().cancelCallNotification(broadcast: true);
       _stopCallTimer();
       setState(() {
         _isAudioOn = false;
@@ -612,8 +613,24 @@ class _ChessGameScreenState extends State<ChessScreen> {
       // Start or Accept Call
       try {
         if (_isIncomingCall) {
-          // Accept
+          // ── ACCEPT CALL ──
+          // 1. Open media first so local tracks are ready when offer arrives
+          final mediaError = await _signalingService.openUserMedia(videoEnabled: _isVideoOn);
+          if (mediaError != null && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text("Media error: $mediaError"),
+              backgroundColor: Colors.red,
+            ));
+            return;
+          }
+
+          // 2. Ensure signaling is connected (fast – already pre-connected)
           await _signalingService.connectToWebSocket(widget.roomId!);
+
+          // 3. Signal the caller that we have accepted (triggers startCall on their side)
+          _signalingService.signalCallAccepted();
+
+          // 4. Update UI
           _startCallTimer();
           setState(() {
             _isAudioOn = true;
@@ -623,7 +640,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
           // Force clear system notifications on accept
           await MqttService().cancelCallNotification(broadcast: true);
         } else {
-          // Start Call (Initiator part)
+          // ── START CALL (Initiator) ──
           if (widget.opponentName == null) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text("Cannot start call: Opponent unknown"),
@@ -632,32 +649,38 @@ class _ChessGameScreenState extends State<ChessScreen> {
             return;
           }
 
-          setState(() {
-            _isCalling = true;
-          });
+          setState(() => _isCalling = true);
 
-          // Play calling ringtone IMMEDIATELY before signaling setup
+          // 1. Open media in parallel with signaling
+          final mediaFuture = _signalingService.openUserMedia(videoEnabled: _isVideoOn);
+
+          // 2. Play calling ringtone IMMEDIATELY
           MqttService().playSound('sounds/call_ringtone.mp3');
 
-          // Send notification to opponent
-          await GameService.sendCallSignal(
+          // 3. Send notification to opponent in parallel
+          final signalFuture = GameService.sendCallSignal(
             receiverUsername: widget.opponentName!,
             roomId: widget.roomId!,
-            initialVideo: _isVideoOn
+            initialVideo: _isVideoOn,
           );
 
-          await _signalingService.connectToWebSocket(widget.roomId!);
+          // 4. Connect signaling in parallel
+          final connectFuture = _signalingService.connectToWebSocket(widget.roomId!);
+
+          // 5. Wait for all three to finish
+          await Future.wait([mediaFuture, signalFuture, connectFuture]);
+          // Note: startCall() is triggered later by onCallAccepted callback
         }
       } catch (e) {
-        MqttService().stopAudio(broadcast: true); // Stop ringtone on error
+        MqttService().stopAudio(broadcast: true);
         _stopCallTimer();
-        setState(() {
-          _isCalling = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Could not start call: $e"),
-          backgroundColor: Colors.red,
-        ));
+        setState(() => _isCalling = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Could not start call: $e"),
+            backgroundColor: Colors.red,
+          ));
+        }
       }
     }
   }
@@ -2592,38 +2615,15 @@ class _ChessGameScreenState extends State<ChessScreen> {
           const SizedBox(width: 8),
           // Remote Player Box
           Expanded(
-            child: _opponentJoined 
+            child: (_opponentJoined || _isAudioOn)
               ? _buildCallProfileBox(
                   name: widget.opponentName ?? "Opponent",
                   renderer: _remoteRenderer,
                   isCameraOn: _isRemoteVideoOn,
                   isMuted: false,
                   profilePic: null,
-                  // Show call icons ONLY if no active call/calling/banner
-                  controls: (!_isAudioOn && !_isCalling && !_showIncomingCallBanner)
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildCallControlButton(
-                              icon: Icons.call,
-                              color: Colors.green,
-                              onPressed: () {
-                                setState(() => _isVideoOn = false);
-                                _toggleAudio();
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            _buildCallControlButton(
-                              icon: Icons.videocam,
-                              color: Colors.blue,
-                              onPressed: () {
-                                setState(() => _isVideoOn = true);
-                                _toggleAudio();
-                              },
-                            ),
-                          ],
-                        )
-                      : null,
+                  // Call icons are ONLY on the "You" side
+                  controls: null,
                 )
               : _buildWaitingProfileBox(),
           ),

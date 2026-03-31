@@ -331,7 +331,14 @@ class SignalingService {
     print("📞 Sending end_call signal");
     _send('end_call', {});
   }
-  
+
+  /// Called by the callee after accepting a call.
+  /// Signals the caller to begin the WebRTC offer negotiation.
+  void signalCallAccepted() {
+    print("📞 Sending call_accepted signal");
+    _send('call_accepted', {});
+  }
+
   Future<void> stopAudio() async {
     _localStream?.getAudioTracks().forEach((t) => t.stop());
   }
