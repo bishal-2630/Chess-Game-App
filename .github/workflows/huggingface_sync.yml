@@ -21,12 +21,12 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           # 1. Prepare a clean directory for the fresh push
-          mkdir hf_deploy
-          # Copy everything except the .git folder to wipe problematic history
-          cp -rn . hf_deploy/
-          rm -rf hf_deploy/.git
+          mkdir ../hf_deploy
+          # Copy everything to an external folder to avoid self-copy infinite loop
+          cp -rp . ../hf_deploy
           
-          cd hf_deploy
+          cd ../hf_deploy
+          rm -rf .git
           
           # 2. Init a fresh repo and commit
           git init -b main
