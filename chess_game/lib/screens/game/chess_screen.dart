@@ -258,20 +258,7 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
     };
 
     _signalingService.onEndCall = () {
-      if (mounted && _isAudioOn) {
-        _signalingService.stopAudio();
-        MqttService().cancelCallNotification(broadcast: true);
-        _stopCallTimer();
-        setState(() {
-          _isAudioOn = false;
-          _isIncomingCall = false;
-          _isCalling = false;
-          _isMuted = false;
-          _isVideoOn = false;
-          _isRemoteVideoOn = false;
-          _callStatus = "";
-        });
-      }
+      _stopCall();
     };
 
     _signalingService.onGameMove = (data) {
@@ -380,33 +367,49 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
       _stopCallTimer();
     };
 
-    _signalingService.onEndCall = () async {
-      await MqttService().stopAudio(broadcast: true); // Stop any ringing
-      _stopCallTimer();
-      if (_isAudioOn || _callStatus == "Calling..." || _isCalling) {
-        await _signalingService.stopAudio();
-        if (mounted) {
-          setState(() {
-            _isAudioOn = false;
-            _isIncomingCall = false;
-            _isCalling = false;
-            _callStatus = ""; // NEW: Clear status on remote end
-            _callStatus = ""; // NEW: Clear status on remote end
-          });
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Call ended."), duration: Duration(seconds: 2)));
-        }
-        // Even if not active, ensure status is clear
-        if (mounted) {
-          setState(() => _callStatus = "");
-        }
-      }
-    };
 
     _signalingService.onNewGame = () {
       _initializeBoard();
       _setEphemeralStatus("Opponent started a new game");
     };
+  }
+
+  void _stopCall() async {
+    print("🧹 [ChessScreen] Stopping call and clearing renderers.");
+    
+    // Stop signaling and cleanup WebRTC tracks
+    await _signalingService.stopCall();
+    
+    // Stop any local ringtones/sounds
+    MqttService().stopAudio(broadcast: true);
+    
+    _stopCallTimer();
+    
+    if (mounted) {
+      setState(() {
+        // Clear media renderers explicitly
+        _localRenderer.srcObject = null;
+        _remoteRenderer.srcObject = null;
+        _remoteStream = null;
+        
+        // Reset call UI state flags
+        _isAudioOn = false;
+        _isIncomingCall = false;
+        _isCalling = false;
+        _isMuted = false;
+        _isVideoOn = false;
+        _isRemoteVideoOn = false;
+        _showIncomingCallBanner = false;
+        _callStatus = "";
+      });
+      
+      // Optional feedback snackbar
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Call ended."),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
   }
 
   void _setEphemeralStatus(String message) {
@@ -636,7 +639,12 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
     }
 
     if (_isAudioOn || (_isCalling && !_isAudioOn)) {
-      // End Call or Cancel Outgoing Call
+      // ── END CALL ──
+      
+      // Notify opponent via WebSocket
+      _signalingService.sendEndCall();
+      
+      // If we were initiating, also cancel the backend call signal
       if (_isCalling && !_isAudioOn && widget.opponentName != null && widget.roomId != null) {
         await GameService.cancelCall(
           receiverUsername: widget.opponentName!,
@@ -644,22 +652,11 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
         );
       }
 
-      _signalingService.sendEndCall();
-      // Small delay to ensure the message is sent before we update local state
+      // Small delay to ensure 'end_call' message is sent before closure
       await Future.delayed(const Duration(milliseconds: 200));
       
-      await _signalingService.stopAudio();
-      await MqttService().cancelCallNotification(broadcast: true);
-      _stopCallTimer();
-      setState(() {
-        _isAudioOn = false;
-        _isIncomingCall = false;
-        _isCalling = false;
-        _isMuted = false;
-        _isVideoOn = false;
-        _isRemoteVideoOn = false;
-        _callStatus = "";
-      });
+      // Local teardown
+      _stopCall();
     } else {
       // Start or Accept Call
       try {

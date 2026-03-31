@@ -18,9 +18,9 @@ class SignalingService {
   MediaStream? _localStream;
   
   // Callbacks for UI
-  void Function(MediaStream stream)? onLocalStream;
-  void Function(MediaStream stream)? onAddRemoteStream;
-  void Function(MediaStream stream)? onRemoveRemoteStream;
+  void Function(MediaStream? stream)? onLocalStream;
+  void Function(MediaStream? stream)? onAddRemoteStream;
+  void Function(MediaStream? stream)? onRemoveRemoteStream;
   void Function()? onEndCall;
   void Function(bool isConnected)? onConnectionState;
   
@@ -339,8 +339,30 @@ class SignalingService {
     _send('call_accepted', {});
   }
 
+  Future<void> stopCall() async {
+    print("📞 Stopping WebRTC call tracks and closing PeerConnection.");
+    
+    // Stop all local media tracks (Audio & Video)
+    _localStream?.getTracks().forEach((track) {
+      print("🛑 Stopping track: ${track.kind}");
+      track.stop();
+    });
+    
+    await _localStream?.dispose();
+    _localStream = null;
+    
+    // Close PeerConnection but KEEP _channel (WebSocket) for game moves
+    await _peerConnection?.close();
+    _peerConnection = null;
+    
+    // Notify UI that call state is cleared
+    onLocalStream?.call(null); 
+    onAddRemoteStream?.call(null);
+  }
+
   Future<void> stopAudio() async {
-    _localStream?.getAudioTracks().forEach((t) => t.stop());
+    // Legacy support: stopCall() is now preferred for full termination
+    await stopCall();
   }
 
   Future<void> hangUp() async => disconnect();
