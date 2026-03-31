@@ -476,6 +476,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
         await GameService.recordGameResult('loss');
       }
 
+      // Send the 'leave' websocket event
+      _signalingService.sendBye();
+      // Brief delay to ensure transmission before the socket is closed by hangUp
+      await Future.delayed(const Duration(milliseconds: 200));
+
       _hangUp();
       if (mounted) context.go('/chess');
     }
@@ -2615,13 +2620,13 @@ class _ChessGameScreenState extends State<ChessScreen> {
           const SizedBox(width: 8),
           // Remote Player Box
           Expanded(
-            child: (_opponentJoined || _isAudioOn)
+            child: (widget.opponentName != null || _opponentJoined || _isAudioOn)
               ? _buildCallProfileBox(
                   name: widget.opponentName ?? "Opponent",
                   renderer: _remoteRenderer,
                   isCameraOn: _isRemoteVideoOn,
                   isMuted: false,
-                  profilePic: null,
+                  profilePic: null, // Would be widget.opponentProfilePic if available
                   // Call icons are ONLY on the "You" side
                   controls: null,
                 )
