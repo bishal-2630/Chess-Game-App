@@ -138,7 +138,7 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
             _showIncomingCallBanner = true;
             _incomingCallFrom = caller ?? 'Unknown';
             _incomingCallRoomId = roomId ?? '';
-            _isVideoOn = payload['initial_video'] == true; // Capture the caller's video preference
+            _isVideoOn = payload['initial_video'] == true || payload['initial_video'] == 'true' || payload['initial_video'] == 'True'; // Capture the caller's video preference
           });
         }
         // If user is not in a room, system notification will handle it
@@ -253,6 +253,23 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
           _opponentJoined = true;
           // Optionally update opponent profile picture/name here if we had fields for it
           _setEphemeralStatus("Connected with ${opponent['username']}");
+        });
+      }
+    };
+
+    _signalingService.onEndCall = () {
+      if (mounted && _isAudioOn) {
+        _signalingService.stopAudio();
+        MqttService().cancelCallNotification(broadcast: true);
+        _stopCallTimer();
+        setState(() {
+          _isAudioOn = false;
+          _isIncomingCall = false;
+          _isCalling = false;
+          _isMuted = false;
+          _isVideoOn = false;
+          _isRemoteVideoOn = false;
+          _callStatus = "";
         });
       }
     };
@@ -593,11 +610,28 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
     if (!kIsWeb) {
       var status = await Permission.microphone.request();
       if (status != PermissionStatus.granted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Microphone permission is required for audio calls."),
-          backgroundColor: Colors.red,
-        ));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Microphone permission is required for audio calls."),
+            backgroundColor: Colors.red,
+          ));
+        }
         return;
+      }
+      
+      if (_isVideoOn) {
+        var camStatus = await Permission.camera.request();
+        if (camStatus != PermissionStatus.granted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text("Camera permission denied. Falling back to audio only."),
+              backgroundColor: Colors.orange,
+            ));
+            setState(() {
+              _isVideoOn = false;
+            });
+          }
+        }
       }
     }
 
