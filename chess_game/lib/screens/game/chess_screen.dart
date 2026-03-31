@@ -511,6 +511,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
   }
 
   void _connectRoom(String serverUrl, String roomId) async {
+    // Prevent redundant connection if already connected to the same room
+    if (_isConnectedToRoom && _signalingService.currentRoomId == roomId) {
+      return;
+    }
+
     setState(() {
       _callStatus = "Connecting...";
     });

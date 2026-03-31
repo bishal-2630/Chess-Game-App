@@ -12,6 +12,7 @@ class SignalingService {
   SignalingService._internal();
 
   WebSocketChannel? _channel;
+  String? _currentRoomId; // Track current intended room
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
   
@@ -40,10 +41,22 @@ class SignalingService {
   };
 
   Future<void> connectToWebSocket(String roomId) async {
-    // 1. Cleanly close any existing channel WITHOUT wiping UI callbacks
+    // 1. If already connecting/connected to this room, skip
+    if (_channel != null && _currentRoomId == roomId) {
+      print("🔔 Already connecting to room $roomId. Skipping redundant request.");
+      onConnectionState?.call(true); // Ensure UI stays in sync
+      return;
+    }
+
+    _currentRoomId = roomId;
+
+    // 2. Cleanly close any existing channel
     if (_channel != null) {
-      await _channel!.sink.close();
+      print("🚿 Closing stale connection before room change.");
+      // We don't await sink.close() here as it might hang; just clear reference
+      final oldChannel = _channel;
       _channel = null;
+      oldChannel!.sink.close();
     }
 
     final host = AppConfig.baseUrl.replaceAll('http://', '').replaceAll('https://', '').replaceAll('/api/auth/', '');
@@ -53,24 +66,44 @@ class SignalingService {
     print("📞 Connecting to Signaling Server: $url");
     
     try {
-      _channel = WebSocketChannel.connect(Uri.parse(url));
-      // Use a more robust listener that won't wipe callbacks on accidental disconnect
+      final newChannel = WebSocketChannel.connect(Uri.parse(url));
+      _channel = newChannel;
+
       _channel!.stream.listen(
-        _onMessage, 
+        (msg) {
+          // Only process message if this is the CURRENT active channel
+          if (_channel == newChannel) {
+            _onMessage(msg);
+          }
+        }, 
         onDone: () {
-          print("⚠️ Signaling Socket Closed.");
-          onConnectionState?.call(false);
+          // ONLY trigger disconnect logic if this was the intended channel
+          if (_channel == newChannel) {
+            print("⚠️ Current Signaling Socket Closed.");
+            _currentRoomId = null;
+            onConnectionState?.call(false);
+          } else {
+            print("💡 Stale Signaling Socket Closed (Ignored).");
+          }
         }, 
         onError: (e) {
-          print("❌ Signaling Error: $e");
-          onConnectionState?.call(false);
+          if (_channel == newChannel) {
+            print("❌ Current Signaling Error: $e");
+            _currentRoomId = null;
+            onConnectionState?.call(false);
+          }
         }
       );
       
-      // Notify UI that we are "trying" to connect or are connected (from WebSocket's perspective)
-      onConnectionState?.call(true);
+      // Delay slightly to ensure UI has finished building the "Connecting..." state
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_channel == newChannel) {
+          onConnectionState?.call(true);
+        }
+      });
     } catch (e) {
       print("❌ Failed to connect to signaling server: $e");
+      _currentRoomId = null;
       onConnectionState?.call(false);
     }
   }
