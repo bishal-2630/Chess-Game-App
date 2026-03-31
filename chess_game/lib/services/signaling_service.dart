@@ -21,6 +21,16 @@ class SignalingService {
   void Function(MediaStream stream)? onRemoveRemoteStream;
   void Function()? onEndCall;
   void Function(bool isConnected)? onConnectionState;
+  
+  // Game Signaling Callbacks
+  void Function(Map<String, dynamic> data)? onGameMove;
+  void Function()? onPlayerLeft;
+  void Function()? onIncomingCall;
+  void Function(bool enabled)? onRemoteVideoToggle;
+  void Function()? onCallAccepted;
+  void Function()? onCallRejected;
+  void Function()? onNewGame;
+  void Function()? onPlayerJoined;
 
   // WebRTC Configuration
   final Map<String, dynamic> _iceServers = {
@@ -30,7 +40,7 @@ class SignalingService {
   };
 
   Future<void> connectToWebSocket(String roomId) async {
-    final host = AppConfig.baseUrl.replaceAll('http://', '').replaceAll('https://', '').replaceAll('/', '');
+    final host = AppConfig.baseUrl.replaceAll('http://', '').replaceAll('https://', '').replaceAll('/api/auth/', '');
     final scheme = AppConfig.baseUrl.startsWith('https') ? 'wss' : 'ws';
     final url = '$scheme://$host/ws/call/$roomId/';
     
@@ -51,6 +61,8 @@ class SignalingService {
     final type = data['type'];
     final payload = data['payload'] ?? data;
 
+    print("📬 Received Signaling Message: $type");
+
     switch (type) {
       case 'offer':
         await _handleOffer(payload);
@@ -63,6 +75,31 @@ class SignalingService {
         break;
       case 'end_call':
         onEndCall?.call();
+        break;
+      case 'move':
+        onGameMove?.call(payload);
+        break;
+      case 'leave':
+      case 'player_left':
+        onPlayerLeft?.call();
+        break;
+      case 'incoming_call':
+        onIncomingCall?.call();
+        break;
+      case 'call_accepted':
+        onCallAccepted?.call();
+        break;
+      case 'call_rejected':
+        onCallRejected?.call();
+        break;
+      case 'remote_video_toggle':
+        onRemoteVideoToggle?.call(payload['enabled'] ?? false);
+        break;
+      case 'new_game':
+        onNewGame?.call();
+        break;
+      case 'player_joined':
+        onPlayerJoined?.call();
         break;
     }
   }
@@ -134,8 +171,10 @@ class SignalingService {
     }
   }
 
-  void _send(String type, Map<String, dynamic> data) {
-    _channel?.sink.add(jsonEncode({'type': type, 'payload': data}));
+  void _send(String type, dynamic payload) {
+    if (_channel != null) {
+      _channel!.sink.add(jsonEncode({'type': type, 'payload': payload}));
+    }
   }
 
   Future<void> disconnect() async {
@@ -159,9 +198,27 @@ class SignalingService {
 
   Future<void> setVideoEnabled(bool enabled) async {
     _localStream?.getVideoTracks().forEach((t) => t.enabled = enabled);
+    _send('remote_video_toggle', {'enabled': enabled});
   }
 
-  // Compatibility stubs
-  Future<void> connectToLiveKit(String url, String token, {bool videoEnabled = false}) async => connectToWebSocket(url);
+  // Game Signaling Methods
+  void sendMove(Map<String, dynamic> moveData) => _send('move', moveData);
+  void sendNewGame() => _send('new_game', {});
+  void sendBye() => _send('leave', {});
   void sendEndCall() => _send('end_call', {});
+  
+  Future<void> stopAudio() async {
+    _localStream?.getAudioTracks().forEach((t) => t.stop());
+  }
+
+  Future<void> hangUp() async => disconnect();
+
+  // Compatibility stubs
+  Future<void> connectToLiveKit(String url, String token, {bool videoEnabled = false}) async {
+    // For now, extract roomId from token if possible, or just use a placeholder
+    // In a real app, you'd parse the token or use the URL
+    final roomId = url.split('/').lastWhere((s) => s.isNotEmpty, orElse: () => 'lobby');
+    await connectToWebSocket(roomId);
+  }
+
 }
