@@ -13,6 +13,7 @@ class SignalingService {
 
   WebSocketChannel? _channel;
   String? _currentRoomId; // Track current intended room
+  String? get currentRoomId => _currentRoomId;
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
   
