@@ -24,11 +24,12 @@ jobs:
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
           
-          # Allow pushing even if some LFS objects are missing in the runner
-          git config lfs.allowincompletepush true
+          # 1. Strip LFS to avoid "missing object" errors on Hugging Face
+          git lfs uninstall
+          rm -f .gitattributes
+          git add .
+          git commit -m "Strip LFS for Hugging Face deployment" || echo "No changes to commit"
           
-          # Add Hugging Face as a remote
+          # 2. Add Hugging Face as a remote and push
           git remote add hf https://Bishal26:$HF_TOKEN@huggingface.co/spaces/Bishal26/chess_game_bishal
-          
-          # Push the branch that triggered this action to HF's main branch
           git push hf HEAD:refs/heads/main --force
