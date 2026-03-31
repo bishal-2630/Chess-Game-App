@@ -2089,7 +2089,6 @@ class _ChessGameScreenState extends State<ChessScreen> {
               onPressed: _onLogout,
               icon: const Icon(Icons.close, color: Colors.white, size: 20),
               label: const Text("EXIT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-              tooltip: 'Exit Room',
             ),
         ],
       ),
