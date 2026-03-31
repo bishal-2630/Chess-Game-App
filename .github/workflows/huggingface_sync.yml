@@ -28,16 +28,17 @@ jobs:
           cd ../hf_deploy
           rm -rf .git
           
-          # 2. Init a fresh repo and commit
+          # 2. Init a fresh repo and configure LFS correctly
           git init -b main
+          git lfs install
+          # Explicitly track binaries to satisfy Hugging Face's server-side hooks
+          git lfs track "*.png" "*.jpg" "*.mp3" "*.wasm" "*.ttf" "*.otf"
+          
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           
-          # Stop tracking LFS for this deployment
-          rm -f .gitattributes
-          
           git add .
-          git commit -m "Clean deploy from ${{ github.ref_name }} at ${{ github.sha }}"
+          git commit -m "Clean LFS-enabled deploy from ${{ github.ref_name }} at ${{ github.sha }}"
           
           # 3. Add HF remote and force push to main
           git remote add hf https://Bishal26:$HF_TOKEN@huggingface.co/spaces/Bishal26/chess_game_bishal
