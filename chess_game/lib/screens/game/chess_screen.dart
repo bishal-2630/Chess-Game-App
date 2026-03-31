@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../services/signaling_service.dart';
 import '../../services/django_auth_service.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
-import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:flutter/foundation.dart';
 import '../../services/config.dart';
 import '../../services/game_service.dart';
@@ -491,21 +490,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
     });
 
     try {
-      final token = _authService.accessToken;
-      // Request token with recording enabled for online matches
-      final url = "${AppConfig.baseUrl}call/token/?room_id=$roomId&record=true";
-      
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {"Authorization": "Bearer $token"}
-      );
-      
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        await _signalingService.connectToLiveKit(data['url'], data['token'], videoEnabled: false);
-      } else {
-        _setEphemeralStatus("Connection failed: ${response.statusCode}");
-      }
+      // PURE WebRTC: Connect directly to the signaling server via WebSocket
+      await _signalingService.connectToWebSocket(roomId);
     } catch (e) {
       _setEphemeralStatus("Connection error: $e");
     }
@@ -544,29 +530,14 @@ class _ChessGameScreenState extends State<ChessScreen> {
         _isMuted = false;
         _isVideoOn = false;
         _isRemoteVideoOn = false;
-        _callStatus = ""; // NEW: Clear status when ending via toggle
+        _callStatus = "";
       });
     } else {
       // Start or Accept Call
       try {
-        final token = _authService.accessToken;
-        // Request token with recording enabled for calls
-        final tokenUrl = "${AppConfig.baseUrl}call/token/?room_id=${widget.roomId}&record=true";
-        
-        final response = await http.get(
-          Uri.parse(tokenUrl),
-          headers: {"Authorization": "Bearer $token"}
-        );
-
-        if (response.statusCode != 200) throw Exception("Failed to get call token");
-        
-        final tokenData = jsonDecode(response.body);
-        final livekitToken = tokenData['token'];
-        final livekitUrl = tokenData['url'];
-
         if (_isIncomingCall) {
           // Accept
-          await _signalingService.connectToLiveKit(livekitUrl, livekitToken, videoEnabled: false);
+          await _signalingService.connectToWebSocket(widget.roomId!);
           _startCallTimer();
           setState(() {
             _isAudioOn = true;
@@ -578,34 +549,34 @@ class _ChessGameScreenState extends State<ChessScreen> {
         } else {
           // Start Call (Initiator part)
           if (widget.opponentName == null) {
-             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-               content: Text("Cannot start call: Opponent unknown"),
-               backgroundColor: Colors.red,
-             ));
-             return;
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text("Cannot start call: Opponent unknown"),
+              backgroundColor: Colors.red,
+            ));
+            return;
           }
 
           setState(() {
-             _isCalling = true;
+            _isCalling = true;
           });
-          
+
           // Play calling ringtone IMMEDIATELY before signaling setup
           MqttService().playSound('sounds/call_ringtone.mp3');
 
           // Send notification to opponent
           await GameService.sendCallSignal(
-            receiverUsername: widget.opponentName!, 
+            receiverUsername: widget.opponentName!,
             roomId: widget.roomId!,
             initialVideo: _isVideoOn
           );
 
-          await _signalingService.connectToLiveKit(livekitUrl, livekitToken, videoEnabled: _isVideoOn);
+          await _signalingService.connectToWebSocket(widget.roomId!);
         }
       } catch (e) {
         MqttService().stopAudio(broadcast: true); // Stop ringtone on error
         _stopCallTimer();
         setState(() {
-           _isCalling = false;
+          _isCalling = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("Could not start call: $e"),

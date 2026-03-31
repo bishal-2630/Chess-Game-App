@@ -213,12 +213,4 @@ class SignalingService {
 
   Future<void> hangUp() async => disconnect();
 
-  // Compatibility stubs
-  Future<void> connectToLiveKit(String url, String token, {bool videoEnabled = false}) async {
-    // For now, extract roomId from token if possible, or just use a placeholder
-    // In a real app, you'd parse the token or use the URL
-    final roomId = url.split('/').lastWhere((s) => s.isNotEmpty, orElse: () => 'lobby');
-    await connectToWebSocket(roomId);
-  }
-
 }

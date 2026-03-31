@@ -62,13 +62,21 @@ class _CallScreenState extends State<CallScreen> {
     try {
       // 1. Request Permissions FIRST to avoid crashes
       setState(() => _status = "Requesting permissions...");
-      final micStatus = await Permission.microphone.request();
-      PermissionStatus camStatus = PermissionStatus.granted;
+      
+      final micStatus = await Permission.microphone.status;
+      if (micStatus.isDenied || micStatus.isRestricted) {
+        await Permission.microphone.request();
+      }
+      
       if (widget.initialVideo) {
-        camStatus = await Permission.camera.request();
+        final camStatus = await Permission.camera.status;
+        if (camStatus.isDenied || camStatus.isRestricted) {
+          await Permission.camera.request();
+        }
       }
 
-      if (micStatus.isDenied || camStatus.isDenied) {
+      // Re-check essential permissions
+      if (await Permission.microphone.isDenied || (widget.initialVideo && await Permission.camera.isDenied)) {
         _handleCallEnd("Permissions Denied\nPlease enable camera/mic in settings.");
         return;
       }
