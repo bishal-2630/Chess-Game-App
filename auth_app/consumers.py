@@ -23,10 +23,12 @@ class SignalingConsumer(AsyncWebsocketConsumer):
         print(f"✅ Connection accepted for room: {self.room_id}")
 
         # Send confirmation to the player who just connected
+        opponent = await self.get_room_opponent()
         await self.send(text_data=json.dumps({
             'type': 'connected',
             'status': 'success',
-            'room_id': self.room_id
+            'room_id': self.room_id,
+            'opponent': opponent
         }))
 
         # Notify others in the room that we've joined
@@ -109,6 +111,22 @@ class SignalingConsumer(AsyncWebsocketConsumer):
             user.is_online = is_online
             user.current_room = room_id if is_online else None
             user.save()
+
+    @database_sync_to_async
+    def get_room_opponent(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        # Find another user who is currently in this room
+        try:
+            opponent = User.objects.filter(current_room=self.room_id).exclude(id=self.user.id).first()
+            if opponent:
+                return {
+                    'username': opponent.username,
+                    'profile_picture': opponent.profile_picture.url if opponent.profile_picture else None
+                }
+        except Exception as e:
+            print(f"❌ Error fetching opponent: {e}")
+        return None
 
 class UserNotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):

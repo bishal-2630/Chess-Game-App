@@ -26,13 +26,14 @@ class SignalingService {
   
   // Game Signaling Callbacks
   void Function(Map<String, dynamic> data)? onGameMove;
+  void Function(Map<String, dynamic> opponent)? onRoomStatus;
+  void Function()? onPlayerJoined;
   void Function()? onPlayerLeft;
   void Function()? onIncomingCall;
   void Function(bool enabled)? onRemoteVideoToggle;
   void Function()? onCallAccepted;
   void Function()? onCallRejected;
   void Function()? onNewGame;
-  void Function()? onPlayerJoined;
 
   // WebRTC Configuration
   final Map<String, dynamic> _iceServers = {
@@ -116,7 +117,12 @@ class SignalingService {
 
     print("📬 Received Signaling Message: $type");
 
-    switch (type) {
+    switch (data['type']) {
+      case 'connected':
+        if (data['opponent'] != null) {
+          onRoomStatus?.call(data['opponent']);
+        }
+        break;
       case 'offer':
         await _handleOffer(payload);
         break;

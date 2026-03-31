@@ -39,12 +39,29 @@ class _CallScreenState extends State<CallScreen> {
   bool _isRemoteVideoOn = false;
   bool _isExiting = false;
   Timer? _callTimeoutTimer;
+  StreamSubscription<Map<String, dynamic>>? _mqttSubscription;
 
   @override
   void initState() {
     super.initState();
     _isVideoOn = widget.initialVideo;
     MqttService().setInCall(true);
+    
+    // Listen for call rejection/cancellation signals via MQTT
+    _mqttSubscription = MqttService().notifications.listen((data) {
+      if (!mounted) return;
+      
+      final type = data['type'];
+      if (type == 'call_declined' || type == 'call_cancelled') {
+        final payload = data['data'] ?? data['payload'] ?? data;
+        final String? incomingRoomId = payload['room_id']?.toString();
+        
+        if (incomingRoomId == widget.roomId) {
+          _handleCallEnd(type == 'call_declined' ? "Call Declined" : "Call Cancelled");
+        }
+      }
+    });
+
     _init();
   }
 
@@ -378,6 +395,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
+    _mqttSubscription?.cancel();
     _callTimeoutTimer?.cancel();
     _localRenderer.dispose();
     _remoteRenderer.dispose();
