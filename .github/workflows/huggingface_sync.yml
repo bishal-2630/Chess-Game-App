@@ -27,6 +27,5 @@ jobs:
           # Add Hugging Face as a remote
           git remote add hf https://Bishal26:$HF_TOKEN@huggingface.co/spaces/Bishal26/chess_game_bishal
           
-          # Mirror all branches and tags
-          git push hf --all --force
-          git push hf --tags --force
+          # Push the branch that triggered this action to HF's main branch
+          git push hf HEAD:refs/heads/main --force
