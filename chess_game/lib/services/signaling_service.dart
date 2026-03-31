@@ -40,6 +40,12 @@ class SignalingService {
   };
 
   Future<void> connectToWebSocket(String roomId) async {
+    // 1. Cleanly close any existing channel WITHOUT wiping UI callbacks
+    if (_channel != null) {
+      await _channel!.sink.close();
+      _channel = null;
+    }
+
     final host = AppConfig.baseUrl.replaceAll('http://', '').replaceAll('https://', '').replaceAll('/api/auth/', '');
     final scheme = AppConfig.baseUrl.startsWith('https') ? 'wss' : 'ws';
     final url = '$scheme://$host/ws/call/$roomId/';
@@ -48,7 +54,20 @@ class SignalingService {
     
     try {
       _channel = WebSocketChannel.connect(Uri.parse(url));
-      _channel!.stream.listen(_onMessage, onDone: disconnect, onError: (e) => print("❌ Signaling Error: $e"));
+      // Use a more robust listener that won't wipe callbacks on accidental disconnect
+      _channel!.stream.listen(
+        _onMessage, 
+        onDone: () {
+          print("⚠️ Signaling Socket Closed.");
+          onConnectionState?.call(false);
+        }, 
+        onError: (e) {
+          print("❌ Signaling Error: $e");
+          onConnectionState?.call(false);
+        }
+      );
+      
+      // Notify UI that we are "trying" to connect or are connected (from WebSocket's perspective)
       onConnectionState?.call(true);
     } catch (e) {
       print("❌ Failed to connect to signaling server: $e");
@@ -202,15 +221,9 @@ class SignalingService {
     _channel?.sink.close();
     _channel = null;
     
-    // Clear callbacks to avoid sending events to disposed UI components
-    onLocalStream = null;
-    onAddRemoteStream = null;
-    onRemoveRemoteStream = null;
-    onEndCall = null;
-    onConnectionState = null;
-    onPlayerJoined = null;
-    onCallAccepted = null;
-    onCallRejected = null;
+    // NOTE: We no longer nullify the UI callbacks here.
+    // They are managed by the UI components (ChessScreen/CallScreen)
+    // to prevent race conditions during rapid state transitions.
     
     onConnectionState?.call(false);
   }

@@ -229,14 +229,20 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Opponent left the room. Resetting game."),
-          backgroundColor: Colors.redAccent,
+          content: Text("Opponent left the game. You win the game"),
+          backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 5),
+          duration: Duration(seconds: 3),
         ));
+        
+        // Auto-exit after 3 seconds so they can see the result
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            _hangUp();
+            context.go('/users');
+          }
+        });
       }
-      _initializeBoard(); // Reset board state
-      _hangUp(); // Disconnect self
     };
 
     _signalingService.onConnectionState = (isConnected) {
@@ -412,7 +418,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
               builder: (context) => AlertDialog(
                 title: const Text('Leave Game?'),
                 content: const Text(
-                  'If you leave now, you will lose the game. Are you sure?',
+                  'You will lose the game. Are you sure to exit the room?',
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 actions: [
@@ -422,7 +428,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('LEAVE GAME',
+                    child: const Text('EXIT ROOM',
                         style: TextStyle(
                             color: Colors.red, fontWeight: FontWeight.bold)),
                   ),
@@ -437,10 +443,8 @@ class _ChessGameScreenState extends State<ChessScreen> {
         await GameService.recordGameResult('loss');
       }
 
-      _signalingService.sendBye();
-      // Delay before hangup to ensure bye is sent
-      await Future.delayed(const Duration(milliseconds: 200));
       _hangUp();
+      if (mounted) context.go('/users');
     }
   }
 
@@ -2081,10 +2085,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
           ],
           
           if (_isConnectedToRoom)
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.white),
+            TextButton.icon(
               onPressed: _onLogout,
-              tooltip: 'Leave Room',
+              icon: const Icon(Icons.close, color: Colors.white, size: 20),
+              label: const Text("EXIT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              tooltip: 'Exit Room',
             ),
         ],
       ),

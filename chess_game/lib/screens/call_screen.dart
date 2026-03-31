@@ -36,6 +36,7 @@ class _CallScreenState extends State<CallScreen> {
   String _status = "Initializing...";
   bool _isMuted = false;
   late bool _isVideoOn;
+  bool _isRemoteVideoOn = false;
   bool _isExiting = false;
   Timer? _callTimeoutTimer;
 
@@ -109,12 +110,13 @@ class _CallScreenState extends State<CallScreen> {
       _signalingService.onAddRemoteStream = (stream) {
         if (mounted) {
           _remoteRenderer.srcObject = stream;
-          setState(() {
-            _inCall = true;
-          });
           // Check if remote stream has video tracks
           bool hasVideo = stream.getVideoTracks().isNotEmpty;
           print("📺 Remote Stream Added: Video=${hasVideo}");
+          setState(() {
+            _inCall = true;
+            _isRemoteVideoOn = hasVideo;
+          });
         }
         _callTimeoutTimer?.cancel();
         MqttService().stopAudio();
@@ -123,7 +125,7 @@ class _CallScreenState extends State<CallScreen> {
       _signalingService.onRemoteVideoToggle = (enabled) {
         if (mounted) {
           setState(() {
-            // We can show a notification or update UI if needed
+            _isRemoteVideoOn = enabled;
             print("📺 Remote Video Toggle: $enabled");
           });
         }
@@ -260,43 +262,13 @@ class _CallScreenState extends State<CallScreen> {
           child: _buildPlaceholderView(),
         ),
         // Remote Video
-        Positioned.fill(
-          child: RTCVideoView(_remoteRenderer, 
-            mirror: true,
-            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+        if (_isRemoteVideoOn)
+          Positioned.fill(
+            child: RTCVideoView(_remoteRenderer, 
+              mirror: true,
+              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+            ),
           ),
-        ),
-        // Name Overlay
-        Positioned(
-          top: 50,
-          left: 0,
-          right: 0,
-          child: Column(
-            children: [
-              Text(
-                widget.otherUserName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  shadows: [Shadow(blurRadius: 10, color: Colors.black)],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  "Connected",
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ),
-            ],
-          ),
-        ),
         // Local Video (PiP)
         if (_isVideoOn)
           Positioned(
