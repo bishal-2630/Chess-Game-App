@@ -61,7 +61,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
   final SignalingService _signalingService = SignalingService();
   final rtc.RTCVideoRenderer _localRenderer = rtc.RTCVideoRenderer();
   final rtc.RTCVideoRenderer _remoteRenderer = rtc.RTCVideoRenderer();
-  lk.VideoTrack? _remoteVideoTrack;
+  rtc.MediaStream? _remoteStream;
 
   bool _isConnectedToRoom = false;
   bool _isAudioOn = false;
@@ -191,18 +191,17 @@ class _ChessGameScreenState extends State<ChessScreen> {
     await _remoteRenderer.initialize();
 
     _signalingService.onLocalStream = ((stream) {
-      // For now, keep as is or stub out.
-      // _localRenderer.srcObject = stream;
+      _localRenderer.srcObject = stream;
       if (mounted) setState(() {});
     });
 
-    _signalingService.onAddRemoteStream = (publication, participant) {
-      if (publication.kind == lk.TrackType.VIDEO) {
-        if (mounted) {
-          setState(() {
-            _remoteVideoTrack = publication.track as lk.VideoTrack?;
-          });
-        }
+    _signalingService.onAddRemoteStream = (stream) {
+      if (mounted) {
+        setState(() {
+          _remoteStream = stream;
+          _remoteRenderer.srcObject = stream;
+          _isRemoteVideoOn = stream.getVideoTracks().isNotEmpty;
+        });
       }
     };
 
@@ -1182,9 +1181,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
 
         // Send promotion move to opponent if connected
         if (_isConnectedToRoom) {
+          final lastMove = moveHistory.last;
           _signalingService.sendMove({
-            'fromRow': selectedRow,
-            'fromCol': selectedCol,
+            'type': 'move',
+            'fromRow': lastMove['fromRow'],
+            'fromCol': lastMove['fromCol'],
             'toRow': row,
             'toCol': col,
             'movedPiece': '${isWhite ? 'w' : 'b'}p',
@@ -1207,6 +1208,7 @@ class _ChessGameScreenState extends State<ChessScreen> {
     // Send move to opponent
     if (_isConnectedToRoom) {
       _signalingService.sendMove({
+        'type': 'move',
         'fromRow': selectedRow,
         'fromCol': selectedCol,
         'toRow': toRow,
@@ -2579,16 +2581,11 @@ class _ChessGameScreenState extends State<ChessScreen> {
             ),
             // Video Stream
             if (isCameraOn)
-              name == "Opponent" && _remoteVideoTrack != null
-                  ? lk.VideoTrackRenderer(
-                      _remoteVideoTrack!,
-                      fit: rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                    )
-                  : rtc.RTCVideoView(
-                      renderer,
-                      objectFit: rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                      mirror: name == "You",
-                    ),
+              rtc.RTCVideoView(
+                renderer,
+                objectFit: rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                mirror: name == "You",
+              ),
             // Name Overlay
             Positioned(
               bottom: 8,
