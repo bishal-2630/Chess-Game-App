@@ -245,7 +245,7 @@ class MqttService {
               );
             }
             return;
-          } else if (response.actionId == 'accept') {
+          } else if (response.actionId == 'accept' || response.actionId == 'accept_action') {
             AppLogger.i('✅ [FG] ACTION: ACCEPT GAME');
             _emitNotification({
               ...data,
@@ -254,8 +254,6 @@ class MqttService {
             return;
           }
         }
-        
-        // Handle Call Invitation Actions
         if (type == 'call_invitation' || type == 'incoming_call') {
           if (response.actionId == 'decline_action' || response.actionId == 'decline') {
             await cancelCallNotification();
@@ -351,6 +349,10 @@ class MqttService {
     await Future.delayed(Duration(milliseconds: 500));
 
     if (client!.connectionStatus!.state == MqttConnectionState.connected) {
+      // 6. Subscribe to global presence
+      final globalTopic = 'chess/global/presence';
+      client?.subscribe(globalTopic, MqttQos.atMostOnce);
+      
       isConnected = true;
       _subscribeToNotifications(username);
       _listen();
@@ -497,6 +499,9 @@ class MqttService {
           ],
         );
       }
+    } else if (type == 'user_status_update') {
+      // Internal update for lobby
+      _notificationController.add(data);
     }
     
     _notificationController.add(data);

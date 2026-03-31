@@ -57,8 +57,29 @@ class _UserListScreenState extends State<UserListScreen> {
           // Removed automatic navigation. User will join via the notification "Join" button.
           // context.go('/chess?roomId=$roomId&color=w');
         }
+      } else if (data['type'] == 'user_status_update') {
+        _handleStatusUpdate(data['payload'] ?? data['data']);
       }
     });
+  }
+
+  void _handleStatusUpdate(dynamic payload) {
+    if (!mounted || payload == null) return;
+    
+    final String? username = payload['username'];
+    final bool isOnline = payload['is_online'] ?? false;
+    
+    if (username != null) {
+      setState(() {
+        final index = _allUsers.indexWhere((u) => u['username'] == username);
+        if (index != -1) {
+          _allUsers[index]['is_online'] = isOnline;
+        } else if (isOnline) {
+          // New user came online, refresh the list to see them
+          _loadUsers();
+        }
+      });
+    }
   }
 
   Future<void> _loadUsers() async {

@@ -31,15 +31,32 @@ class SignalingConsumer(AsyncWebsocketConsumer):
             'opponent': opponent
         }))
 
-        # Notify others in the room that we've joined
+        # Notify others in the room that we've joined WITH our profile info
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'signaling_message',
-                'message': {'type': 'player_joined'},
+                'message': {
+                    'type': 'player_joined',
+                    'opponent': {
+                        'username': self.user.username,
+                        'profile_picture': self.user.profile_picture.url if hasattr(self.user, 'profile_picture') and self.user.profile_picture else None
+                    }
+                },
                 'sender_channel_name': self.channel_name
             }
         )
+        
+        # Notify globally via MQTT that this user is now in a room
+        try:
+            from .mqtt_utils import publish_global_mqtt_notification
+            publish_global_mqtt_notification('user_status_update', {
+                'username': self.user.username,
+                'is_online': True,
+                'current_room': self.room_id
+            })
+        except Exception as e:
+            print(f"⚠️ MQTT Global Broadcast failed: {e}")
 
     async def disconnect(self, close_code):
         # Leave room group
@@ -51,26 +68,16 @@ class SignalingConsumer(AsyncWebsocketConsumer):
         # Update user offline status
         await self.update_user_status(False, None)
         
-        # Notify others in the room that we've left/ended call
-        print(f"📡 Abrupt disconnect from room: {self.room_id}")
-        # Send end_call for the integrated call UI
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'signaling_message',
-                'message': {'type': 'end_call'},
-                'sender_channel_name': self.channel_name
-            }
-        )
-        # Send player_left for the chess game session
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'signaling_message',
-                'message': {'type': 'player_left'},
-                'sender_channel_name': self.channel_name
-            }
-        )
+        # Notify globally via MQTT that this user has left the room
+        try:
+            from .mqtt_utils import publish_global_mqtt_notification
+            publish_global_mqtt_notification('user_status_update', {
+                'username': self.user.username,
+                'is_online': True, # Likely still in app
+                'current_room': None
+            })
+        except Exception as e:
+            print(f"⚠️ MQTT Global Broadcast failed: {e}")
 
     # Receive message from WebSocket
     async def receive(self, text_data):
@@ -145,9 +152,25 @@ class UserNotificationConsumer(AsyncWebsocketConsumer):
             # Update user online status
             await self.update_user_status(True)
             
+            # Notify all users globally about online status change
+            await self.channel_layer.group_send(
+                'global_notifications',
+                {
+                    'type': 'user_status_update',
+                    'user': {
+                        'id': self.user_id,
+                        'username': self.scope["user"].username,
+                        'is_online': True
+                    }
+                }
+            )
+            
             print(f"🔔 User {self.user_id} connecting to notifications")
         else:
             print(f"🔔 Anonymous user connecting to notifications")
+        
+        # Also join global group
+        await self.channel_layer.group_add('global_notifications', self.channel_name)
         
         await self.accept()
         print(f"✅ Notification connection accepted")
@@ -157,6 +180,18 @@ class UserNotificationConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_discard(
                 self.user_group_name,
                 self.channel_name
+            )
+            
+            # Notify all users globally about offline status
+            await self.channel_layer.group_send(
+                'global_notifications',
+                {
+                    'type': 'user_status_update',
+                    'user': {
+                        'id': self.user_id,
+                        'is_online': False
+                    }
+                }
             )
             
             # Update user offline status

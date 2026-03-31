@@ -51,3 +51,24 @@ def publish_mqtt_notification(username, notification_type, payload):
     finally:
         client.disconnect()
         logger.info(f"🔌 MQTT: Disconnected from broker")
+
+def publish_global_mqtt_notification(notification_type, payload):
+    """
+    Publishes a notification to the global presence topic.
+    Topic format: chess/global/presence
+    """
+    client = mqtt.Client()
+    try:
+        client.connect(MQTT_BROKER, MQTT_PORT, MQTT_KEEPALIVE)
+        topic = "chess/global/presence"
+        message = {
+            'type': notification_type,
+            'payload': payload
+        }
+        client.publish(topic, json.dumps(message)).wait_for_publish()
+        return True
+    except Exception as e:
+        logger.error(f"❌ MQTT Global Publish error: {e}")
+        return False
+    finally:
+        client.disconnect()
