@@ -423,7 +423,10 @@ class MqttService {
       final String? normalizedActiveRoomId = _activeChessRoomId?.toString();
       
       if (normalizedActiveRoomId != null && normalizedActiveRoomId == normalizedIncomingRoomId) {
-        AppLogger.i('🚫 MQTT: Suppressing system notification but PLAYING SOUND for active in-game call in room: $roomId');
+        AppLogger.i('🚫 MQTT: Suppressing system notification but PRE-CONNECTING & PLAYING SOUND for active in-game call in room: $roomId');
+        
+        // PRE-CONNECT: Start signaling connection in background for faster join
+        SignalingService().connectToWebSocket(normalizedIncomingRoomId!);
         
         // playSound immediately (requested by user for audible alert)
         playSound('sounds/ringtone.mp3', roomId: normalizedIncomingRoomId);
@@ -434,6 +437,9 @@ class MqttService {
       }
 
       _currentCallRoomId = roomId;
+      
+      // PRE-CONNECT: Start signaling connection in background even for system notifications
+      SignalingService().connectToWebSocket(normalizedIncomingRoomId!);
       
       // RESTORED: Play sound immediately
       playSound('sounds/ringtone.mp3', roomId: roomId);
@@ -463,9 +469,11 @@ class MqttService {
           stopAudio(broadcast: true, roomId: roomId);
           cancelCallNotification(roomId: roomId); 
           
-          // Show Missed Call Notification
-          if (sender != null) {
+          // Show Missed Call Notification ALWAYS if NOT in the active room
+          if (sender != null && roomId != _activeChessRoomId) {
              _showMissedCallNotification(sender, initialVideo: payload['initial_video'] == true);
+          } else {
+             AppLogger.i('🚫 MQTT: Suppressed missed call notification for active room: $roomId');
           }
         } else {
            cancelCallNotification();
