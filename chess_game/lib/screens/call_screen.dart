@@ -60,26 +60,43 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _startFlow() async {
     try {
-      // 1. Request Permissions FIRST to avoid crashes
-      setState(() => _status = "Requesting permissions...");
-      
-      final micStatus = await Permission.microphone.status;
-      if (micStatus.isDenied || micStatus.isRestricted) {
-        await Permission.microphone.request();
+      // 1. Check & Request Permissions
+      setState(() => _status = "Checking permissions...");
+
+      // Microphone
+      PermissionStatus micStatus = await Permission.microphone.status;
+      if (!micStatus.isGranted) {
+        if (micStatus.isPermanentlyDenied) {
+          _handleCallEnd("Microphone permission permanently denied.\nPlease enable it in app settings.");
+          return;
+        }
+        micStatus = await Permission.microphone.request();
       }
-      
+
+      // Camera (only if needed)
       if (widget.initialVideo) {
-        final camStatus = await Permission.camera.status;
-        if (camStatus.isDenied || camStatus.isRestricted) {
-          await Permission.camera.request();
+        PermissionStatus camStatus = await Permission.camera.status;
+        if (!camStatus.isGranted) {
+          if (camStatus.isPermanentlyDenied) {
+            _handleCallEnd("Camera permission permanently denied.\nPlease enable it in app settings.");
+            return;
+          }
+          camStatus = await Permission.camera.request();
+          if (!camStatus.isGranted) {
+            _handleCallEnd("Camera permission denied.");
+            return;
+          }
         }
       }
 
-      // Re-check essential permissions
-      if (await Permission.microphone.isDenied || (widget.initialVideo && await Permission.camera.isDenied)) {
-        _handleCallEnd("Permissions Denied\nPlease enable camera/mic in settings.");
+      // Final mic check
+      if (!micStatus.isGranted) {
+        _handleCallEnd("Microphone permission denied.");
         return;
       }
+
+      setState(() => _status = "Connecting...");
+
 
       // 2. Start Signaling IMMEDIATELY (Don't wait for media)
       if (widget.isCaller) {
