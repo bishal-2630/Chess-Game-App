@@ -151,7 +151,9 @@ class SignalingService {
         return null;
       }
       return "Failed to get local stream";
-    return "Failed to get media: $e";
+    } catch (e) {
+      print("⚠️ Media access failed: $e");
+      return "Failed to get media: $e";
     }
   }
 
