@@ -2656,7 +2656,31 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
               isCameraOn: _isVideoOn,
               isMuted: _isMuted,
               profilePic: _authService.currentUser?['profile_picture'],
-              controls: null, // Call icons shifted to opponent side
+              // Call icons on local side, but only if opponent has joined and no active call
+              controls: (_opponentJoined && !_isAudioOn && !_isCalling && !_showIncomingCallBanner)
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildCallControlButton(
+                          icon: Icons.call,
+                          color: Colors.green,
+                          onPressed: () {
+                            setState(() => _isVideoOn = false);
+                            _toggleAudio();
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _buildCallControlButton(
+                          icon: Icons.videocam,
+                          color: Colors.blue,
+                          onPressed: () {
+                            setState(() => _isVideoOn = true);
+                            _toggleAudio();
+                          },
+                        ),
+                      ],
+                    )
+                  : (_isAudioOn ? activeControls : null), 
             ),
           ),
           const SizedBox(width: 8),
@@ -2671,33 +2695,9 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
                   renderer: _remoteRenderer,
                   isLocal: false,
                   isCameraOn: _isRemoteVideoOn,
-                  isMuted: false, // Opponent mute status not tracked in this UI version
+                  isMuted: false, 
                   profilePic: _opponentInfo?['profile_picture'],
-                  // Shift Call Icons here
-                  controls: (!_isAudioOn && !_isCalling && !_showIncomingCallBanner)
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildCallControlButton(
-                              icon: Icons.call,
-                              color: Colors.green,
-                              onPressed: () {
-                                setState(() => _isVideoOn = false);
-                                _toggleAudio();
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            _buildCallControlButton(
-                              icon: Icons.videocam,
-                              color: Colors.blue,
-                              onPressed: () {
-                                setState(() => _isVideoOn = true);
-                                _toggleAudio();
-                              },
-                            ),
-                          ],
-                        )
-                      : activeControls, 
+                  controls: null, // Invitation controls moved to local side
                 )
               : _buildWaitingProfileBox(),
           ),
