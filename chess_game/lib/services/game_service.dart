@@ -323,6 +323,7 @@ class GameService {
   }
 
   // Record game result (win, draw, loss)
+  // Get result
   static Future<Map<String, dynamic>> recordGameResult(String result) async {
     try {
       final response = await _authenticatedRequest(
@@ -350,6 +351,27 @@ class GameService {
       }
     } catch (e) {
       return {'success': false, 'error': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  // Get current room status (participants)
+  static Future<Map<String, dynamic>?> getRoomStatus(String roomId) async {
+    try {
+      final response = await _authenticatedRequest(
+        'GET',
+        '${_baseUrl}game/room/$roomId/status/',
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return data['opponent'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print("❌ Error fetching room status: $e");
+      return null;
     }
   }
 }

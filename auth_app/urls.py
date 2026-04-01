@@ -13,8 +13,8 @@ from .google_auth_views import GoogleLoginView
 from .game_views import (
     OnlineUsersView, AllUsersView, UpdateOnlineStatusView,
     SendInvitationView, MyInvitationsView, RespondToInvitationView,
-   cancel_invitation, SendCallSignalView, DeclineCallView, CancelCallView,
-    RecordGameResultView
+    cancel_invitation, SendCallSignalView, DeclineCallView, CancelCallView,
+    RecordGameResultView, GetRoomStatusView
 )
 from .realtime_docs import MQTTDocumentationView, WebSocketDocumentationView
 from .web_session_views import WebSessionView
@@ -91,6 +91,7 @@ urlpatterns = [
     path('call/decline/', DeclineCallView.as_view(), name='decline_call'),
     path('call/cancel/', CancelCallView.as_view(), name='cancel_call'),
     path('game/result/', RecordGameResultView.as_view(), name='record_result'),
+    path('game/room/<str:room_id>/status/', GetRoomStatusView.as_view(), name='room_status'),
     
     # Real-time Service Documentation (Swagger Only)
     path('docs/mqtt/', MQTTDocumentationView.as_view(), name='docs_mqtt'),

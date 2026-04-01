@@ -100,6 +100,8 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
   Timer? _callTimer;
   StreamSubscription? _callNotificationSubscription;
 
+  Map<String, dynamic>? _opponentInfo; // NEW: Store opponent profile (username, pic, etc)
+
   @override
   void initState() {
     super.initState();
@@ -181,6 +183,9 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
 
     // Auto-connect if parameters provided via route
     if (widget.roomId != null) {
+      // Update online status in database before connecting
+      GameService.updateOnlineStatus(isOnline: true, roomId: widget.roomId);
+      
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _playerColor = widget.color ?? 'w';
         _connectRoom(_defaultServerUrl, widget.roomId!);
@@ -188,16 +193,21 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
     }
   }
 
-  Future<void> _loadInviteCount() async {
-    try {
-      final result = await GameService.getMyInvitations();
-      if (result['success'] && mounted) {
-        setState(() {
-          _inviteCount = result['count'];
-        });
-      }
     } catch (e) {
       // Error loading invite count
+    }
+  }
+
+  Future<void> _checkInitialRoomStatus() async {
+    if (widget.roomId == null) return;
+    
+    // Quick REST check to see if someone is already here
+    final opponent = await GameService.getRoomStatus(widget.roomId!);
+    if (opponent != null && mounted) {
+      setState(() {
+        _opponentJoined = true;
+        _opponentInfo = opponent;
+      });
     }
   }
 
@@ -242,7 +252,7 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
       if (mounted) {
         setState(() {
           _opponentJoined = true;
-          _setEphemeralStatus("Opponent Joined: ${opponent['username']}");
+          _opponentInfo = opponent; // Save opponent details
         });
       }
     };
@@ -251,8 +261,7 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
       if (mounted) {
         setState(() {
           _opponentJoined = true;
-          // Optionally update opponent profile picture/name here if we had fields for it
-          _setEphemeralStatus("Connected with ${opponent['username']}");
+          _opponentInfo = opponent; // Save opponent details
         });
       }
     };
@@ -276,6 +285,7 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
 
       setState(() {
         _opponentJoined = false;
+        _opponentInfo = null; // Clear details when they leave
       });
 
       // If game was active, record as a win for this player
@@ -593,6 +603,9 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
     try {
       // PURE WebRTC: Connect directly to the signaling server via WebSocket
       await _signalingService.connectToWebSocket(roomId);
+      
+      // NEW: Check for existing opponent via REST API for instant sync
+      _checkInitialRoomStatus();
       
       // Secondary safety check: ensure UI is updated if the automatic callback is delayed
       if (mounted) {
@@ -2629,49 +2642,52 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
           Expanded(
             child: _buildCallProfileBox(
               name: "You",
+              subtitle: null,
               renderer: _localRenderer,
+              isLocal: true,
               isCameraOn: _isVideoOn,
               isMuted: _isMuted,
               profilePic: _authService.currentUser?['profile_picture'],
-              // Show call icons also on "You" side as requested
-              controls: (!_isAudioOn && !_isCalling && !_showIncomingCallBanner)
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildCallControlButton(
-                          icon: Icons.call,
-                          color: Colors.green,
-                          onPressed: () {
-                            setState(() => _isVideoOn = false);
-                            _toggleAudio();
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        _buildCallControlButton(
-                          icon: Icons.videocam,
-                          color: Colors.blue,
-                          onPressed: () {
-                            setState(() => _isVideoOn = true);
-                            _toggleAudio();
-                          },
-                        ),
-                      ],
-                    )
-                  : activeControls, // Fallback to current active controls (Mute, etc)
+              controls: null, // Call icons shifted to opponent side
             ),
           ),
           const SizedBox(width: 8),
           // Remote Player Box
           Expanded(
-            child: (widget.opponentName != null || _opponentJoined || _isAudioOn)
+            child: (_opponentJoined)
               ? _buildCallProfileBox(
-                  name: widget.opponentName ?? "Opponent",
+                  name: _opponentInfo?['username'] ?? widget.opponentName ?? "Opponent",
+                  subtitle: null,
                   renderer: _remoteRenderer,
+                  isLocal: false,
                   isCameraOn: _isRemoteVideoOn,
-                  isMuted: false,
-                  profilePic: null, // Would be widget.opponentProfilePic if available
-                  // Call icons are ONLY on the "You" side
-                  controls: null,
+                  isMuted: false, // Opponent mute status not tracked in this UI version
+                  profilePic: _opponentInfo?['profile_picture'],
+                  // Shift Call Icons here
+                  controls: (!_isAudioOn && !_isCalling && !_showIncomingCallBanner)
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildCallControlButton(
+                              icon: Icons.call,
+                              color: Colors.green,
+                              onPressed: () {
+                                setState(() => _isVideoOn = false);
+                                _toggleAudio();
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _buildCallControlButton(
+                              icon: Icons.videocam,
+                              color: Colors.blue,
+                              onPressed: () {
+                                setState(() => _isVideoOn = true);
+                                _toggleAudio();
+                              },
+                            ),
+                          ],
+                        )
+                      : activeControls, 
                 )
               : _buildWaitingProfileBox(),
           ),
@@ -2713,52 +2729,96 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
     required rtc.RTCVideoRenderer renderer,
     required bool isCameraOn,
     required bool isMuted,
+    required bool isLocal,
+    String? subtitle,
     String? profilePic,
     Widget? controls,
   }) {
     return Container(
-      height: 120, // Increased slightly as requested
+      height: 120,
       decoration: BoxDecoration(
         color: Colors.black45,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white24),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12, width: 1),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Stack(
           children: [
-            // Background / Avatar
-            Center(
-              child: profilePic != null
-                  ? CircleAvatar(
-                      radius: 20,
-                      backgroundImage: NetworkImage(profilePic),
-                    )
-                  : Icon(Icons.person, size: 30, color: Colors.blue[100]),
-            ),
-            // Video Stream
+            // Video Stream (Full Background if ON)
             if (isCameraOn)
               rtc.RTCVideoView(
                 renderer,
                 objectFit: rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                mirror: true,
+                mirror: isLocal,
               ),
-            // Name Overlay
-            Positioned(
-              bottom: 8,
-              left: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(4),
+            
+            // Profile Info Overlay (Gradient background for readability)
+            if (!isCameraOn)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.blue[100],
+                      backgroundImage: profilePic != null
+                          ? NetworkImage(profilePic)
+                          : null,
+                      child: profilePic == null
+                          ? Icon(
+                              isLocal && _authService.isGuest 
+                                ? Icons.person_outline 
+                                : Icons.person, 
+                              size: 24, 
+                              color: Colors.blue[800],
+                            )
+                          : null,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 9,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
                 ),
-                child: Text(
-                  name,
-                  style: const TextStyle(color: Colors.white, fontSize: 10),
+              )
+            else
+              // Small Name Tag when Video is ON
+              Positioned(
+                bottom: 8,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    name,
+                    style: const TextStyle(color: Colors.white, fontSize: 10),
+                  ),
                 ),
               ),
-            ),
+
             // Mute Icon
             if (isMuted)
               const Positioned(
@@ -2766,10 +2826,11 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
                 right: 8,
                 child: Icon(Icons.mic_off, color: Colors.red, size: 16),
               ),
-            // Controls Overlay
+
+            // Controls Overlay (Shifted to this box)
             if (controls != null)
               Positioned(
-                bottom: 8,
+                bottom: isCameraOn ? 40 : 8, // Adjust if video is on
                 left: 0,
                 right: 0,
                 child: Center(child: controls),

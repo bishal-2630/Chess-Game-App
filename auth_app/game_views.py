@@ -389,3 +389,30 @@ class RecordGameResultView(APIView):
             'draws': user.draws, 
             'losses': user.losses
         })
+
+class GetRoomStatusView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_description="Get current participants in a specific game room.",
+        responses={200: 'Participant data'}
+    )
+    def get(self, request, room_id):
+        # Find online users in this room (excluding current user)
+        opponent = User.objects.filter(
+            current_room=room_id,
+            is_online=True
+        ).exclude(id=request.user.id).first()
+        
+        if opponent:
+            serializer = UserSerializer(opponent)
+            return Response({
+                'success': True,
+                'opponent': serializer.data
+            })
+        
+        return Response({
+            'success': False,
+            'opponent': None,
+            'message': 'No opponent found in room'
+        })
