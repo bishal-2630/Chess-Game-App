@@ -49,6 +49,7 @@ urlpatterns = [
     
     # API
     path('api/auth/', include('auth_app.urls')),
+    path('api/payments/', include('payments.urls')),
     
     # Ghost Check
     path('ghost-check/', direct_rollback_check),
