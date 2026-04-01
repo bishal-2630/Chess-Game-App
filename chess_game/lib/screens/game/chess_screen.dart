@@ -2664,7 +2664,9 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
           Expanded(
             child: (_opponentJoined)
               ? _buildCallProfileBox(
-                  name: _opponentInfo?['username'] ?? widget.opponentName ?? "Opponent",
+                  name: (_opponentInfo?['username'] != null && _opponentInfo!['username'].toString().isNotEmpty) 
+                      ? _opponentInfo!['username'] 
+                      : (widget.opponentName ?? "Opponent"),
                   subtitle: null,
                   renderer: _remoteRenderer,
                   isLocal: false,

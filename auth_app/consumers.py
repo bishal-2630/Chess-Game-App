@@ -40,7 +40,7 @@ class SignalingConsumer(AsyncWebsocketConsumer):
                     'type': 'player_joined',
                     'opponent': {
                         'username': self.user.username,
-                        'profile_picture': self.user.profile_picture.url if hasattr(self.user, 'profile_picture') and self.user.profile_picture else None
+                        'profile_picture': self.user.profile_picture if hasattr(self.user, 'profile_picture') and self.user.profile_picture else None
                     }
                 },
                 'sender_channel_name': self.channel_name
@@ -129,7 +129,7 @@ class SignalingConsumer(AsyncWebsocketConsumer):
             if opponent:
                 return {
                     'username': opponent.username,
-                    'profile_picture': opponent.profile_picture.url if opponent.profile_picture else None
+                    'profile_picture': opponent.profile_picture if opponent.profile_picture else None
                 }
         except Exception as e:
             print(f"❌ Error fetching opponent: {e}")
