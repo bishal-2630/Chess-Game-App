@@ -2656,8 +2656,7 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
               isCameraOn: _isVideoOn,
               isMuted: _isMuted,
               profilePic: _authService.currentUser?['profile_picture'],
-              // Call icons on local side, but only if opponent has joined and no active call
-              controls: (_opponentJoined && !_isAudioOn && !_isCalling && !_showIncomingCallBanner)
+              controls: activeControls ?? ((_opponentJoined && !_isAudioOn && !_isCalling && !_showIncomingCallBanner)
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -2680,7 +2679,7 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
                         ),
                       ],
                     )
-                  : (_isAudioOn ? activeControls : null), 
+                  : null), // Fixed syntax error and simplified null case
             ),
           ),
           const SizedBox(width: 8),
