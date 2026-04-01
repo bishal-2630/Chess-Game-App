@@ -193,6 +193,14 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
     }
   }
 
+  Future<void> _loadInviteCount() async {
+    try {
+      final result = await GameService.getMyInvitations();
+      if (result['success'] && mounted) {
+        setState(() {
+          _inviteCount = result['count'];
+        });
+      }
     } catch (e) {
       // Error loading invite count
     }
