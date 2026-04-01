@@ -28,6 +28,10 @@ dependencies:
   url_launcher: ^6.2.5
   google_sign_in: ^6.2.1
   logger: ^2.4.0
+  nsd: ^3.0.0
+  shelf: ^1.4.1
+  shelf_web_socket: ^2.0.0
+  network_info_plus: ^6.0.0
 
 
 dev_dependencies:

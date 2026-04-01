@@ -10,6 +10,7 @@ import 'screens/call_screen.dart';
 import 'screens/users/user_list_screen.dart';
 import 'screens/users/invitations_screen.dart';
 import 'screens/chess_webview_screen.dart';
+import 'screens/game/hotspot_setup_screen.dart';
 import 'services/django_auth_service.dart';
 import 'services/mqtt_service.dart';
 import 'services/game_service.dart';
@@ -78,7 +79,8 @@ final GoRouter _globalRouter = GoRouter(
             final roomId = state.uri.queryParameters['roomId'];
             final color = state.uri.queryParameters['color'];
             final opponentName = state.uri.queryParameters['opponentName'];
-            return ChessScreen(roomId: roomId, color: color, opponentName: opponentName);
+            final mode = state.uri.queryParameters['mode'];
+            return ChessScreen(roomId: roomId, color: color, opponentName: opponentName, mode: mode);
           },
         ),
         GoRoute(
@@ -102,6 +104,10 @@ final GoRouter _globalRouter = GoRouter(
               initialVideo: initialVideo,
             );
           },
+        ),
+        GoRoute(
+          path: '/hotspot-setup',
+          builder: (context, state) => const HotspotSetupScreen(),
         ),
         GoRoute(
           path: '/users',

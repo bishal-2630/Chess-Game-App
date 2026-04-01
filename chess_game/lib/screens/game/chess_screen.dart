@@ -7,6 +7,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
 import 'package:flutter/foundation.dart';
 import '../../services/config.dart';
 import '../../services/game_service.dart';
+import '../../services/local_network_service.dart';
 import 'dart:math';
 import 'dart:async';
 import 'package:permission_handler/permission_handler.dart';
@@ -18,7 +19,8 @@ class ChessScreen extends StatefulWidget {
   final String? roomId;
   final String? color;
   final String? opponentName;
-  const ChessScreen({super.key, this.roomId, this.color, this.opponentName});
+  final String? mode; // 'hotspot' for local network play
+  const ChessScreen({super.key, this.roomId, this.color, this.opponentName, this.mode});
 
   @override
   State<ChessScreen> createState() => _ChessGameScreenState();
@@ -99,6 +101,11 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
   int _callDuration = 0;
   Timer? _callTimer;
   StreamSubscription? _callNotificationSubscription;
+
+  // Hotspot mode
+  final LocalNetworkService _lns = LocalNetworkService();
+  bool get _isHotspotMode => widget.mode == 'hotspot';
+  StreamSubscription<Map<String, dynamic>>? _hotspotSubscription;
 
   Map<String, dynamic>? _opponentInfo; // NEW: Store opponent profile (username, pic, etc)
 
@@ -182,7 +189,7 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
     });
 
     // Auto-connect if parameters provided via route
-    if (widget.roomId != null) {
+    if (widget.roomId != null && !_isHotspotMode) {
       // Update online status in database before connecting
       GameService.updateOnlineStatus(isOnline: true, roomId: widget.roomId);
       
@@ -191,7 +198,54 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
         _connectRoom(_defaultServerUrl, widget.roomId!);
       });
     }
+
+    // ── Hotspot mode: wire LocalNetworkService messages ──────────────────────
+    if (_isHotspotMode) {
+      setState(() {
+        _playerColor = widget.color ?? 'w';
+        _isConnectedToRoom = true;
+        _callStatus = '';
+      });
+
+      _hotspotSubscription = _lns.messages.listen((data) {
+        if (!mounted) return;
+        final type = data['type'];
+
+        if (type == 'move') {
+          setState(() {
+            _opponentJoined = true;
+            _handleRemoteMove(data);
+          });
+        } else if (type == 'player_left' || type == 'leave') {
+          setState(() {
+            _opponentJoined = false;
+            _opponentInfo = null;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Opponent left the game.'),
+            backgroundColor: Colors.orange,
+          ));
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) context.go('/chess');
+          });
+        } else if (type == 'connected') {
+          setState(() {
+            _opponentJoined = true;
+          });
+        } else if (type == 'new_game') {
+          _initializeBoard();
+        }
+      });
+
+      _lns.onOpponentConnected = () {
+        if (mounted) setState(() => _opponentJoined = true);
+      };
+      _lns.onOpponentLeft = () {
+        if (mounted) setState(() => _opponentJoined = false);
+      };
+    }
   }
+
 
   Future<void> _loadInviteCount() async {
     try {
@@ -525,12 +579,15 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
         await GameService.recordGameResult('loss');
       }
 
-      // Send the 'leave' websocket event
-      _signalingService.sendBye();
-      // Brief delay to ensure transmission before the socket is closed by hangUp
+      // Send the 'leave' event via appropriate channel
+      if (_isHotspotMode) {
+        _lns.send({'type': 'leave'});
+      } else {
+        _signalingService.sendBye();
+      }
       await Future.delayed(const Duration(milliseconds: 200));
 
-      _hangUp();
+      if (!_isHotspotMode) _hangUp();
       if (mounted) context.go('/chess');
     }
   }
@@ -562,21 +619,27 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // NEW: Clear active room ID so notifications are restored for future sessions
     MqttService().setActiveChessRoomId(null);
     _statusTimer?.cancel();
     _inviteTimer?.cancel();
     _callNotificationSubscription?.cancel();
+    _hotspotSubscription?.cancel();
     _localRenderer.dispose();
     _remoteRenderer.dispose();
-    if (_isConnectedToRoom) {
-      _signalingService.sendBye();
+    if (_isHotspotMode) {
+      // Notify remote peer we are leaving via the local channel
+      _lns.send({'type': 'leave'});
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _lns.dispose();
+      });
+    } else {
+      if (_isConnectedToRoom) {
+        _signalingService.sendBye();
+      }
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _signalingService.hangUp();
+      });
     }
-    // Small delay to ensure bye is sent before closing socket
-    Future.delayed(const Duration(milliseconds: 200), () {
-      _signalingService.hangUp();
-    });
-    // Notification service lifecycle is now managed by DjangoAuthService
     super.dispose();
   }
 
@@ -759,46 +822,107 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Play Online'),
+          backgroundColor: const Color(0xFF1E1E2E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Play Online',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                  "Connect to the multiplayer server to play with others."),
+              Text(
+                'Connect via server or play locally over Wi-Fi Hotspot.',
+                style: TextStyle(color: Colors.white.withOpacity(0.65)),
+              ),
               const SizedBox(height: 20),
-              ElevatedButton(
+
+              // ── Wifi Hotspot Mode ────────────────────────────────────────
+              InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/hotspot-setup');
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF3A7BD5), Color(0xFF00D2FF)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                          color: const Color(0xFF3A7BD5).withOpacity(0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.wifi_tethering, color: Colors.white, size: 20),
+                      SizedBox(width: 10),
+                      Text('Wifi Hotspot Mode',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15)),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+              Divider(color: Colors.white12),
+              const SizedBox(height: 12),
+
+              // ── Online Server ────────────────────────────────────────────
+              ElevatedButton.icon(
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text('Create Room (Online)'),
                 onPressed: () {
                   Navigator.pop(context);
                   _playerColor = 'w';
                   _createRoom(_defaultServerUrl);
                 },
                 style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 40)),
-                child: Text('Create Room (Generate ID)'),
+                  minimumSize: const Size(double.infinity, 44),
+                  backgroundColor: Colors.white12,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
               ),
               const SizedBox(height: 10),
-              ElevatedButton(
+              ElevatedButton.icon(
+                icon: const Icon(Icons.login, size: 18),
+                label: const Text('Join Room (Online)'),
                 onPressed: () {
                   Navigator.pop(context);
                   _playerColor = 'b';
                   _showJoinDialog(_defaultServerUrl);
                 },
                 style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 40)),
-                child: Text('Join Room (Enter ID)'),
+                  minimumSize: const Size(double.infinity, 44),
+                  backgroundColor: Colors.white12,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
             ),
           ],
         );
       },
     );
   }
+
 
   void _createRoom(String serverUrl) {
     // Generate random 4-digit ID
@@ -1343,10 +1467,9 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
   }
 
   void _movePiece(int toRow, int toCol) {
-    // Local move
     // Send move to opponent
     if (_isConnectedToRoom) {
-      _signalingService.sendMove({
+      final moveData = {
         'type': 'move',
         'fromRow': selectedRow,
         'fromCol': selectedCol,
@@ -1354,7 +1477,12 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
         'toCol': toCol,
         'movedPiece': selectedPiece,
         'promotion': null, // Will be set if it's a promotion
-      });
+      };
+      if (_isHotspotMode) {
+        _lns.send(moveData);
+      } else {
+        _signalingService.sendMove(moveData);
+      }
     }
 
     setState(() {
@@ -2422,7 +2550,11 @@ class _ChessGameScreenState extends State<ChessScreen> with WidgetsBindingObserv
                           child: ElevatedButton.icon(
                             onPressed: () {
                               if (_isConnectedToRoom) {
-                                _signalingService.sendNewGame();
+                                if (_isHotspotMode) {
+                                  _lns.send({'type': 'new_game'});
+                                } else {
+                                  _signalingService.sendNewGame();
+                                }
                               }
                               _initializeBoard();
                             },
