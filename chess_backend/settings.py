@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     
     # Local
     'auth_app.apps.AuthAppConfig',
+    'payments.apps.PaymentsConfig',
     'channels',
 ]
 
@@ -283,6 +284,12 @@ else:
 LIVEKIT_API_KEY = config('LIVEKIT_API_KEY', default='APImrhGecyNFG7p')
 LIVEKIT_API_SECRET = config('LIVEKIT_API_SECRET', default='CEf97PsPDAFW6aVRtmS1NlMid5LQZZ3xWKJyfQPqQ5g')
 LIVEKIT_URL = config('LIVEKIT_URL', default='wss://chess-game-bishal-ptignr4p.livekit.cloud')
+
+# Stripe Configuration
+STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY', default='')
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
+STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
+CLIENT_URL = config('CLIENT_URL', default='http://localhost:8080')
 
 # GHOSTBUSTER CONFIG
 CSRF_FAILURE_VIEW = 'auth_app.views.csrf_failure'
