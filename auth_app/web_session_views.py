@@ -47,6 +47,7 @@ class WebSessionView(APIView):
                     'id': user.id,
                     'username': user.username,
                     'email': user.email,
+                    'is_pro': user.is_pro,
                 }
             }
             
@@ -114,9 +115,9 @@ class WebSessionView(APIView):
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
+                "is_pro": user.is_pro,
             }
         }
-        
         response = Response(response_data, status=status.HTTP_200_OK)
         # Re-inject cookie as a safety measure
         expires_delta = timedelta(days=7)

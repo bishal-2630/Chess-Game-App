@@ -217,6 +217,22 @@ class DjangoAuthService extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshUserData() async {
+    try {
+      final url = '${_baseUrl}web-session/';
+      final response = await authenticatedRequest(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          _currentUser = data['user'];
+          await _saveAuthData();
+        }
+      }
+    } catch (e) {
+      AppLogger.e('❌ [Auth] Refresh user error: $e');
+    }
+  }
+
   void updateCurrentUser(Map<String, dynamic> userData) {
     _currentUser = userData;
     _saveAuthData();
@@ -792,6 +808,14 @@ class DjangoAuthService extends ChangeNotifier {
     if (_currentUser != null && _currentUser!['roles'] != null) {
       List<String> roles = List<String>.from(_currentUser!['roles']);
       return roles.contains(role);
+    }
+    return false;
+  }
+
+  // Check if user is Pro
+  bool get isPro {
+    if (_currentUser != null) {
+      return _currentUser!['is_pro'] == true;
     }
     return false;
   }

@@ -98,7 +98,8 @@ class GoogleLoginView(APIView):
                 'last_name': user.last_name,
                 'google_id': getattr(user, 'google_id', None),
                 'profile_picture': getattr(user, 'profile_picture', None),
-                'is_guest': False
+                'is_guest': False,
+                'is_pro': user.is_pro
             }
             
             return Response({

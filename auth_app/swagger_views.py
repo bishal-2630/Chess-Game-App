@@ -102,7 +102,7 @@ class RegisterView(APIView):
                     'email_verified': user.email_verified,
                     'is_online': user.is_online,
                     'last_seen': user.last_seen.isoformat() if user.last_seen else None,
-                    'current_room': user.current_room
+                    'current_room': user.current_room, 'is_pro': user.is_pro
                 },
                 'tokens': {
                     'access': str(refresh.access_token),
@@ -181,7 +181,7 @@ class LoginView(APIView):
                     'profile_picture': user.profile_picture,
                     'is_online': user.is_online,
                     'last_seen': user.last_seen.isoformat() if user.last_seen else None,
-                    'current_room': user.current_room
+                    'current_room': user.current_room, 'is_pro': user.is_pro
                 },
                 'tokens': {
                     'access': str(refresh.access_token),
@@ -433,7 +433,8 @@ class GuestRegisterView(APIView):
                 'guest_user': {
                     'id': user.id,
                     'username': guest_username,
-                    'is_guest': True
+                    'is_guest': True,
+                    'is_pro': False
                 },
                 'tokens': {
                     'access': str(refresh.access_token),

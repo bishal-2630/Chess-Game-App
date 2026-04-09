@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/django_auth_service.dart';
+import '../../services/payment_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -12,6 +14,7 @@ class ProfileScreen extends StatelessWidget {
     final bool isGuest = authService.isGuest;
     final String displayName = authService.displayName;
     final String displayEmail = isGuest ? "Guest Account" : (user?['email'] ?? 'No email provided');
+    final bool isPro = authService.isPro;
 
     return Scaffold(
       appBar: AppBar(
@@ -51,12 +54,35 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 20),
 
               // Display Name
-              Text(
-                displayName,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    displayName,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (isPro) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'PRO',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               if (isGuest)
                 Container(
@@ -122,6 +148,71 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 30),
+
+              // Pro Upgrade Card
+              if (!isPro && !isGuest)
+                Card(
+                  color: Colors.blue[50],
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    side: const BorderSide(color: Colors.blue, width: 1),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 40),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Upgrade to Pro',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Unlock premium features and support the development!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final result = await PaymentService.createCheckoutSession();
+                            if (result['success']) {
+                              await PaymentService.launchCheckout(result['url']);
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: ${result['error']}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: const Text(
+                            'UPGRADE FOR $9.99',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
               const SizedBox(height: 30),
 
@@ -196,6 +287,25 @@ class ProfileScreen extends StatelessWidget {
                       label: const Text('Logout'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        await authService.refreshUserData();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Profile refreshed'),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Refresh Profile'),
+                      style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
                       ),
                     ),

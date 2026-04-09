@@ -16,3 +16,5 @@ pyotp>=2.9.0
 gunicorn>=21.2.0
 paho-mqtt>=1.6.1
 python-jose[cryptography]>=3.3.0
+stripe>=6.0.0
+
